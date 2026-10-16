@@ -1,0 +1,6 @@
+{
+  "name": "VEX Robotics Inventory Control",
+  "description": "Live-linked VEX Robotics inventory management system with Google Sheets integration, instant checkout tracking, team allocations, and competition pack lists.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

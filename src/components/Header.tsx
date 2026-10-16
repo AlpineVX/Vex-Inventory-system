@@ -1,0 +1,183 @@
+import React from 'react';
+import { RefreshCw, Settings, Plus, Radio, Database } from 'lucide-react';
+import { ActiveTab, SyncStatus } from '../types';
+
+interface HeaderProps {
+  activeTab: ActiveTab;
+  onTabChange: (tab: ActiveTab) => void;
+  syncStatus: SyncStatus;
+  onOpenSettings: () => void;
+  onOpenCheckout: () => void;
+  onSyncNow: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({
+  activeTab,
+  onTabChange,
+  syncStatus,
+  onOpenSettings,
+  onOpenCheckout,
+  onSyncNow,
+}) => {
+  return (
+    <header className="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between gap-8 h-16">
+          {/* Zone 1: Single text element wordmark */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-700/80 flex items-center justify-center text-indigo-400">
+              <Radio className="w-4 h-4" />
+            </div>
+            <a
+              href="#dashboard"
+              onClick={(e) => {
+                e.preventDefault();
+                onTabChange('dashboard');
+              }}
+              className="text-base font-semibold tracking-tight text-zinc-100 whitespace-nowrap shrink-0 hover:text-white transition-colors"
+            >
+              VEX Robotics Inventory Control
+            </a>
+          </div>
+
+          {/* Zone 2: 5 clean single-line text navigation links */}
+          <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-zinc-400">
+            <button
+              onClick={() => onTabChange('dashboard')}
+              className={`hover:text-zinc-100 transition-colors whitespace-nowrap shrink-0 py-1.5 ${
+                activeTab === 'dashboard'
+                  ? 'text-zinc-100 font-semibold border-b-2 border-indigo-500'
+                  : 'text-zinc-400'
+              }`}
+            >
+              Command Center
+            </button>
+            <button
+              onClick={() => onTabChange('inventory')}
+              className={`hover:text-zinc-100 transition-colors whitespace-nowrap shrink-0 py-1.5 ${
+                activeTab === 'inventory'
+                  ? 'text-zinc-100 font-semibold border-b-2 border-indigo-500'
+                  : 'text-zinc-400'
+              }`}
+            >
+              Universal Inventory
+            </button>
+            <button
+              onClick={() => onTabChange('teams')}
+              className={`hover:text-zinc-100 transition-colors whitespace-nowrap shrink-0 py-1.5 ${
+                activeTab === 'teams'
+                  ? 'text-zinc-100 font-semibold border-b-2 border-indigo-500'
+                  : 'text-zinc-400'
+              }`}
+            >
+              Team Allocations
+            </button>
+            <button
+              onClick={() => onTabChange('packlist')}
+              className={`hover:text-zinc-100 transition-colors whitespace-nowrap shrink-0 py-1.5 ${
+                activeTab === 'packlist'
+                  ? 'text-zinc-100 font-semibold border-b-2 border-indigo-500'
+                  : 'text-zinc-400'
+              }`}
+            >
+              Competition Pack
+            </button>
+            <button
+              onClick={() => onTabChange('logs')}
+              className={`hover:text-zinc-100 transition-colors whitespace-nowrap shrink-0 py-1.5 ${
+                activeTab === 'logs'
+                  ? 'text-zinc-100 font-semibold border-b-2 border-indigo-500'
+                  : 'text-zinc-400'
+              }`}
+            >
+              Audit Logs
+            </button>
+          </nav>
+
+          {/* Zone 3: Primary action & live link status */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Sync Now button */}
+            <button
+              onClick={onSyncNow}
+              disabled={syncStatus.isSyncing}
+              title={syncStatus.url ? `Sync with Google Sheet (${syncStatus.url})` : 'Sync local data'}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-md transition-colors disabled:opacity-50 whitespace-nowrap shrink-0"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncStatus.isSyncing ? 'animate-spin text-indigo-400' : 'text-zinc-400'}`} />
+              <span className="hidden sm:inline">
+                {syncStatus.isSyncing ? 'Syncing...' : syncStatus.url ? 'Live Linked' : 'Offline'}
+              </span>
+            </button>
+
+            {/* Settings button */}
+            <button
+              onClick={onOpenSettings}
+              title="Google Sheet API Settings"
+              className="p-1.5 text-zinc-400 hover:text-zinc-100 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-md transition-colors relative"
+            >
+              <Settings className="w-4 h-4" />
+              {syncStatus.url ? (
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+              ) : (
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-amber-500 rounded-full" />
+              )}
+            </button>
+
+            {/* Primary Action Button */}
+            <button
+              onClick={onOpenCheckout}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-md transition-colors shadow-sm whitespace-nowrap shrink-0 active:scale-[0.98]"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Check In / Out</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Navigation Bar */}
+        <div className="flex md:hidden items-center justify-between border-t border-zinc-900 py-2 overflow-x-auto gap-2">
+          <button
+            onClick={() => onTabChange('dashboard')}
+            className={`px-2.5 py-1 text-xs rounded whitespace-nowrap ${
+              activeTab === 'dashboard' ? 'bg-zinc-800 text-zinc-100 font-medium' : 'text-zinc-400'
+            }`}
+          >
+            Dashboard
+          </button>
+          <button
+            onClick={() => onTabChange('inventory')}
+            className={`px-2.5 py-1 text-xs rounded whitespace-nowrap ${
+              activeTab === 'inventory' ? 'bg-zinc-800 text-zinc-100 font-medium' : 'text-zinc-400'
+            }`}
+          >
+            Inventory
+          </button>
+          <button
+            onClick={() => onTabChange('teams')}
+            className={`px-2.5 py-1 text-xs rounded whitespace-nowrap ${
+              activeTab === 'teams' ? 'bg-zinc-800 text-zinc-100 font-medium' : 'text-zinc-400'
+            }`}
+          >
+            Teams
+          </button>
+          <button
+            onClick={() => onTabChange('packlist')}
+            className={`px-2.5 py-1 text-xs rounded whitespace-nowrap ${
+              activeTab === 'packlist' ? 'bg-zinc-800 text-zinc-100 font-medium' : 'text-zinc-400'
+            }`}
+          >
+            Pack List
+          </button>
+          <button
+            onClick={() => onTabChange('logs')}
+            className={`px-2.5 py-1 text-xs rounded whitespace-nowrap ${
+              activeTab === 'logs' ? 'bg-zinc-800 text-zinc-100 font-medium' : 'text-zinc-400'
+            }`}
+          >
+            Audit Logs
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+};

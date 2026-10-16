@@ -1,0 +1,685 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  X,
+  Search,
+  Check,
+  AlertCircle,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Loader2,
+  Wrench,
+  Hash,
+  Sparkles,
+} from 'lucide-react';
+import {
+  InventoryItem,
+  VexCategory,
+  CLUB_TEAMS,
+  CATEGORY_PREFIX_MAP,
+} from '../types';
+
+interface CheckInOutModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  items: InventoryItem[];
+  preselectedItem?: InventoryItem;
+  defaultAction?: 'Check Out' | 'Check In';
+  presetTeam?: string;
+  defaultEmail?: string;
+  onSubmit: (data: {
+    action: 'Check Out' | 'Check In';
+    itemId: string;
+    team: string;
+    notes: string;
+    email: string;
+    category?: string;
+  }) => Promise<void>;
+}
+
+const CATEGORIES: VexCategory[] = [
+  'Motors',
+  'Brain',
+  'Radio',
+  'Optical',
+  'Distance',
+  'Inertial',
+  'Rotational',
+  'Solenoids',
+];
+
+const QUICK_NOTES = [
+  'Primary chassis drive base',
+  'Autonomous tracking wheel pod',
+  'Flywheel shooter assembly',
+  'Intake mechanism roller',
+  'Pneumatics clamp actuator',
+  'Pit box emergency spare',
+  'Firmware verified & calibrated',
+];
+
+export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
+  isOpen,
+  onClose,
+  items,
+  preselectedItem,
+  defaultAction = 'Check Out',
+  presetTeam = '654V',
+  defaultEmail = 'yln2k20trishanth@gmail.com',
+  onSubmit,
+}) => {
+  const [action, setAction] = useState<'Check Out' | 'Check In'>(defaultAction);
+
+  // Selection mode: 'assemble' (click Type + Part #) or 'search' (browse/search catalog)
+  const [selectionMode, setSelectionMode] = useState<'assemble' | 'search'>('assemble');
+
+  // Assembly state: Type (category) + Part Number
+  const [assembledType, setAssembledType] = useState<VexCategory>('Solenoids');
+  const [assembledPartNum, setAssembledPartNum] = useState<string>('001');
+
+  // Direct item ID state (either assembled or selected)
+  const [selectedItemId, setSelectedItemId] = useState<string>('');
+  const [itemSearch, setItemSearch] = useState<string>('');
+
+  // Team state
+  const [team, setTeam] = useState<string>(presetTeam);
+  const [customTeam, setCustomTeam] = useState<string>('');
+  const [isCustomTeam, setIsCustomTeam] = useState<boolean>(false);
+
+  // Notes & Email
+  const [notes, setNotes] = useState<string>('');
+  const [email, setEmail] = useState<string>(defaultEmail);
+
+  // Form states
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Items under the active assembled category
+  const categoryItems = useMemo(() => {
+    return items.filter((i) => i.category === assembledType);
+  }, [items, assembledType]);
+
+  // Derived assembled item ID
+  const computedAssembledId = useMemo(() => {
+    const prefix = CATEGORY_PREFIX_MAP[assembledType] || 'VEX';
+    const cleanNum = assembledPartNum.trim();
+    if (!cleanNum) return `${prefix}-001`;
+    // If user typed 1 or 2 digits, pad to 3 digits (e.g. 3 -> 003)
+    const padded = cleanNum.length < 3 ? cleanNum.padStart(3, '0') : cleanNum;
+    return `${prefix}-${padded}`;
+  }, [assembledType, assembledPartNum]);
+
+  // Currently matched item in database
+  const effectiveItemId = selectionMode === 'assemble' ? computedAssembledId : selectedItemId;
+
+  const currentMatchedItem = useMemo(() => {
+    return items.find(
+      (i) => i.itemId.toUpperCase() === effectiveItemId.toUpperCase()
+    );
+  }, [items, effectiveItemId]);
+
+  // Reset or initialize on open
+  useEffect(() => {
+    if (isOpen) {
+      setAction(defaultAction);
+      setErrorMessage(null);
+      setIsSubmitting(false);
+
+      if (preselectedItem) {
+        setSelectedItemId(preselectedItem.itemId);
+        setAssembledType(preselectedItem.category);
+        const match = preselectedItem.itemId.match(/\d+$/);
+        if (match) {
+          setAssembledPartNum(match[0]);
+        }
+        setSelectionMode('assemble');
+        if (preselectedItem.currentUser) {
+          setTeam(preselectedItem.currentUser);
+        }
+      } else {
+        // Default to Solenoids or Motors as requested
+        setAssembledType('Solenoids');
+        setAssembledPartNum('001');
+        setSelectedItemId('');
+        setSelectionMode('assemble');
+      }
+
+      setTeam(presetTeam);
+      const isClubTeam = CLUB_TEAMS.includes(presetTeam as any);
+      setIsCustomTeam(!isClubTeam && Boolean(presetTeam));
+      if (!isClubTeam && presetTeam) {
+        setCustomTeam(presetTeam);
+      }
+      setNotes(
+        preselectedItem?.notes && defaultAction === 'Check In'
+          ? 'Returned in good working order'
+          : ''
+      );
+    }
+  }, [isOpen, preselectedItem, defaultAction, presetTeam]);
+
+  // Auto-sync team if checking in an item that has an assigned team
+  useEffect(() => {
+    if (action === 'Check In' && currentMatchedItem?.currentUser) {
+      setTeam(currentMatchedItem.currentUser);
+      setIsCustomTeam(!CLUB_TEAMS.includes(currentMatchedItem.currentUser as any));
+    }
+  }, [action, currentMatchedItem]);
+
+  // Filter items for search mode
+  const eligibleItems = useMemo(() => {
+    let pool = items;
+    if (action === 'Check Out') {
+      pool = [...items].sort((a, b) => (a.status === 'Available' ? -1 : 1));
+    } else {
+      pool = [...items].sort((a, b) => (a.status === 'Checked Out' ? -1 : 1));
+    }
+
+    if (itemSearch.trim()) {
+      const q = itemSearch.toLowerCase();
+      pool = pool.filter(
+        (i) =>
+          i.itemId.toLowerCase().includes(q) ||
+          i.itemName.toLowerCase().includes(q) ||
+          i.category.toLowerCase().includes(q) ||
+          i.currentUser.toLowerCase().includes(q)
+      );
+    }
+    return pool.slice(0, 24);
+  }, [items, action, itemSearch]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    const finalItemId = effectiveItemId;
+    if (!finalItemId) {
+      setErrorMessage('Please specify a valid component Type and Part Number.');
+      return;
+    }
+
+    const effectiveTeam = isCustomTeam ? customTeam.trim().toUpperCase() : team;
+    if (action === 'Check Out' && !effectiveTeam) {
+      setErrorMessage('Please assign a team or user for this checkout.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        action,
+        itemId: finalItemId,
+        team: effectiveTeam,
+        notes: notes.trim(),
+        email: email.trim(),
+        category: currentMatchedItem?.category || assembledType,
+      });
+      onClose();
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to submit transaction.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[94vh]">
+        {/* Modal Header */}
+        <div className="px-5 py-3.5 border-b border-zinc-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm sm:text-base font-bold text-white">
+              {action === 'Check Out' ? 'Hardware Check Out' : 'Hardware Check In'}
+            </h2>
+            <span className="text-xs text-zinc-400">· VEX Robotics Control</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-zinc-400 hover:text-zinc-200 p-1 rounded-md transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Action Toggle Strip */}
+        <div className="p-5 pb-0">
+          <div className="grid grid-cols-2 gap-1 p-1 bg-zinc-950 rounded-lg border border-zinc-800">
+            <button
+              type="button"
+              onClick={() => setAction('Check Out')}
+              className={`flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-md transition-all ${
+                action === 'Check Out'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <ArrowUpRight className="w-3.5 h-3.5" />
+              <span>Check Out (Assign to Team)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAction('Check In')}
+              className={`flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-md transition-all ${
+                action === 'Check In'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <ArrowDownLeft className="w-3.5 h-3.5" />
+              <span>Check In (Return to Stock)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Modal Form */}
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
+          {/* Item Selection Section: Assemble (Type + Part #) vs Search */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-zinc-200">
+                1. Select Component (Type &amp; Part #) <span className="text-rose-400">*</span>
+              </label>
+              <div className="flex items-center gap-1 text-[11px] bg-zinc-950 p-0.5 rounded border border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setSelectionMode('assemble')}
+                  className={`px-2 py-0.5 rounded transition-colors ${
+                    selectionMode === 'assemble'
+                      ? 'bg-zinc-800 text-white font-medium'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  Type + Part #
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectionMode('search')}
+                  className={`px-2 py-0.5 rounded transition-colors ${
+                    selectionMode === 'search'
+                      ? 'bg-zinc-800 text-white font-medium'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  Search Catalog
+                </button>
+              </div>
+            </div>
+
+            {selectionMode === 'assemble' ? (
+              <div className="p-3.5 bg-zinc-950 rounded-xl border border-zinc-800 space-y-3">
+                {/* Step A: Click Type (Category) */}
+                <div>
+                  <div className="text-[11px] font-medium text-zinc-400 mb-1.5 flex items-center justify-between">
+                    <span>Click Component Type:</span>
+                    <span className="text-indigo-400 font-mono">
+                      Prefix: {CATEGORY_PREFIX_MAP[assembledType]}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    {CATEGORIES.map((cat) => {
+                      const isSelected = assembledType === cat;
+                      const prefix = CATEGORY_PREFIX_MAP[cat];
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setAssembledType(cat)}
+                          className={`px-2 py-1.5 text-xs rounded-lg border text-left transition-all ${
+                            isSelected
+                              ? 'bg-indigo-600 text-white border-indigo-500 font-semibold shadow-sm'
+                              : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                          }`}
+                        >
+                          <div className="truncate">{cat}</div>
+                          <div
+                            className={`text-[10px] font-mono ${
+                              isSelected ? 'text-indigo-200' : 'text-zinc-500'
+                            }`}
+                          >
+                            [{prefix}]
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Step B: Enter or Click Part Number */}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] font-medium text-zinc-400 mb-1.5">
+                    <span>Part Number:</span>
+                    <span className="text-zinc-500">
+                      {categoryItems.length} total {assembledType} in system
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono text-zinc-500 font-semibold select-none">
+                        {CATEGORY_PREFIX_MAP[assembledType]}-
+                      </div>
+                      <input
+                        type="text"
+                        value={assembledPartNum}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^\d]/g, '').slice(0, 4);
+                          setAssembledPartNum(val);
+                        }}
+                        placeholder="001"
+                        className="w-full pl-14 pr-3 py-1.5 text-xs bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-indigo-500 font-mono font-bold"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const n = Math.max(1, (parseInt(assembledPartNum, 10) || 1) - 1);
+                          setAssembledPartNum(String(n).padStart(3, '0'));
+                        }}
+                        className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-xs text-zinc-300 font-mono"
+                      >
+                        -1
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const n = (parseInt(assembledPartNum, 10) || 0) + 1;
+                          setAssembledPartNum(String(n).padStart(3, '0'));
+                        }}
+                        className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-xs text-zinc-300 font-mono"
+                      >
+                        +1
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick-pick strip of first 12 part numbers for this category */}
+                  <div className="mt-2 flex flex-wrap items-center gap-1 overflow-x-auto max-h-16 scrollbar-none py-0.5">
+                    <span className="text-[10px] text-zinc-500 font-mono mr-1">Quick #:</span>
+                    {categoryItems.slice(0, 16).map((item) => {
+                      const numStr = item.itemId.split('-')[1] || item.itemId;
+                      const isCurrent =
+                        assembledPartNum === numStr ||
+                        assembledPartNum === String(parseInt(numStr, 10));
+                      const isAvailable = item.status === 'Available';
+
+                      return (
+                        <button
+                          key={item.itemId}
+                          type="button"
+                          onClick={() => setAssembledPartNum(numStr)}
+                          title={`${item.itemName} (${item.status})`}
+                          className={`px-1.5 py-0.5 text-[10px] font-mono rounded border transition-colors ${
+                            isCurrent
+                              ? 'bg-indigo-600 text-white border-indigo-500 font-bold'
+                              : isAvailable
+                              ? 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700'
+                              : 'bg-zinc-900/60 text-amber-400 border-amber-900/50 hover:border-amber-700'
+                          }`}
+                        >
+                          {numStr}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Assembled ID Confirmation Box */}
+                <div className="pt-2 border-t border-zinc-800/80">
+                  <div className="flex items-center justify-between p-2.5 bg-zinc-900/80 rounded-lg border border-zinc-800">
+                    <div>
+                      <div className="text-[11px] text-zinc-400">
+                        Put Together for Google Sheet:
+                      </div>
+                      <div className="text-sm font-bold font-mono text-white flex items-center gap-2 mt-0.5">
+                        <span className="text-indigo-400">{effectiveItemId}</span>
+                        {currentMatchedItem ? (
+                          <span className="text-xs font-sans text-zinc-300 font-normal">
+                            · {currentMatchedItem.itemName}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-sans text-zinc-500 font-normal">
+                            · Custom Part ID
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      {currentMatchedItem ? (
+                        <div className="text-right">
+                          <span
+                            className={`text-xs font-medium ${
+                              currentMatchedItem.status === 'Available'
+                                ? 'text-emerald-400'
+                                : 'text-amber-400'
+                            }`}
+                          >
+                            {currentMatchedItem.status}
+                          </span>
+                          {currentMatchedItem.currentUser && (
+                            <div className="text-[10px] text-zinc-400 font-mono">
+                              Held by Team {currentMatchedItem.currentUser}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-zinc-500">Unmatched</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Search Catalog mode */
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                  <input
+                    type="text"
+                    value={itemSearch}
+                    onChange={(e) => setItemSearch(e.target.value)}
+                    placeholder="Search by ID (e.g. SOL-001) or component name..."
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="max-h-36 overflow-y-auto border border-zinc-800 rounded-lg divide-y divide-zinc-800/60 bg-zinc-950">
+                  {eligibleItems.map((item) => (
+                    <button
+                      key={item.itemId}
+                      type="button"
+                      onClick={() => {
+                        setSelectedItemId(item.itemId);
+                        setAssembledType(item.category);
+                        const num = item.itemId.match(/\d+$/);
+                        if (num) setAssembledPartNum(num[0]);
+                        if (item.currentUser) setTeam(item.currentUser);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-800/50 flex items-center justify-between transition-colors ${
+                        selectedItemId === item.itemId ? 'bg-indigo-950/40' : ''
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center gap-1.5 font-mono text-zinc-200">
+                          <span className="font-bold">{item.itemId}</span>
+                          <span className="font-sans text-zinc-300 font-normal truncate max-w-[200px]">
+                            {item.itemName}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-zinc-500 font-sans mt-0.5">
+                          {item.category} {item.location ? `· ${item.location}` : ''}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span
+                          className={`text-[11px] font-sans ${
+                            item.status === 'Available' ? 'text-emerald-400' : 'text-amber-400'
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                        {item.currentUser && (
+                          <div className="text-[10px] text-zinc-500 font-mono">
+                            Team {item.currentUser}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 2. Team Selector: All 11 Club Teams */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-zinc-200">
+                2. {action === 'Check Out' ? 'Assign to Club Team' : 'Returning Team'}{' '}
+                <span className="text-rose-400">*</span>
+              </label>
+              <span className="text-[11px] text-zinc-500">11 Club Teams</span>
+            </div>
+
+            {/* Club Teams Grid */}
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
+              {CLUB_TEAMS.map((t) => {
+                const isSelected = !isCustomTeam && team === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      setTeam(t);
+                      setIsCustomTeam(false);
+                    }}
+                    className={`py-1.5 text-xs font-mono font-semibold rounded-lg border transition-all ${
+                      isSelected
+                        ? 'bg-zinc-100 text-zinc-950 border-white shadow-sm'
+                        : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setIsCustomTeam(true)}
+                className={`py-1.5 text-xs font-mono font-semibold rounded-lg border transition-all ${
+                  isCustomTeam
+                    ? 'bg-zinc-100 text-zinc-950 border-white shadow-sm'
+                    : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                }`}
+              >
+                Other...
+              </button>
+            </div>
+
+            {isCustomTeam && (
+              <input
+                type="text"
+                value={customTeam}
+                onChange={(e) => setCustomTeam(e.target.value)}
+                placeholder="Enter custom team or builder identifier (e.g. 654W or Mentor)"
+                className="mt-2 w-full px-3 py-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 font-mono"
+              />
+            )}
+          </div>
+
+          {/* 3. Deployment Notes */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-zinc-200">
+                3. Deployment Purpose &amp; Condition Notes
+              </label>
+              <span className="text-[11px] text-zinc-500">Optional</span>
+            </div>
+            <textarea
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Pneumatics clamp actuator, 100 PSI tested, competition robot chassis..."
+              className="w-full px-3 py-2 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 resize-none font-sans"
+            />
+            {/* Quick Chips */}
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {QUICK_NOTES.slice(0, 4).map((quick) => (
+                <button
+                  key={quick}
+                  type="button"
+                  onClick={() => setNotes(quick)}
+                  className="text-[10px] text-zinc-400 hover:text-zinc-200 bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800/80 transition-colors"
+                >
+                  + {quick}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 4. Responsible Email */}
+          <div>
+            <label className="block text-xs font-semibold text-zinc-200 mb-1.5">
+              4. Responsible Person Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="student@school.edu"
+              className="w-full px-3 py-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 font-mono"
+            />
+          </div>
+
+          {/* Error notice if present */}
+          {errorMessage && (
+            <div className="p-3 rounded-lg bg-rose-950/60 border border-rose-800/80 text-rose-200 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {/* Modal Footer */}
+          <div className="pt-2 flex items-center justify-between border-t border-zinc-800">
+            <div className="text-[11px] text-zinc-400 font-mono">
+              Ready: <span className="text-white font-semibold">{effectiveItemId}</span> &rarr;{' '}
+              <span className="text-white font-semibold">
+                Team {isCustomTeam ? customTeam || 'Custom' : team}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="px-3.5 py-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 bg-zinc-950 hover:bg-zinc-800 rounded-lg border border-zinc-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`flex items-center gap-2 px-4 py-1.5 text-xs font-semibold text-white rounded-lg shadow-sm transition-all disabled:opacity-50 ${
+                  action === 'Check Out'
+                    ? 'bg-amber-600 hover:bg-amber-500'
+                    : 'bg-emerald-600 hover:bg-emerald-500'
+                }`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Sending to Sheet...</span>
+                  </>
+                ) : (
+                  <span>Send {action} to Sheet</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
