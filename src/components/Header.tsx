@@ -1,23 +1,29 @@
 import React from 'react';
-import { RefreshCw, Settings, Plus, Radio, Database } from 'lucide-react';
-import { ActiveTab, SyncStatus } from '../types';
+import { RefreshCw, Settings, Plus, Radio, ShieldCheck, Lock, Unlock, LogOut } from 'lucide-react';
+import { ActiveTab, SyncStatus, AdminSettings } from '../types';
 
 interface HeaderProps {
   activeTab: ActiveTab;
   onTabChange: (tab: ActiveTab) => void;
   syncStatus: SyncStatus;
+  adminSettings: AdminSettings;
   onOpenSettings: () => void;
   onOpenCheckout: () => void;
   onSyncNow: () => void;
+  onOpenAdminUnlock: () => void;
+  onLockAdmin: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onTabChange,
   syncStatus,
+  adminSettings,
   onOpenSettings,
   onOpenCheckout,
   onSyncNow,
+  onOpenAdminUnlock,
+  onLockAdmin,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80">
@@ -25,8 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between gap-8 h-16">
           {/* Zone 1: Single text element wordmark */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-700/80 flex items-center justify-center text-indigo-400">
-              <Radio className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-750 flex items-center justify-center text-zinc-300">
+              <Radio className="w-4 h-4 text-zinc-300" />
             </div>
             <a
               href="#dashboard"
@@ -46,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onTabChange('dashboard')}
               className={`hover:text-zinc-100 transition-colors whitespace-nowrap shrink-0 py-1.5 ${
                 activeTab === 'dashboard'
-                  ? 'text-zinc-100 font-semibold border-b-2 border-indigo-500'
+                  ? 'text-white font-semibold border-b-2 border-zinc-200'
                   : 'text-zinc-400'
               }`}
             >
@@ -56,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onTabChange('inventory')}
               className={`hover:text-zinc-100 transition-colors whitespace-nowrap shrink-0 py-1.5 ${
                 activeTab === 'inventory'
-                  ? 'text-zinc-100 font-semibold border-b-2 border-indigo-500'
+                  ? 'text-white font-semibold border-b-2 border-zinc-200'
                   : 'text-zinc-400'
               }`}
             >
@@ -66,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onTabChange('teams')}
               className={`hover:text-zinc-100 transition-colors whitespace-nowrap shrink-0 py-1.5 ${
                 activeTab === 'teams'
-                  ? 'text-zinc-100 font-semibold border-b-2 border-indigo-500'
+                  ? 'text-white font-semibold border-b-2 border-zinc-200'
                   : 'text-zinc-400'
               }`}
             >
@@ -76,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onTabChange('packlist')}
               className={`hover:text-zinc-100 transition-colors whitespace-nowrap shrink-0 py-1.5 ${
                 activeTab === 'packlist'
-                  ? 'text-zinc-100 font-semibold border-b-2 border-indigo-500'
+                  ? 'text-white font-semibold border-b-2 border-zinc-200'
                   : 'text-zinc-400'
               }`}
             >
@@ -86,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onTabChange('logs')}
               className={`hover:text-zinc-100 transition-colors whitespace-nowrap shrink-0 py-1.5 ${
                 activeTab === 'logs'
-                  ? 'text-zinc-100 font-semibold border-b-2 border-indigo-500'
+                  ? 'text-white font-semibold border-b-2 border-zinc-200'
                   : 'text-zinc-400'
               }`}
             >
@@ -95,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
 
           {/* Zone 3: Primary action & live link status */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Sync Now button */}
             <button
               onClick={onSyncNow}
@@ -103,16 +109,40 @@ export const Header: React.FC<HeaderProps> = ({
               title={syncStatus.url ? `Sync with Google Sheet (${syncStatus.url})` : 'Sync local data'}
               className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-md transition-colors disabled:opacity-50 whitespace-nowrap shrink-0"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${syncStatus.isSyncing ? 'animate-spin text-indigo-400' : 'text-zinc-400'}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${syncStatus.isSyncing ? 'animate-spin text-zinc-200' : 'text-zinc-400'}`} />
               <span className="hidden sm:inline">
                 {syncStatus.isSyncing ? 'Syncing...' : syncStatus.url ? 'Live Linked' : 'Offline'}
               </span>
             </button>
 
+            {/* Admin Status / Toggle */}
+            {adminSettings.isUnlocked ? (
+              <div className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded-md text-xs text-amber-300">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden lg:inline font-medium">Admin</span>
+                <button
+                  onClick={onLockAdmin}
+                  title="Lock Admin Mode (Return to Regular Member Mode)"
+                  className="ml-1 p-0.5 hover:text-white rounded hover:bg-amber-500/20 transition-colors"
+                >
+                  <Lock className="w-3 h-3 text-amber-400/80 hover:text-amber-200" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onOpenAdminUnlock}
+                title="Admin Authentication (Coaches / Leads)"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-md transition-colors"
+              >
+                <Lock className="w-3.5 h-3.5 text-zinc-400" />
+                <span className="hidden xl:inline">Admin Login</span>
+              </button>
+            )}
+
             {/* Settings button */}
             <button
               onClick={onOpenSettings}
-              title="Google Sheet API Settings"
+              title={adminSettings.isUnlocked ? 'Google Sheet API & System Settings' : 'Settings (Admin Authentication Required)'}
               className="p-1.5 text-zinc-400 hover:text-zinc-100 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-md transition-colors relative"
             >
               <Settings className="w-4 h-4" />
@@ -123,12 +153,12 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </button>
 
-            {/* Primary Action Button */}
+            {/* Primary Action Button: Check In / Out */}
             <button
               onClick={onOpenCheckout}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-md transition-colors shadow-sm whitespace-nowrap shrink-0 active:scale-[0.98]"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-md transition-all shadow-sm whitespace-nowrap shrink-0 active:scale-[0.98]"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5 text-zinc-950" />
               <span>Check In / Out</span>
             </button>
           </div>

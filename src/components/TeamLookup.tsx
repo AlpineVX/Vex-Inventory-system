@@ -79,7 +79,7 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => onOpenCheckout(undefined, 'Check Out', selectedTeam)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-md transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-md transition-colors shadow-sm"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Check Out to {selectedTeam}</span>
@@ -124,7 +124,7 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
               value={customTeamInput}
               onChange={(e) => setCustomTeamInput(e.target.value)}
               placeholder="Other Team (e.g. 654X)"
-              className="w-36 px-2.5 py-1.5 text-xs bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+              className="w-36 px-2.5 py-1.5 text-xs bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400"
             />
             <button
               type="submit"
@@ -198,7 +198,7 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
             <p className="text-xs text-zinc-500 mt-1">Team {selectedTeam} has zero active checkouts.</p>
             <button
               onClick={() => onOpenCheckout(undefined, 'Check Out', selectedTeam)}
-              className="mt-3 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-md transition-colors"
+              className="mt-3 px-3 py-1.5 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-md transition-colors"
             >
               Check Out Parts to {selectedTeam}
             </button>

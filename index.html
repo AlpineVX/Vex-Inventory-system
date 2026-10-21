@@ -3,6 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Gracefully silence benign Vite HMR WebSocket errors in iframe preview
+      window.addEventListener('error', function (e) {
+        if (e && (e.message?.includes('WebSocket') || String(e.error)?.includes('WebSocket'))) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+        }
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        if (e && (String(e.reason)?.includes('WebSocket') || e.reason?.message?.includes('WebSocket'))) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+        }
+      });
+    </script>
     <title>VEX Robotics Inventory Control</title>
     <meta name="description" content="Live-linked VEX Robotics inventory management system with Google Sheets integration, instant checkout tracking, team allocations, and competition pack lists." />
     <meta property="og:title" content="VEX Robotics Inventory Control" />

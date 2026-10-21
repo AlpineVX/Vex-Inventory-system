@@ -29,23 +29,29 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
     return Array.from(teams).sort();
   }, [logs]);
 
-  // Filter logs
+  // Filter logs sorted newest first
   const filteredLogs = useMemo(() => {
-    return logs.filter((log) => {
-      if (actionFilter !== 'All' && log.action !== actionFilter) return false;
-      if (teamFilter !== 'All' && log.team !== teamFilter) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matches =
-          log.itemId.toLowerCase().includes(q) ||
-          (log.itemName && log.itemName.toLowerCase().includes(q)) ||
-          log.team.toLowerCase().includes(q) ||
-          (log.notes && log.notes.toLowerCase().includes(q)) ||
-          (log.userEmail && log.userEmail.toLowerCase().includes(q));
-        if (!matches) return false;
-      }
-      return true;
-    });
+    return logs
+      .filter((log) => {
+        if (actionFilter !== 'All' && log.action !== actionFilter) return false;
+        if (teamFilter !== 'All' && log.team !== teamFilter) return false;
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          const matches =
+            log.itemId.toLowerCase().includes(q) ||
+            (log.itemName && log.itemName.toLowerCase().includes(q)) ||
+            log.team.toLowerCase().includes(q) ||
+            (log.notes && log.notes.toLowerCase().includes(q)) ||
+            (log.userEmail && log.userEmail.toLowerCase().includes(q));
+          if (!matches) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const timeA = new Date(a.timestamp).getTime() || 0;
+        const timeB = new Date(b.timestamp).getTime() || 0;
+        return timeB - timeA;
+      });
   }, [logs, actionFilter, teamFilter, searchQuery]);
 
   const exportLogsCSV = () => {
@@ -105,7 +111,7 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by Item ID, team, notes, email..."
-            className="w-full pl-9 pr-4 py-1.5 text-xs bg-zinc-950/80 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 font-sans"
+            className="w-full pl-9 pr-4 py-1.5 text-xs bg-zinc-950/80 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400 font-sans"
           />
         </div>
 
@@ -142,7 +148,7 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
           <select
             value={teamFilter}
             onChange={(e) => setTeamFilter(e.target.value)}
-            className="px-2.5 py-1 text-xs bg-zinc-950/80 border border-zinc-800 rounded-lg text-zinc-300 focus:outline-none focus:border-indigo-500"
+            className="px-2.5 py-1 text-xs bg-zinc-950/80 border border-zinc-800 rounded-lg text-zinc-300 focus:outline-none focus:border-zinc-400"
           >
             <option value="All">All Teams</option>
             {uniqueTeams.map((team) => (
@@ -184,9 +190,13 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
                     <tr key={log.id} className="hover:bg-zinc-800/30 transition-colors">
                       {/* Timestamp */}
                       <td className="py-2.5 px-3 text-zinc-400 font-mono tabular-nums whitespace-nowrap">
-                        <div>{date.toLocaleDateString()}</div>
+                        <div>
+                          {isNaN(date.getTime()) ? log.timestamp || '—' : date.toLocaleDateString()}
+                        </div>
                         <div className="text-[11px] text-zinc-500">
-                          {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          {isNaN(date.getTime())
+                            ? ''
+                            : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </div>
                       </td>
 

@@ -16,6 +16,7 @@ import {
   VexCategory,
   CLUB_TEAMS,
   CATEGORY_PREFIX_MAP,
+  normalizeItemId,
 } from '../types';
 
 interface CheckInOutModalProps {
@@ -37,7 +38,6 @@ interface CheckInOutModalProps {
 }
 
 const CATEGORIES: VexCategory[] = [
-  'Motors',
   'Brain',
   'Radio',
   'Optical',
@@ -64,7 +64,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
   preselectedItem,
   defaultAction = 'Check Out',
   presetTeam = '654V',
-  defaultEmail = 'yln2k20trishanth@gmail.com',
+  defaultEmail = '',
   onSubmit,
 }) => {
   const [action, setAction] = useState<'Check Out' | 'Check In'>(defaultAction);
@@ -101,20 +101,66 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
   // Derived assembled item ID
   const computedAssembledId = useMemo(() => {
     const prefix = CATEGORY_PREFIX_MAP[assembledType] || 'VEX';
-    const cleanNum = assembledPartNum.trim();
-    if (!cleanNum) return `${prefix}-001`;
-    // If user typed 1 or 2 digits, pad to 3 digits (e.g. 3 -> 003)
-    const padded = cleanNum.length < 3 ? cleanNum.padStart(3, '0') : cleanNum;
-    return `${prefix}-${padded}`;
-  }, [assembledType, assembledPartNum]);
+    const cleanNum = assembledPartNum.trim().toUpperCase();
+    if (!cleanNum) return `${prefix}-1`;
+
+    const normClean = normalizeItemId(cleanNum);
+    // 1. If user typed or pasted the full Item ID directly (e.g. "VEXSOL-21", "VEX-O-1", "VEXS-ROT-24276GS")
+    const fullMatch = items.find((i) => {
+      const cur = normalizeItemId(i.itemId).toUpperCase();
+      return (
+        cur === normClean ||
+        cur === cleanNum ||
+        cur.replace(/[-\s]/g, '') === cleanNum.replace(/[-\s]/g, '') ||
+        cur.replace(/[-\s]/g, '') === normClean.replace(/[-\s]/g, '')
+      );
+    });
+    if (fullMatch) return fullMatch.itemId;
+
+    // 2. If it already starts with the category prefix
+    if (cleanNum.startsWith(prefix.toUpperCase()) || normClean.startsWith(prefix.toUpperCase())) {
+      return normClean || cleanNum;
+    }
+
+    // 3. Check exact combined ID with hyphen
+    const combinedHyphen = `${prefix}-${cleanNum}`;
+    const hyphenMatch = items.find((i) => {
+      const cur = normalizeItemId(i.itemId).toUpperCase();
+      return cur === combinedHyphen.toUpperCase() || cur === normalizeItemId(combinedHyphen).toUpperCase();
+    });
+    if (hyphenMatch) return hyphenMatch.itemId;
+
+    // 4. Check unpadded vs padded if numeric
+    const rawNum = parseInt(cleanNum, 10);
+    if (!isNaN(rawNum)) {
+      const unpaddedId = `${prefix}-${rawNum}`;
+      const directMatch = items.find((i) => {
+        const cur = normalizeItemId(i.itemId).toUpperCase();
+        return cur === unpaddedId.toUpperCase() || cur === normalizeItemId(unpaddedId).toUpperCase();
+      });
+      if (directMatch) return directMatch.itemId;
+
+      const padded = cleanNum.length < 3 ? cleanNum.padStart(3, '0') : cleanNum;
+      const paddedId = `${prefix}-${padded}`;
+      const paddedMatch = items.find((i) => {
+        const cur = normalizeItemId(i.itemId).toUpperCase();
+        return cur === paddedId.toUpperCase() || cur === normalizeItemId(paddedId).toUpperCase();
+      });
+      if (paddedMatch) return paddedMatch.itemId;
+    }
+
+    return combinedHyphen;
+  }, [assembledType, assembledPartNum, items]);
 
   // Currently matched item in database
   const effectiveItemId = selectionMode === 'assemble' ? computedAssembledId : selectedItemId;
 
   const currentMatchedItem = useMemo(() => {
-    return items.find(
-      (i) => i.itemId.toUpperCase() === effectiveItemId.toUpperCase()
-    );
+    const normEff = normalizeItemId(effectiveItemId).toUpperCase();
+    return items.find((i) => {
+      const cur = normalizeItemId(i.itemId).toUpperCase();
+      return cur === normEff || i.itemId.toUpperCase() === effectiveItemId.toUpperCase();
+    });
   }, [items, effectiveItemId]);
 
   // Reset or initialize on open
@@ -154,8 +200,9 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
           ? 'Returned in good working order'
           : ''
       );
+      setEmail(defaultEmail || '');
     }
-  }, [isOpen, preselectedItem, defaultAction, presetTeam]);
+  }, [isOpen, preselectedItem, defaultAction, presetTeam, defaultEmail]);
 
   // Auto-sync team if checking in an item that has an assigned team
   useEffect(() => {
@@ -205,6 +252,18 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
       return;
     }
 
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setErrorMessage('Borrower email address is required.');
+      return;
+    }
+
+    // Basic email format validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setErrorMessage('Please enter a valid email address (e.g. s123456@ltisdschools.net or student@school.org).');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await onSubmit({
@@ -212,7 +271,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
         itemId: finalItemId,
         team: effectiveTeam,
         notes: notes.trim(),
-        email: email.trim(),
+        email: cleanEmail,
         category: currentMatchedItem?.category || assembledType,
       });
       onClose();
@@ -312,7 +371,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                 <div>
                   <div className="text-[11px] font-medium text-zinc-400 mb-1.5 flex items-center justify-between">
                     <span>Click Component Type:</span>
-                    <span className="text-indigo-400 font-mono">
+                    <span className="text-zinc-300 font-mono">
                       Prefix: {CATEGORY_PREFIX_MAP[assembledType]}
                     </span>
                   </div>
@@ -327,14 +386,14 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                           onClick={() => setAssembledType(cat)}
                           className={`px-2 py-1.5 text-xs rounded-lg border text-left transition-all ${
                             isSelected
-                              ? 'bg-indigo-600 text-white border-indigo-500 font-semibold shadow-sm'
+                              ? 'bg-zinc-100 text-zinc-950 border-zinc-200 font-bold shadow-sm'
                               : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
                           }`}
                         >
                           <div className="truncate">{cat}</div>
                           <div
                             className={`text-[10px] font-mono ${
-                              isSelected ? 'text-indigo-200' : 'text-zinc-500'
+                              isSelected ? 'text-zinc-700' : 'text-zinc-500'
                             }`}
                           >
                             [{prefix}]
@@ -349,108 +408,139 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                 <div>
                   <div className="flex items-center justify-between text-[11px] font-medium text-zinc-400 mb-1.5">
                     <span>Part Number:</span>
-                    <span className="text-zinc-500">
-                      {categoryItems.length} total {assembledType} in system
+                    <span className="text-zinc-500 font-mono text-[11px]">
+                      {categoryItems.length} items cataloged
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono text-zinc-500 font-semibold select-none">
-                        {CATEGORY_PREFIX_MAP[assembledType]}-
-                      </div>
-                      <input
-                        type="text"
-                        value={assembledPartNum}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/[^\d]/g, '').slice(0, 4);
-                          setAssembledPartNum(val);
-                        }}
-                        placeholder="001"
-                        className="w-full pl-14 pr-3 py-1.5 text-xs bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-indigo-500 font-mono font-bold"
-                      />
+                  {/* Unified High-Craft Segmented Input Group */}
+                  <div className="flex items-center rounded-xl bg-zinc-900 border border-zinc-700/80 focus-within:border-zinc-400 focus-within:ring-1 focus-within:ring-zinc-400/20 transition-all overflow-hidden shadow-inner">
+                    {/* Fixed Prefix Add-on */}
+                    <div className="px-3.5 py-2.5 bg-zinc-800/90 border-r border-zinc-700/80 text-xs font-mono font-bold text-zinc-200 flex items-center select-none shrink-0 tracking-wider">
+                      {CATEGORY_PREFIX_MAP[assembledType]}-
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    {/* Numeric / Identifier Input */}
+                    <input
+                      type="text"
+                      value={assembledPartNum}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 20);
+                        setAssembledPartNum(val);
+                      }}
+                      placeholder="e.g. 1"
+                      className="flex-1 bg-transparent px-3 py-2 text-sm font-mono font-bold text-white placeholder-zinc-600 focus:outline-none"
+                    />
+
+                    {/* Integrated Increment / Decrement Stepper */}
+                    <div className="flex items-center border-l border-zinc-700/80 shrink-0">
                       <button
                         type="button"
                         onClick={() => {
                           const n = Math.max(1, (parseInt(assembledPartNum, 10) || 1) - 1);
-                          setAssembledPartNum(String(n).padStart(3, '0'));
+                          setAssembledPartNum(String(n));
                         }}
-                        className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-xs text-zinc-300 font-mono"
+                        className="px-3 py-2.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors font-mono font-semibold"
+                        title="Previous part number"
                       >
                         -1
                       </button>
+                      <div className="w-[1px] h-4 bg-zinc-700/60" />
                       <button
                         type="button"
                         onClick={() => {
                           const n = (parseInt(assembledPartNum, 10) || 0) + 1;
-                          setAssembledPartNum(String(n).padStart(3, '0'));
+                          setAssembledPartNum(String(n));
                         }}
-                        className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-xs text-zinc-300 font-mono"
+                        className="px-3 py-2.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors font-mono font-semibold"
+                        title="Next part number"
                       >
                         +1
                       </button>
                     </div>
                   </div>
 
-                  {/* Quick-pick strip of first 12 part numbers for this category */}
-                  <div className="mt-2 flex flex-wrap items-center gap-1 overflow-x-auto max-h-16 scrollbar-none py-0.5">
-                    <span className="text-[10px] text-zinc-500 font-mono mr-1">Quick #:</span>
-                    {categoryItems.slice(0, 16).map((item) => {
-                      const numStr = item.itemId.split('-')[1] || item.itemId;
-                      const isCurrent =
-                        assembledPartNum === numStr ||
-                        assembledPartNum === String(parseInt(numStr, 10));
-                      const isAvailable = item.status === 'Available';
+                  {/* Clean Quick Part Number Selector */}
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-1.5">
+                      <span className="font-medium">Quick Part Select:</span>
+                      <span className="text-[10px] text-zinc-500 font-mono">
+                        Showing first {Math.min(24, categoryItems.length)} parts
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                      {categoryItems.slice(0, 24).map((item) => {
+                        const numStr = item.itemId.split('-').pop() || item.itemId;
+                        const isCurrent =
+                          assembledPartNum === numStr ||
+                          assembledPartNum === String(parseInt(numStr, 10));
+                        const isAvailable = item.status === 'Available';
 
-                      return (
-                        <button
-                          key={item.itemId}
-                          type="button"
-                          onClick={() => setAssembledPartNum(numStr)}
-                          title={`${item.itemName} (${item.status})`}
-                          className={`px-1.5 py-0.5 text-[10px] font-mono rounded border transition-colors ${
-                            isCurrent
-                              ? 'bg-indigo-600 text-white border-indigo-500 font-bold'
-                              : isAvailable
-                              ? 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700'
-                              : 'bg-zinc-900/60 text-amber-400 border-amber-900/50 hover:border-amber-700'
-                          }`}
-                        >
-                          {numStr}
-                        </button>
-                      );
-                    })}
+                        return (
+                          <button
+                            key={item.itemId}
+                            type="button"
+                            onClick={() => setAssembledPartNum(numStr)}
+                            title={`${item.itemName} · ${item.status}${item.currentUser ? ` (Team ${item.currentUser})` : ''}`}
+                            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-mono rounded-lg border transition-all shrink-0 ${
+                              isCurrent
+                                ? 'bg-zinc-100 text-zinc-950 border-zinc-200 font-bold shadow-sm'
+                                : isAvailable
+                                ? 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                                : 'bg-zinc-900/60 text-amber-300 border-amber-900/50 hover:border-amber-700'
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isAvailable ? 'bg-emerald-400' : 'bg-amber-400'
+                              }`}
+                            />
+                            <span>{numStr}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
-                {/* Assembled ID Confirmation Box */}
-                <div className="pt-2 border-t border-zinc-800/80">
-                  <div className="flex items-center justify-between p-2.5 bg-zinc-900/80 rounded-lg border border-zinc-800">
+                {/* Identified Component Confirmation Card */}
+                <div className="mt-3 p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center font-mono text-sm font-bold text-zinc-300 shrink-0">
+                      #
+                    </div>
                     <div>
-                      <div className="text-[11px] text-zinc-400">
-                        Put Together for Google Sheet:
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                        Resolved Hardware ID
                       </div>
                       <div className="text-sm font-bold font-mono text-white flex items-center gap-2 mt-0.5">
-                        <span className="text-indigo-400">{effectiveItemId}</span>
+                        <span className="text-zinc-100">{effectiveItemId}</span>
                         {currentMatchedItem ? (
-                          <span className="text-xs font-sans text-zinc-300 font-normal">
+                          <span className="text-xs font-sans text-zinc-300 font-normal truncate max-w-[200px]">
                             · {currentMatchedItem.itemName}
                           </span>
                         ) : (
                           <span className="text-xs font-sans text-zinc-500 font-normal">
-                            · Custom Part ID
+                            · Custom Component
                           </span>
                         )}
                       </div>
                     </div>
-                    <div>
-                      {currentMatchedItem ? (
-                        <div className="text-right">
+                  </div>
+
+                  <div className="sm:text-right shrink-0">
+                    {currentMatchedItem ? (
+                      <div>
+                        <div className="flex items-center sm:justify-end gap-1.5">
                           <span
-                            className={`text-xs font-medium ${
+                            className={`w-2 h-2 rounded-full ${
+                              currentMatchedItem.status === 'Available'
+                                ? 'bg-emerald-400'
+                                : 'bg-amber-400'
+                            }`}
+                          />
+                          <span
+                            className={`text-xs font-semibold ${
                               currentMatchedItem.status === 'Available'
                                 ? 'text-emerald-400'
                                 : 'text-amber-400'
@@ -458,16 +548,16 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                           >
                             {currentMatchedItem.status}
                           </span>
-                          {currentMatchedItem.currentUser && (
-                            <div className="text-[10px] text-zinc-400 font-mono">
-                              Held by Team {currentMatchedItem.currentUser}
-                            </div>
-                          )}
                         </div>
-                      ) : (
-                        <span className="text-xs text-zinc-500">Unmatched</span>
-                      )}
-                    </div>
+                        <div className="text-[11px] text-zinc-400 font-mono mt-0.5">
+                          {currentMatchedItem.currentUser
+                            ? `Held by Team ${currentMatchedItem.currentUser}`
+                            : 'Ready in Pit Storage'}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-zinc-500">Uncataloged Hardware</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -481,7 +571,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                     value={itemSearch}
                     onChange={(e) => setItemSearch(e.target.value)}
                     placeholder="Search by ID (e.g. SOL-001) or component name..."
-                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400"
                   />
                 </div>
 
@@ -498,7 +588,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                         if (item.currentUser) setTeam(item.currentUser);
                       }}
                       className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-800/50 flex items-center justify-between transition-colors ${
-                        selectedItemId === item.itemId ? 'bg-indigo-950/40' : ''
+                        selectedItemId === item.itemId ? 'bg-zinc-800/60' : ''
                       }`}
                     >
                       <div>
@@ -584,7 +674,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                 value={customTeam}
                 onChange={(e) => setCustomTeam(e.target.value)}
                 placeholder="Enter custom team or builder identifier (e.g. 654W or Mentor)"
-                className="mt-2 w-full px-3 py-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 font-mono"
+                className="mt-2 w-full px-3 py-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400 font-mono"
               />
             )}
           </div>
@@ -602,7 +692,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Pneumatics clamp actuator, 100 PSI tested, competition robot chassis..."
-              className="w-full px-3 py-2 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 resize-none font-sans"
+              className="w-full px-3 py-2 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400 resize-none font-sans"
             />
             {/* Quick Chips */}
             <div className="flex flex-wrap gap-1 mt-1.5">
@@ -619,17 +709,22 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
             </div>
           </div>
 
-          {/* 4. Responsible Email */}
+          {/* 4. Responsible Person Email (Required) */}
           <div>
-            <label className="block text-xs font-semibold text-zinc-200 mb-1.5">
-              4. Responsible Person Email
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-zinc-200 flex items-center gap-1">
+                <span>4. Borrower / Student Email Address</span>
+                <span className="text-rose-400">*</span>
+              </label>
+              <span className="text-[11px] text-rose-400/90 font-medium">Required</span>
+            </div>
             <input
               type="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="student@school.edu"
-              className="w-full px-3 py-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 font-mono"
+              placeholder="e.g. s123456@ltisdschools.net or student@school.org"
+              className="w-full px-3 py-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400 font-mono"
             />
           </div>
 

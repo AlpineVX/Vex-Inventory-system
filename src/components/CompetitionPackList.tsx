@@ -43,9 +43,9 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
   // Compute available stock per category from live inventory
   const availableStockByCategory = React.useMemo(() => {
     const map: Record<VexCategory, number> = {
-      Motors: 0,
       Brain: 0,
       Radio: 0,
+      Sensors: 0,
       Optical: 0,
       Distance: 0,
       Inertial: 0,
@@ -170,7 +170,7 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <div className="text-2xl font-bold font-mono tabular-nums text-indigo-400">
+              <div className={`text-2xl font-bold font-mono tabular-nums ${readinessPercent === 100 ? 'text-emerald-400' : 'text-zinc-100'}`}>
                 {readinessPercent}%
               </div>
               <div className="text-[11px] text-zinc-500">
@@ -184,7 +184,7 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
         <div className="mt-4 w-full bg-zinc-950 rounded-full h-2.5 overflow-hidden border border-zinc-800/60">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
-              readinessPercent === 100 ? 'bg-emerald-500' : 'bg-indigo-500'
+              readinessPercent === 100 ? 'bg-emerald-500' : 'bg-zinc-300'
             }`}
             style={{ width: `${readinessPercent}%` }}
           />

@@ -12,8 +12,9 @@ import {
   MapPin,
   ExternalLink,
   ChevronDown,
+  Lock,
 } from 'lucide-react';
-import { InventoryItem, VexCategory, CLUB_TEAMS } from '../types';
+import { InventoryItem, VexCategory, CLUB_TEAMS, SENSOR_CATEGORIES } from '../types';
 
 interface InventoryBrowserProps {
   items: InventoryItem[];
@@ -21,17 +22,19 @@ interface InventoryBrowserProps {
   onSelectCategory: (cat: VexCategory | 'All') => void;
   onOpenCheckout: (item: InventoryItem, defaultAction?: 'Check Out' | 'Check In') => void;
   onBatchAction?: (items: InventoryItem[], action: 'Check Out' | 'Check In') => void;
+  isAdmin?: boolean;
+  onOpenAdminUnlock?: () => void;
 }
 
 const CATEGORIES: (VexCategory | 'All')[] = [
   'All',
-  'Motors',
-  'Brain',
-  'Radio',
+  'Sensors',
   'Optical',
   'Distance',
   'Inertial',
   'Rotational',
+  'Brain',
+  'Radio',
   'Solenoids',
 ];
 
@@ -41,6 +44,8 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
   onSelectCategory,
   onOpenCheckout,
   onBatchAction,
+  isAdmin = false,
+  onOpenAdminUnlock,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Available' | 'Checked Out'>('All');
@@ -68,7 +73,15 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
     const counts: Record<string, number> = { All: items.length };
     CATEGORIES.forEach((cat) => {
       if (cat !== 'All') {
-        counts[cat] = items.filter((i) => i.category === cat).length;
+        if (cat === 'Sensors') {
+          counts[cat] = items.filter(
+            (i) => SENSOR_CATEGORIES.includes(i.category) || i.category === 'Sensors'
+          ).length;
+        } else if (cat === 'Solenoids') {
+          counts[cat] = items.filter((i) => i.category === 'Solenoids' || (i as any).category === 'Solenoid').length;
+        } else {
+          counts[cat] = items.filter((i) => i.category === cat).length;
+        }
       }
     });
     return counts;
@@ -89,7 +102,15 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
 
     // Category filter
     if (selectedCategory !== 'All') {
-      result = result.filter((i) => i.category === selectedCategory);
+      if (selectedCategory === 'Sensors') {
+        result = result.filter(
+          (i) => SENSOR_CATEGORIES.includes(i.category) || i.category === 'Sensors'
+        );
+      } else if (selectedCategory === 'Solenoids') {
+        result = result.filter((i) => i.category === 'Solenoids' || (i as any).category === 'Solenoid');
+      } else {
+        result = result.filter((i) => i.category === selectedCategory);
+      }
     }
 
     // Status filter
@@ -120,13 +141,13 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
       );
     }
 
-    // Sorting
+    // Sorting (with natural numeric sorting so VEXM-2 comes before VEXM-10)
     return [...result].sort((a, b) => {
       let cmp = 0;
       if (sortField === 'itemId') {
-        cmp = a.itemId.localeCompare(b.itemId);
+        cmp = a.itemId.localeCompare(b.itemId, undefined, { numeric: true, sensitivity: 'base' });
       } else if (sortField === 'itemName') {
-        cmp = a.itemName.localeCompare(b.itemName);
+        cmp = a.itemName.localeCompare(b.itemName, undefined, { numeric: true, sensitivity: 'base' });
       } else if (sortField === 'category') {
         cmp = a.category.localeCompare(b.category);
       } else if (sortField === 'status') {
@@ -137,6 +158,13 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
       return sortAsc ? cmp : -cmp;
     });
   }, [items, selectedCategory, statusFilter, teamFilter, searchQuery, sortField, sortAsc]);
+
+  // Instant Item Profile matching (Page 10 in spreadsheet)
+  const matchedExactItem = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    const q = searchQuery.trim().toUpperCase();
+    return items.find((i) => i.itemId.toUpperCase() === q);
+  }, [searchQuery, items]);
 
   const toggleSort = (field: typeof sortField) => {
     if (sortField === field) {
@@ -210,7 +238,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
               Universal Inventory Browser
             </h1>
             <p className="text-xs text-zinc-400 mt-1">
-              Search and filter across 279 hardware items with live status updates
+              Search and filter across {items.length} hardware items with live status updates
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -264,7 +292,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search item ID, name, notes, team... (Press '/' to focus)"
-            className="w-full pl-9 pr-8 py-1.5 text-xs bg-zinc-950/80 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-sans"
+            className="w-full pl-9 pr-8 py-1.5 text-xs bg-zinc-950/80 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400/20 font-sans"
           />
           {searchQuery && (
             <button
@@ -314,7 +342,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
           <select
             value={teamFilter}
             onChange={(e) => setTeamFilter(e.target.value)}
-            className="px-2.5 py-1 text-xs bg-zinc-950/80 border border-zinc-800 rounded-lg text-zinc-300 focus:outline-none focus:border-indigo-500"
+            className="px-2.5 py-1 text-xs bg-zinc-950/80 border border-zinc-800 rounded-lg text-zinc-300 focus:outline-none focus:border-zinc-400"
           >
             <option value="All">All Teams</option>
             {activeTeams.map((t) => (
@@ -337,11 +365,81 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
         </div>
       </div>
 
+      {/* Instant Item Profile & Scan Tool (Matching Page 10 in Spreadsheet) */}
+      {matchedExactItem && (
+        <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-700 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-300 font-mono">
+                Instant Item Profile &amp; Search Tool
+              </span>
+              <span className="text-xs font-mono font-bold text-white bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">
+                {matchedExactItem.itemId}
+              </span>
+            </div>
+            <div className="text-sm font-semibold text-white">{matchedExactItem.itemName}</div>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+              <span>
+                Status:{' '}
+                <strong
+                  className={
+                    matchedExactItem.status === 'Available'
+                      ? 'text-emerald-400'
+                      : 'text-amber-400'
+                  }
+                >
+                  {matchedExactItem.status}
+                </strong>
+              </span>
+              <span>·</span>
+              <span>
+                Current Holder:{' '}
+                <strong className="text-zinc-200">
+                  {matchedExactItem.currentUser
+                    ? `Team ${matchedExactItem.currentUser}`
+                    : 'In Pit Storage (N/A)'}
+                </strong>
+              </span>
+              <span>·</span>
+              <span>
+                Checkouts:{' '}
+                <strong className="text-zinc-200 font-mono">
+                  {matchedExactItem.timesCheckedOut}
+                </strong>
+              </span>
+              {matchedExactItem.dateOut && (
+                <>
+                  <span>·</span>
+                  <span>Date Out: <span className="font-mono text-zinc-300">{matchedExactItem.dateOut}</span></span>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {matchedExactItem.status === 'Available' ? (
+              <button
+                onClick={() => onOpenCheckout(matchedExactItem, 'Check Out')}
+                className="px-3.5 py-1.5 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-500 rounded-md transition-colors shadow-sm"
+              >
+                Check Out {matchedExactItem.itemId}
+              </button>
+            ) : (
+              <button
+                onClick={() => onOpenCheckout(matchedExactItem, 'Check In')}
+                className="px-3.5 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-md transition-colors shadow-sm"
+              >
+                Check In (Return)
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Bulk Action Toolbar if items selected */}
       {selectedIds.size > 0 && onBatchAction && (
-        <div className="flex items-center justify-between p-2.5 px-4 rounded-lg bg-indigo-950/50 border border-indigo-800/70 text-xs">
+        <div className="flex items-center justify-between p-2.5 px-4 rounded-lg bg-zinc-900 border border-zinc-700 text-xs">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-indigo-200">{selectedIds.size} items selected</span>
+            <span className="font-semibold text-zinc-200">{selectedIds.size} items selected</span>
             <span className="text-zinc-400">· Apply batch operation:</span>
           </div>
           <div className="flex items-center gap-2">
@@ -378,12 +476,12 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                     type="checkbox"
                     checked={filteredItems.length > 0 && selectedIds.size === filteredItems.length}
                     onChange={(e) => handleSelectAll(e.target.checked)}
-                    className="rounded border-zinc-700 bg-zinc-950 text-indigo-600 focus:ring-0 cursor-pointer"
+                    className="rounded border-zinc-700 bg-zinc-950 text-zinc-100 accent-zinc-200 focus:ring-0 cursor-pointer"
                   />
                 </th>
                 <th
                   onClick={() => toggleSort('itemId')}
-                  className="py-3 px-3 font-semibold hover:text-zinc-200 cursor-pointer transition-colors"
+                  className="py-3 px-3 w-32 font-semibold hover:text-zinc-200 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Item ID</span>
@@ -392,7 +490,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                 </th>
                 <th
                   onClick={() => toggleSort('itemName')}
-                  className="py-3 px-3 font-semibold hover:text-zinc-200 cursor-pointer transition-colors"
+                  className="py-3 px-3 w-64 font-semibold hover:text-zinc-200 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Item Name & Specs</span>
@@ -401,7 +499,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                 </th>
                 <th
                   onClick={() => toggleSort('category')}
-                  className="py-3 px-3 font-semibold hover:text-zinc-200 cursor-pointer transition-colors"
+                  className="py-3 px-3 w-32 font-semibold hover:text-zinc-200 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Category</span>
@@ -410,25 +508,25 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                 </th>
                 <th
                   onClick={() => toggleSort('status')}
-                  className="py-3 px-3 font-semibold hover:text-zinc-200 cursor-pointer transition-colors"
+                  className="py-3 px-3 w-28 font-semibold hover:text-zinc-200 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Status</span>
                     <ArrowUpDown className="w-3 h-3 text-zinc-500" />
                   </div>
                 </th>
-                <th className="py-3 px-3 font-semibold">Team / Current Holder</th>
+                <th className="py-3 px-3 w-36 font-semibold">Team / Current Holder</th>
                 <th
                   onClick={() => toggleSort('dateOut')}
-                  className="py-3 px-3 font-semibold hover:text-zinc-200 cursor-pointer transition-colors"
+                  className="py-3 px-3 w-28 font-semibold hover:text-zinc-200 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Date Out</span>
                     <ArrowUpDown className="w-3 h-3 text-zinc-500" />
                   </div>
                 </th>
-                <th className="py-3 px-3 font-semibold">Location & Notes</th>
-                <th className="py-3 px-3 text-right font-semibold">Action</th>
+                <th className="py-3 px-3 min-w-[180px] font-semibold">Location & Notes</th>
+                <th className="py-3 px-3 w-24 text-right font-semibold">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60 font-sans">
@@ -439,7 +537,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                     <p className="text-xs text-zinc-500 mt-1">Try adjusting your search criteria or resetting filters</p>
                     <button
                       onClick={resetFilters}
-                      className="mt-3 px-3 py-1.5 text-xs font-medium text-indigo-400 hover:text-indigo-300 bg-zinc-800/80 rounded-md transition-colors"
+                      className="mt-3 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white bg-zinc-800/80 hover:bg-zinc-800 rounded-md transition-colors"
                     >
                       Reset All Filters
                     </button>
@@ -449,12 +547,20 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                 filteredItems.map((item) => {
                   const isChecked = selectedIds.has(item.itemId);
                   const isAvailable = item.status === 'Available';
+                  const cleanItemName =
+                    !item.itemName || item.itemName === '#N/A' || item.itemName.startsWith('Dashboard #')
+                      ? `VEX ${item.category} Component`
+                      : item.itemName;
+                  const cleanNotes =
+                    item.notes && !item.notes.includes('█') && !item.notes.includes('#') && !item.notes.includes('░')
+                      ? item.notes
+                      : '';
 
                   return (
                     <tr
                       key={item.itemId}
                       className={`group hover:bg-zinc-800/40 transition-colors ${
-                        isChecked ? 'bg-indigo-950/20' : ''
+                        isChecked ? 'bg-zinc-800/50' : ''
                       }`}
                     >
                       {/* Checkbox */}
@@ -463,18 +569,20 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleToggleSelect(item.itemId)}
-                          className="rounded border-zinc-700 bg-zinc-950 text-indigo-600 focus:ring-0 cursor-pointer"
+                          className="rounded border-zinc-700 bg-zinc-950 text-zinc-100 accent-zinc-200 focus:ring-0 cursor-pointer"
                         />
                       </td>
 
-                      {/* Item ID in tabular mono */}
-                      <td className="py-2.5 px-3 font-mono font-medium text-zinc-200 whitespace-nowrap">
-                        {item.itemId}
+                      {/* Item ID in tabular mono with overflow protection */}
+                      <td className="py-2.5 px-3 font-mono font-bold text-zinc-100 whitespace-nowrap">
+                        <span className="truncate max-w-[140px] inline-block">{item.itemId}</span>
                       </td>
 
                       {/* Item Name */}
                       <td className="py-2.5 px-3">
-                        <div className="font-medium text-zinc-100 group-hover:text-white">{item.itemName}</div>
+                        <div className="font-medium text-zinc-100 group-hover:text-white line-clamp-1">
+                          {cleanItemName}
+                        </div>
                         {item.timesCheckedOut > 0 && (
                           <div className="text-[11px] text-zinc-400 mt-0.5">
                             Checked out {item.timesCheckedOut}x this season
@@ -482,9 +590,12 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                         )}
                       </td>
 
-                      {/* Category */}
-                      <td className="py-2.5 px-3 text-zinc-400 whitespace-nowrap">
-                        {item.category}
+                      {/* Category Badge */}
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono border border-zinc-800 bg-zinc-900/90 text-zinc-300">
+                          <span className="w-1.5 h-1.5 rounded-sm bg-zinc-500" />
+                          {item.category}
+                        </span>
                       </td>
 
                       {/* Status - Clean unboxed text with semantic indicator (Zero-pill discipline) */}
@@ -522,12 +633,12 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                       </td>
 
                       {/* Notes / Location */}
-                      <td className="py-2.5 px-3 text-zinc-400 max-w-xs truncate" title={item.notes}>
-                        <div className="truncate text-zinc-300">{item.notes || '—'}</div>
+                      <td className="py-2.5 px-3 text-zinc-400 max-w-xs truncate" title={cleanNotes || item.location}>
+                        <div className="truncate text-zinc-300">{cleanNotes || '—'}</div>
                         {item.location && (
-                          <div className="text-[11px] text-zinc-400 flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-3 h-3 text-zinc-400" />
-                            <span>{item.location}</span>
+                          <div className="text-[11px] text-zinc-500 flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3 text-zinc-500 shrink-0" />
+                            <span className="truncate">{item.location}</span>
                           </div>
                         )}
                       </td>
