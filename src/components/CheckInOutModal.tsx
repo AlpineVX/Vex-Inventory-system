@@ -460,16 +460,16 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Clean Quick Part Number Selector */}
+                  {/* Clean Quick Part Number Selector - All Parts Visible */}
                   <div className="mt-3">
                     <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-1.5">
                       <span className="font-medium">Quick Part Select:</span>
                       <span className="text-[10px] text-zinc-500 font-mono">
-                        Showing first {Math.min(24, categoryItems.length)} parts
+                        All {categoryItems.length} parts
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-                      {categoryItems.slice(0, 24).map((item) => {
+                    <div className="flex flex-wrap items-center gap-1.5 max-h-48 overflow-y-auto pr-0.5">
+                      {categoryItems.map((item) => {
                         const numStr = item.itemId.split('-').pop() || item.itemId;
                         const isCurrent =
                           assembledPartNum === numStr ||
@@ -482,7 +482,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                             type="button"
                             onClick={() => setAssembledPartNum(numStr)}
                             title={`${item.itemName} · ${item.status}${item.currentUser ? ` (Team ${item.currentUser})` : ''}`}
-                            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-mono rounded-lg border transition-all shrink-0 ${
+                            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-mono rounded-lg border transition-all ${
                               isCurrent
                                 ? 'bg-zinc-100 text-zinc-950 border-zinc-200 font-bold shadow-sm'
                                 : isAvailable
