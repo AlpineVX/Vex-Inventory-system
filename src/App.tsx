@@ -486,29 +486,23 @@ export default function App() {
         {activeTab === 'logs' && <ActivityLogs logs={logs} />}
       </main>
 
-      {/* Footer */}
       <footer className="mt-auto border-t border-zinc-900 bg-zinc-950/80 py-4 text-xs text-zinc-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <span>VEX Robotics Inventory Control</span>
             <span>·</span>
             <span>{items.length} Items System</span>
             <span>·</span>
             <span className="font-mono text-zinc-400">Club Teams (654K, 654J, 654A, 654B, 654G, 654T, 654V, 654Y, 654X, 654Z, RECF)</span>
           </div>
-          <div className="flex items-center gap-4 text-zinc-400">
+          <div className="flex items-center gap-3 text-zinc-400 shrink-0">
+            <span>Website made by <strong className="text-zinc-200 font-medium">Trishanth Yakkala</strong></span>
+            <span>·</span>
             <button
               onClick={handleOpenSettingsProtected}
               className="hover:text-zinc-200 transition-colors"
             >
               Spreadsheet API Settings
-            </button>
-            <span>·</span>
-            <button
-              onClick={handleResetFactoryData}
-              className="hover:text-zinc-200 transition-colors"
-            >
-              Reset Benchmark Data
             </button>
           </div>
         </div>

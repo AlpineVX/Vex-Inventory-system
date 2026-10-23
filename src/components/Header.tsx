@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Settings, Plus, Radio, ShieldCheck, Lock, Unlock, LogOut } from 'lucide-react';
+import { RefreshCw, Settings, Plus, ShieldCheck, Lock, Unlock, LogOut } from 'lucide-react';
 import { ActiveTab, SyncStatus, AdminSettings } from '../types';
 
 interface HeaderProps {
@@ -31,8 +31,12 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between gap-8 h-16">
           {/* Zone 1: Single text element wordmark */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-750 flex items-center justify-center text-zinc-300">
-              <Radio className="w-4 h-4 text-zinc-300" />
+            <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center p-1 overflow-hidden shrink-0">
+              <img
+                src="/assets/aistudio/lt_logo_transparent.png"
+                alt="Lake Travis Robotics Logo"
+                className="w-full h-full object-contain select-none"
+              />
             </div>
             <a
               href="#dashboard"

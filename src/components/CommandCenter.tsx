@@ -45,13 +45,13 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
   const checkedOutCount = items.filter((i) => i.status === 'Checked Out').length;
   const utilizationRate = totalCount > 0 ? ((checkedOutCount / totalCount) * 100).toFixed(0) : '0';
 
-  // Check overdue (> 7 days out)
+  // Check overdue (>= 100 days out)
   const now = Date.now();
   const overdueItems = items.filter((i) => {
     if (i.status !== 'Checked Out' || !i.dateOut) return false;
     const dateOutMs = new Date(i.dateOut).getTime();
     const diffDays = (now - dateOutMs) / (1000 * 60 * 60 * 24);
-    return diffDays > 7;
+    return diffDays >= 100;
   });
 
   // Teams breakdown initialized with all club teams
@@ -282,7 +282,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               {overdueItems.length}
             </div>
             <div className={`text-[10px] mt-0.5 ${overdueItems.length > 0 ? 'text-rose-400 font-medium' : 'text-emerald-400'}`}>
-              {overdueItems.length > 0 ? `${overdueItems.length} item(s) > 7d` : 'Nothing overdue (>7d)'}
+              {overdueItems.length > 0 ? `${overdueItems.length} item(s) ≥ 100d` : 'Nothing overdue (≥100d)'}
             </div>
           </div>
 
@@ -651,26 +651,34 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         </div>
       </div>
 
-      {/* Overdue Items & Fleet Status Banner (Matching Page 3 & 6) */}
+      {/* Overdue Items & Fleet Status Banner */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="p-3.5 rounded-xl bg-zinc-900/50 border border-zinc-800/70 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-950/60 border border-emerald-800/60 flex items-center justify-center text-emerald-400 shrink-0">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+              overdueItems.length > 0
+                ? 'bg-rose-950/60 border border-rose-800/60 text-rose-400'
+                : 'bg-emerald-950/60 border border-emerald-800/60 text-emerald-400'
+            }`}>
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
               <div className="text-xs font-semibold text-zinc-200">
-                Overdue Items (&gt; 7 Days)
+                Overdue Items (≥ 100 Days)
               </div>
               <p className="text-[11px] text-zinc-400 mt-0.5">
                 {overdueItems.length === 0
-                  ? 'Nothing overdue right now · All checkouts are active & recent'
-                  : `${overdueItems.length} items flagged for return`}
+                  ? 'Nothing overdue right now · All checkouts under 100 days'
+                  : `${overdueItems.length} item(s) checked out for 100+ days`}
               </p>
             </div>
           </div>
-          <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded">
-            0 Overdue
+          <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded border ${
+            overdueItems.length > 0
+              ? 'text-rose-400 bg-rose-950/40 border-rose-800/40'
+              : 'text-emerald-400 bg-emerald-950/40 border-emerald-800/40'
+          }`}>
+            {overdueItems.length} Overdue
           </span>
         </div>
 
@@ -684,7 +692,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 Fleet Maintenance &amp; Health
               </div>
               <p className="text-[11px] text-zinc-400 mt-0.5">
-                No issues reported — fleet is healthy across all 279 cataloged items
+                No issues reported — fleet is healthy across all {totalCount} cataloged items
               </p>
             </div>
           </div>

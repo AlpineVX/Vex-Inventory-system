@@ -65,7 +65,7 @@ export function isValidVexId(rawId: string): boolean {
   if (!rawId) return false;
   const clean = normalizeItemId(rawId);
   return (
-    /^VEX(S-(O|DIST|INER|ROT)|SOL|B|R)-\d+$/i.test(clean) ||
+    /^VEX(S-[A-Z0-9]+|SOL|B|R)-\d+$/i.test(clean) ||
     /^VEX-O-\d+$/i.test(clean) ||
     /^VEX(BRN|RAD|SOL)-\d+$/i.test(clean)
   );

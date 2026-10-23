@@ -48,7 +48,7 @@ export function getCachedInventory(): InventoryItem[] | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0 || parsed.length > 280) {
+    if (!Array.isArray(parsed) || parsed.length === 0 || parsed.length > 5000) {
       localStorage.removeItem(STORAGE_KEY_INVENTORY);
       return null;
     }
@@ -574,7 +574,7 @@ function doGet(e) {
 
       // Validate Item ID: must strictly be a genuine VEX hardware ID, never a formula, date, or word phrase
       var cleanId = itemId.replace(/\s+/g, "").toUpperCase();
-      if (!/^VEX(S-(O|DIST|INER|ROT)|SOL|B|R)-\d+$/.test(cleanId) && !/^VEX-O-\d+$/.test(cleanId)) continue;
+      if (!/^VEX(S-[A-Z0-9]+|SOL|B|R)-\d+$/.test(cleanId) && !/^VEX-O-\d+$/.test(cleanId)) continue;
       
       var key = cleanId;
       if (seenIds[key]) continue;
