@@ -19,6 +19,8 @@ interface TeamLookupProps {
   onOpenCheckout: (item?: InventoryItem, defaultAction?: 'Check Out' | 'Check In', presetTeam?: string) => void;
   onReturnItem: (item: InventoryItem) => void;
   onReturnAllForTeam: (team: string, itemsToReturn: InventoryItem[]) => void;
+  isAdmin?: boolean;
+  onOpenAdminUnlock?: () => void;
 }
 
 export const TeamLookup: React.FC<TeamLookupProps> = ({
@@ -28,6 +30,8 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
   onOpenCheckout,
   onReturnItem,
   onReturnAllForTeam,
+  isAdmin = false,
+  onOpenAdminUnlock,
 }) => {
   const [customTeamInput, setCustomTeamInput] = useState('');
 
@@ -166,20 +170,46 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex flex-col justify-between">
-          <div>
-            <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">Batch Team Actions</span>
-            <p className="text-xs text-zinc-400 mt-1">Check in all parts after tournament or season rebuild</p>
+        {isAdmin ? (
+          <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">Batch Team Actions</span>
+                <span className="text-[10px] font-mono font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">Admin</span>
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">Check in all parts after tournament or season rebuild</p>
+            </div>
+            <button
+              onClick={() => onReturnAllForTeam(selectedTeam, teamItems)}
+              disabled={teamItems.length === 0}
+              className="mt-3 w-full py-2 px-3 text-xs font-semibold text-emerald-300 bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-800/60 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Return All {teamItems.length} Items for Team {selectedTeam}</span>
+            </button>
           </div>
-          <button
-            onClick={() => onReturnAllForTeam(selectedTeam, teamItems)}
-            disabled={teamItems.length === 0}
-            className="mt-3 w-full py-2 px-3 text-xs font-semibold text-emerald-300 bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-800/60 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Return All {teamItems.length} Items for Team {selectedTeam}</span>
-          </button>
-        </div>
+        ) : (
+          <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">Hardware Allocation</span>
+                <span className="text-[11px] text-zinc-400 font-mono">Team {selectedTeam}</span>
+              </div>
+              <p className="text-xs text-zinc-400 mt-1">
+                {teamItems.length > 0
+                  ? `${teamItems.length} component(s) deployed to Team ${selectedTeam}. To check out parts to this team, use the checkout workflow.`
+                  : `Team ${selectedTeam} currently has zero components checked out.`}
+              </p>
+            </div>
+            <button
+              onClick={() => onOpenCheckout(undefined, 'Check Out', selectedTeam)}
+              className="mt-3 w-full py-2 px-3 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Check Out to {selectedTeam}</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Team Item Table */}
@@ -235,12 +265,23 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
                       {item.notes || '—'}
                     </td>
                     <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => onReturnItem(item)}
-                        className="px-2.5 py-1 text-[11px] font-semibold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-800/60 rounded transition-colors active:scale-95"
-                      >
-                        Check In (Return)
-                      </button>
+                      {isAdmin ? (
+                        <button
+                          onClick={() => onReturnItem(item)}
+                          className="px-2.5 py-1 text-[11px] font-semibold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-800/60 rounded transition-colors active:scale-95"
+                          title="Admin Quick Return"
+                        >
+                          Check In (Return)
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => onOpenCheckout(item, 'Check Out', selectedTeam)}
+                          className="px-2.5 py-1 text-[11px] font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 border border-zinc-750 rounded transition-colors active:scale-95 flex items-center gap-1.5 ml-auto"
+                        >
+                          <span>Check Out</span>
+                          <ArrowRight className="w-3 h-3 text-zinc-400" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

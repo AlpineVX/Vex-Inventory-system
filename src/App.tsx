@@ -337,20 +337,32 @@ export default function App() {
     }
   };
 
-  // Fast single return from Team view
+  // Fast single return from Team view (Admin only)
   const handleReturnItem = async (item: InventoryItem) => {
+    if (!adminSettings.isUnlocked) {
+      handleOpenAdminUnlock();
+      addToast('info', 'Admin Access Required', 'Quick return is only available to admins. Regular members must use Check Out / Check In with email and notes.');
+      return;
+    }
+
     await handleSubmitAction({
       action: 'Check In',
       itemId: item.itemId,
       team: item.currentUser,
-      notes: 'Returned from Team Hardware Lookup',
+      notes: 'Returned by Admin from Team Hardware Lookup',
       email: adminSettings.adminEmails[0] || 'admin@vex.club',
       category: item.category,
     });
   };
 
-  // Batch return all items for a team
+  // Batch return all items for a team (Admin only)
   const handleReturnAllForTeam = async (team: string, itemsToReturn: InventoryItem[]) => {
+    if (!adminSettings.isUnlocked) {
+      handleOpenAdminUnlock();
+      addToast('info', 'Admin Access Required', 'Batch returns require admin authorization.');
+      return;
+    }
+
     if (itemsToReturn.length === 0) return;
 
     for (const item of itemsToReturn) {
@@ -478,6 +490,8 @@ export default function App() {
             }
             onReturnItem={handleReturnItem}
             onReturnAllForTeam={handleReturnAllForTeam}
+            isAdmin={adminSettings.isUnlocked}
+            onOpenAdminUnlock={handleOpenAdminUnlock}
           />
         )}
 

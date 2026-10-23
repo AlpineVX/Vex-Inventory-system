@@ -173,14 +173,18 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
       if (preselectedItem) {
         setSelectedItemId(preselectedItem.itemId);
         setAssembledType(preselectedItem.category);
-        const match = preselectedItem.itemId.match(/\d+$/);
-        if (match) {
-          setAssembledPartNum(match[0]);
+        const prefix = CATEGORY_PREFIX_MAP[preselectedItem.category] || 'VEX';
+        let numPart = preselectedItem.itemId;
+        if (numPart.toUpperCase().startsWith(`${prefix.toUpperCase()}-`)) {
+          numPart = numPart.slice(prefix.length + 1);
+        } else if (numPart.toUpperCase().startsWith(prefix.toUpperCase())) {
+          numPart = numPart.slice(prefix.length);
+        } else {
+          const match = preselectedItem.itemId.match(/\d+$/);
+          if (match) numPart = match[0];
         }
+        setAssembledPartNum(numPart);
         setSelectionMode('assemble');
-        if (preselectedItem.currentUser) {
-          setTeam(preselectedItem.currentUser);
-        }
       } else {
         // Default to Solenoids or Motors as requested
         setAssembledType('Solenoids');
@@ -189,11 +193,12 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
         setSelectionMode('assemble');
       }
 
-      setTeam(presetTeam);
-      const isClubTeam = CLUB_TEAMS.includes(presetTeam as any);
-      setIsCustomTeam(!isClubTeam && Boolean(presetTeam));
-      if (!isClubTeam && presetTeam) {
-        setCustomTeam(presetTeam);
+      const activeTeam = presetTeam || preselectedItem?.currentUser || '654V';
+      setTeam(activeTeam);
+      const isClubTeam = CLUB_TEAMS.includes(activeTeam as any);
+      setIsCustomTeam(!isClubTeam && Boolean(activeTeam));
+      if (!isClubTeam && activeTeam) {
+        setCustomTeam(activeTeam);
       }
       setNotes(
         preselectedItem?.notes && defaultAction === 'Check In'
