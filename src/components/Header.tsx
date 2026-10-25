@@ -1,5 +1,4 @@
-import React from 'react';
-import { RefreshCw, Settings, Plus, ShieldCheck, Lock, Unlock, LogOut } from 'lucide-react';
+import { RefreshCw, Settings, Plus, ShieldCheck, Lock, Unlock, LogOut, Smartphone, QrCode, Download } from 'lucide-react';
 import { ActiveTab, SyncStatus, AdminSettings } from '../types';
 
 interface HeaderProps {
@@ -12,6 +11,8 @@ interface HeaderProps {
   onSyncNow: () => void;
   onOpenAdminUnlock: () => void;
   onLockAdmin: () => void;
+  onToggleViewMode?: () => void;
+  onOpenAssetsModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -24,6 +25,8 @@ export const Header: React.FC<HeaderProps> = ({
   onSyncNow,
   onOpenAdminUnlock,
   onLockAdmin,
+  onToggleViewMode,
+  onOpenAssetsModal,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80">
@@ -140,6 +143,30 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Lock className="w-3.5 h-3.5 text-zinc-400" />
                 <span className="hidden xl:inline">Admin Login</span>
+              </button>
+            )}
+
+            {/* Club Assets / Logos Download */}
+            {onOpenAssetsModal && (
+              <button
+                onClick={onOpenAssetsModal}
+                title="Download Club Logos & Custom QR Badges"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-md transition-colors whitespace-nowrap shrink-0"
+              >
+                <Download className="w-3.5 h-3.5 text-zinc-400" />
+                <span className="hidden xl:inline">Logos &amp; QR</span>
+              </button>
+            )}
+
+            {/* Toggle Phone UI Mode */}
+            {onToggleViewMode && (
+              <button
+                onClick={onToggleViewMode}
+                title="Preview / Switch to Phone View"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-blue-300 bg-blue-950/40 hover:bg-blue-900/50 border border-blue-800/50 rounded-md transition-colors whitespace-nowrap shrink-0"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-blue-400" />
+                <span className="hidden xl:inline">Phone UI</span>
               </button>
             )}
 

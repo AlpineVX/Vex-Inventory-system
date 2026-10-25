@@ -15,6 +15,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { InventoryItem, VexCategory, CLUB_TEAMS, SENSOR_CATEGORIES } from '../types';
+import { MobileInventoryList } from './MobileInventoryList';
 
 interface InventoryBrowserProps {
   items: InventoryItem[];
@@ -24,6 +25,7 @@ interface InventoryBrowserProps {
   onBatchAction?: (items: InventoryItem[], action: 'Check Out' | 'Check In') => void;
   isAdmin?: boolean;
   onOpenAdminUnlock?: () => void;
+  isMobileMode?: boolean;
 }
 
 const CATEGORIES: (VexCategory | 'All')[] = [
@@ -46,6 +48,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
   onBatchAction,
   isAdmin = false,
   onOpenAdminUnlock,
+  isMobileMode = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Available' | 'Checked Out'>('All');
@@ -228,10 +231,37 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
     setTeamFilter('All');
   };
 
+  if (isMobileMode) {
+    return (
+      <MobileInventoryList
+        items={items}
+        selectedCategory={selectedCategory}
+        onSelectCategory={onSelectCategory}
+        onOpenCheckout={onOpenCheckout}
+        isAdmin={isAdmin}
+        onOpenAdminUnlock={onOpenAdminUnlock || (() => {})}
+      />
+    );
+  }
+
   return (
-    <div className="space-y-5">
-      {/* Top Header & Fast Filter Bar */}
-      <div>
+    <>
+      {/* Dedicated Mobile View for phones */}
+      <div className="block md:hidden">
+        <MobileInventoryList
+          items={items}
+          selectedCategory={selectedCategory}
+          onSelectCategory={onSelectCategory}
+          onOpenCheckout={onOpenCheckout}
+          isAdmin={isAdmin}
+          onOpenAdminUnlock={onOpenAdminUnlock || (() => {})}
+        />
+      </div>
+
+      {/* Desktop Rich Table View */}
+      <div className="hidden md:block space-y-5">
+        {/* Top Header & Fast Filter Bar */}
+        <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-zinc-800">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white">
@@ -691,5 +721,6 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
         </div>
       </div>
     </div>
-  );
+  </>
+);
 };

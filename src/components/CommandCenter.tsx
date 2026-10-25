@@ -338,7 +338,39 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               </button>
             </div>
 
-            <div className="mt-3 overflow-x-auto">
+            {/* Mobile Category Cards View */}
+            <div className="mt-3 block md:hidden space-y-2">
+              {mainSummaryRows.map((row) => (
+                <div
+                  key={row.name}
+                  onClick={() => onNavigateToCategory(row.targetCategory)}
+                  className="p-3 bg-zinc-950/70 border border-zinc-800 rounded-xl flex flex-col gap-2 active:border-zinc-700 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-zinc-100 text-sm">{row.name}</span>
+                    <span className="text-xs text-zinc-400 font-mono">{row.total} Total</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-emerald-400 font-medium">{row.available} Available</span>
+                    <span className="text-amber-400 font-medium">{row.checkedOut} Out</span>
+                    <span className="text-zinc-300 font-mono">{row.percentAvail}%</span>
+                  </div>
+                  <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden flex">
+                    <div
+                      className="bg-emerald-500 h-full"
+                      style={{ width: `${row.percentAvail}%` }}
+                    />
+                    <div
+                      className="bg-amber-500 h-full"
+                      style={{ width: `${100 - row.percentAvail}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="mt-3 hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-zinc-800 text-zinc-400">
@@ -429,7 +461,39 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               </div>
             </div>
 
-            <div className="mt-3 overflow-x-auto">
+            {/* Mobile Sensor Cards */}
+            <div className="mt-3 block md:hidden space-y-2">
+              {sensorTypeStats.map((item) => (
+                <div
+                  key={item.type}
+                  onClick={() => onNavigateToCategory(item.cat)}
+                  className="p-3 bg-zinc-950/70 border border-zinc-800 rounded-xl flex flex-col gap-2 active:border-zinc-700 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-zinc-100 text-sm">{item.type}</span>
+                    <span className="text-xs text-zinc-400 font-mono">{item.total} Total</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-emerald-400 font-medium">{item.available} Available</span>
+                    <span className="text-amber-400 font-medium">{item.checkedOut} Out</span>
+                    <span className="text-zinc-300 font-mono">{item.percentAvail}%</span>
+                  </div>
+                  <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden flex">
+                    <div
+                      className="bg-emerald-500 h-full"
+                      style={{ width: `${item.percentAvail}%` }}
+                    />
+                    <div
+                      className="bg-amber-500 h-full"
+                      style={{ width: `${100 - item.percentAvail}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Sensor Table */}
+            <div className="mt-3 hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-zinc-800 text-zinc-400">

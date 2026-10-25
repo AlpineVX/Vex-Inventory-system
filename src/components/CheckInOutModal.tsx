@@ -288,10 +288,13 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[94vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="bg-zinc-900 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[94vh] pb-[env(safe-area-inset-bottom,0px)]">
+        {/* Mobile grab handle */}
+        <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+
         {/* Modal Header */}
-        <div className="px-5 py-3.5 border-b border-zinc-800 flex items-center justify-between">
+        <div className="px-5 py-3 border-b border-zinc-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <h2 className="text-sm sm:text-base font-bold text-white">
               {action === 'Check Out' ? 'Hardware Check Out' : 'Hardware Check In'}
@@ -300,15 +303,15 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-zinc-400 hover:text-zinc-200 p-1 rounded-md transition-colors"
+            className="text-zinc-400 hover:text-zinc-200 p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Action Toggle Strip */}
-        <div className="p-5 pb-0">
-          <div className="grid grid-cols-2 gap-1 p-1 bg-zinc-950 rounded-lg border border-zinc-800">
+        <div className="p-4 sm:p-5 pb-0 shrink-0">
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-zinc-950 rounded-xl border border-zinc-800">
             <button
               type="button"
               onClick={() => setAction('Check Out')}
@@ -742,9 +745,9 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
           )}
 
           {/* Modal Footer */}
-          <div className="pt-2 flex items-center justify-between border-t border-zinc-800">
-            <div className="text-[11px] text-zinc-400 font-mono">
-              Ready: <span className="text-white font-semibold">{effectiveItemId}</span> &rarr;{' '}
+          <div className="pt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-zinc-800">
+            <div className="text-[11px] text-zinc-400 font-mono text-center sm:text-left">
+              Selected: <span className="text-white font-semibold">{effectiveItemId}</span> &rarr;{' '}
               <span className="text-white font-semibold">
                 Team {isCustomTeam ? customTeam || 'Custom' : team}
               </span>
@@ -754,14 +757,14 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-3.5 py-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 bg-zinc-950 hover:bg-zinc-800 rounded-lg border border-zinc-800 transition-colors"
+                className="flex-1 sm:flex-initial px-4 py-2.5 text-xs font-medium text-zinc-400 hover:text-zinc-200 bg-zinc-950 hover:bg-zinc-800 rounded-xl border border-zinc-800 transition-colors min-h-[44px] flex items-center justify-center"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`flex items-center gap-2 px-4 py-1.5 text-xs font-semibold text-white rounded-lg shadow-sm transition-all disabled:opacity-50 ${
+                className={`flex-[2] sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-white rounded-xl shadow-md transition-all disabled:opacity-50 min-h-[44px] active:scale-[0.98] ${
                   action === 'Check Out'
                     ? 'bg-amber-600 hover:bg-amber-500'
                     : 'bg-emerald-600 hover:bg-emerald-500'
@@ -769,11 +772,11 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Sending to Sheet...</span>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Recording Transaction...</span>
                   </>
                 ) : (
-                  <span>Send {action} to Sheet</span>
+                  <span>Record {action}</span>
                 )}
               </button>
             </div>

@@ -32,6 +32,9 @@ import {
   postInventoryAction,
 } from './services/sheetApi';
 import { Header } from './components/Header';
+import { MobileTopHeader } from './components/MobileTopHeader';
+import { MobileBottomNav } from './components/MobileBottomNav';
+import { ClubAssetsModal } from './components/ClubAssetsModal';
 import { CommandCenter } from './components/CommandCenter';
 import { InventoryBrowser } from './components/InventoryBrowser';
 import { TeamLookup } from './components/TeamLookup';
@@ -118,7 +121,46 @@ export default function App() {
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [isAdminUnlockModalOpen, setIsAdminUnlockModalOpen] = useState<boolean>(false);
+  const [isAssetsModalOpen, setIsAssetsModalOpen] = useState<boolean>(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Mobile viewport detection and manual layout mode switch
+  const [viewMode, setViewMode] = useState<'auto' | 'mobile' | 'desktop'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('vex_view_mode') as 'auto' | 'mobile' | 'desktop') || 'auto';
+    }
+    return 'auto';
+  });
+
+  const [isWindowMobile, setIsWindowMobile] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 768;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsWindowMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = viewMode === 'mobile' || (viewMode === 'auto' && isWindowMobile);
+
+  const handleToggleViewMode = () => {
+    const next = isMobile ? 'desktop' : 'mobile';
+    setViewMode(next);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('vex_view_mode', next);
+    }
+    addToast(
+      'info',
+      next === 'mobile' ? 'Switched to Dedicated Phone UI' : 'Switched to Desktop UI',
+      'You can switch layouts anytime using the top bar switcher icon or footer link.'
+    );
+  };
 
   // Toast Helper
   const addToast = useCallback((type: 'success' | 'error' | 'info', title: string, message?: string) => {
@@ -440,21 +482,37 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0b0d10] text-zinc-100 flex flex-col font-sans selection:bg-zinc-700 selection:text-zinc-100">
-      {/* Top Bar Contract Navigation */}
-      <Header
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        syncStatus={syncStatus}
-        adminSettings={adminSettings}
-        onOpenSettings={handleOpenSettingsProtected}
-        onOpenCheckout={() => handleOpenCheckoutModal()}
-        onSyncNow={() => handleLiveSync(syncStatus.url, true)}
-        onOpenAdminUnlock={handleOpenAdminUnlock}
-        onLockAdmin={handleLockAdmin}
-      />
+      {/* Top Header: Specialized Mobile Header or Desktop Header */}
+      {isMobile ? (
+        <MobileTopHeader
+          syncStatus={syncStatus}
+          adminSettings={adminSettings}
+          onOpenSettings={handleOpenSettingsProtected}
+          onSyncNow={() => handleLiveSync(syncStatus.url, true)}
+          onOpenAdminUnlock={handleOpenAdminUnlock}
+          onLockAdmin={handleLockAdmin}
+          isMobileModeForced={viewMode === 'mobile'}
+          onToggleViewMode={handleToggleViewMode}
+          onOpenAssetsModal={() => setIsAssetsModalOpen(true)}
+        />
+      ) : (
+        <Header
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          syncStatus={syncStatus}
+          adminSettings={adminSettings}
+          onOpenSettings={handleOpenSettingsProtected}
+          onOpenCheckout={() => handleOpenCheckoutModal()}
+          onSyncNow={() => handleLiveSync(syncStatus.url, true)}
+          onOpenAdminUnlock={handleOpenAdminUnlock}
+          onLockAdmin={handleLockAdmin}
+          onToggleViewMode={handleToggleViewMode}
+          onOpenAssetsModal={() => setIsAssetsModalOpen(true)}
+        />
+      )}
 
       {/* Main Container Viewport */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className={`flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 ${isMobile ? 'pb-24' : ''}`}>
         {activeTab === 'dashboard' && (
           <CommandCenter
             items={items}
@@ -477,6 +535,7 @@ export default function App() {
             onBatchAction={handleBatchInventoryAction}
             isAdmin={adminSettings.isUnlocked}
             onOpenAdminUnlock={handleOpenAdminUnlock}
+            isMobileMode={isMobile}
           />
         )}
 
@@ -500,17 +559,46 @@ export default function App() {
         {activeTab === 'logs' && <ActivityLogs logs={logs} />}
       </main>
 
-      <footer className="mt-auto border-t border-zinc-900 bg-zinc-950/80 py-4 text-xs text-zinc-500">
+      {/* Mobile Fixed Bottom Nav (Natural thumb zone) */}
+      {isMobile && (
+        <MobileBottomNav
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onOpenCheckout={() => handleOpenCheckoutModal()}
+          availableCount={items.filter((i) => i.status === 'Available').length}
+          totalCount={items.length}
+          adminSettings={adminSettings}
+          onOpenAdminUnlock={handleOpenAdminUnlock}
+          onOpenAssetsModal={() => setIsAssetsModalOpen(true)}
+        />
+      )}
+
+      {/* Footer */}
+      <footer className={`mt-auto border-t border-zinc-900 bg-zinc-950/80 py-4 text-xs text-zinc-500 ${isMobile ? 'pb-24' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
             <span>VEX Robotics Inventory Control</span>
             <span>·</span>
             <span>{items.length} Items System</span>
             <span>·</span>
             <span className="font-mono text-zinc-400">Club Teams (654K, 654J, 654A, 654B, 654G, 654T, 654V, 654Y, 654X, 654Z, RECF)</span>
           </div>
-          <div className="flex items-center gap-3 text-zinc-400 shrink-0">
+          <div className="flex items-center gap-3 text-zinc-400 shrink-0 flex-wrap justify-center">
             <span>Website made by <strong className="text-zinc-200 font-medium">Trishanth Yakkala</strong></span>
+            <span>·</span>
+            <button
+              onClick={() => setIsAssetsModalOpen(true)}
+              className="hover:text-zinc-200 transition-colors underline"
+            >
+              Logos &amp; QR Badges
+            </button>
+            <span>·</span>
+            <button
+              onClick={handleToggleViewMode}
+              className="hover:text-blue-300 transition-colors"
+            >
+              {isMobile ? 'Switch to Desktop UI' : 'Switch to Phone UI'}
+            </button>
             <span>·</span>
             <button
               onClick={handleOpenSettingsProtected}
@@ -522,7 +610,7 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Check In / Out Action Modal (For regular members & admins) */}
+      {/* Check In / Out Action Modal (Bottom sheet on mobile, modal on desktop) */}
       <CheckInOutModal
         isOpen={isCheckoutModalOpen}
         onClose={() => setIsCheckoutModalOpen(false)}
@@ -551,6 +639,12 @@ export default function App() {
         onClose={() => setIsAdminUnlockModalOpen(false)}
         adminSettings={adminSettings}
         onUnlockSuccess={handleUnlockAdminSuccess}
+      />
+
+      {/* Club Assets & QR Badges Download Modal */}
+      <ClubAssetsModal
+        isOpen={isAssetsModalOpen}
+        onClose={() => setIsAssetsModalOpen(false)}
       />
 
       {/* Toast Notification Container */}

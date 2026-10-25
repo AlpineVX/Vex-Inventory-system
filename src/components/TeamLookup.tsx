@@ -228,67 +228,128 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
             <p className="text-xs text-zinc-500 mt-1">Team {selectedTeam} has zero active checkouts.</p>
             <button
               onClick={() => onOpenCheckout(undefined, 'Check Out', selectedTeam)}
-              className="mt-3 px-3 py-1.5 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-md transition-colors"
+              className="mt-3 px-4 py-2.5 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-xl transition-colors min-h-[44px]"
             >
               Check Out Parts to {selectedTeam}
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-zinc-950/70 text-zinc-400 border-b border-zinc-800 select-none">
-                <tr>
-                  <th className="py-2.5 px-3 font-semibold">Item ID</th>
-                  <th className="py-2.5 px-3 font-semibold">Item Name</th>
-                  <th className="py-2.5 px-3 font-semibold">Category</th>
-                  <th className="py-2.5 px-3 font-semibold">Checkout Date</th>
-                  <th className="py-2.5 px-3 font-semibold">Notes / Robot Subsystem</th>
-                  <th className="py-2.5 px-3 text-right font-semibold">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/60 font-sans">
-                {teamItems.map((item) => (
-                  <tr key={item.itemId} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="py-2.5 px-3 font-mono font-medium text-zinc-200 whitespace-nowrap">
-                      {item.itemId}
-                    </td>
-                    <td className="py-2.5 px-3 font-medium text-zinc-100">
-                      {item.itemName}
-                    </td>
-                    <td className="py-2.5 px-3 text-zinc-400 whitespace-nowrap">
-                      {item.category}
-                    </td>
-                    <td className="py-2.5 px-3 text-zinc-400 font-mono tabular-nums whitespace-nowrap">
-                      {item.dateOut || '—'}
-                    </td>
-                    <td className="py-2.5 px-3 text-zinc-300 max-w-sm truncate">
-                      {item.notes || '—'}
-                    </td>
-                    <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                      {isAdmin ? (
-                        <button
-                          onClick={() => onReturnItem(item)}
-                          className="px-2.5 py-1 text-[11px] font-semibold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-800/60 rounded transition-colors active:scale-95"
-                          title="Admin Quick Return"
-                        >
-                          Check In (Return)
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => onOpenCheckout(item, 'Check In', selectedTeam)}
-                          className="px-2.5 py-1 text-[11px] font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded transition-colors active:scale-95 flex items-center gap-1.5 ml-auto"
-                          title="Check In this item to return it to inventory"
-                        >
-                          <span>Check In</span>
-                          <ArrowRight className="w-3 h-3 text-zinc-400" />
-                        </button>
-                      )}
-                    </td>
+          <>
+            {/* Mobile Touch Cards View (phones) */}
+            <div className="block md:hidden divide-y divide-zinc-800/80">
+              {teamItems.map((item) => (
+                <div key={item.itemId} className="p-4 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-bold text-zinc-100">
+                          {item.itemId}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-medium">
+                          {item.category}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-semibold text-zinc-200 mt-1">
+                        {item.itemName}
+                      </h4>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-zinc-400 space-y-1">
+                    {item.dateOut && (
+                      <div className="flex items-center gap-1.5 text-zinc-400">
+                        <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                        <span>Checked out: {item.dateOut}</span>
+                      </div>
+                    )}
+                    {item.notes && (
+                      <div className="text-zinc-300 bg-zinc-950/60 p-2 rounded-lg border border-zinc-800/60">
+                        <span className="text-zinc-500">Subsystem: </span>
+                        {item.notes}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-1">
+                    {isAdmin ? (
+                      <button
+                        onClick={() => onReturnItem(item)}
+                        className="w-full py-2.5 px-3 text-xs font-semibold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-800/60 rounded-xl transition-colors min-h-[44px] flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        <span>Check In (Admin Return)</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onOpenCheckout(item, 'Check In', selectedTeam)}
+                        className="w-full py-2.5 px-3 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-xl transition-colors min-h-[44px] flex items-center justify-center gap-1.5 active:scale-[0.98] shadow-sm"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        <span>Check In this Item</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-zinc-950/70 text-zinc-400 border-b border-zinc-800 select-none">
+                  <tr>
+                    <th className="py-2.5 px-3 font-semibold">Item ID</th>
+                    <th className="py-2.5 px-3 font-semibold">Item Name</th>
+                    <th className="py-2.5 px-3 font-semibold">Category</th>
+                    <th className="py-2.5 px-3 font-semibold">Checkout Date</th>
+                    <th className="py-2.5 px-3 font-semibold">Notes / Robot Subsystem</th>
+                    <th className="py-2.5 px-3 text-right font-semibold">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/60 font-sans">
+                  {teamItems.map((item) => (
+                    <tr key={item.itemId} className="hover:bg-zinc-800/30 transition-colors">
+                      <td className="py-2.5 px-3 font-mono font-medium text-zinc-200 whitespace-nowrap">
+                        {item.itemId}
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-zinc-100">
+                        {item.itemName}
+                      </td>
+                      <td className="py-2.5 px-3 text-zinc-400 whitespace-nowrap">
+                        {item.category}
+                      </td>
+                      <td className="py-2.5 px-3 text-zinc-400 font-mono tabular-nums whitespace-nowrap">
+                        {item.dateOut || '—'}
+                      </td>
+                      <td className="py-2.5 px-3 text-zinc-300 max-w-sm truncate">
+                        {item.notes || '—'}
+                      </td>
+                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                        {isAdmin ? (
+                          <button
+                            onClick={() => onReturnItem(item)}
+                            className="px-2.5 py-1 text-[11px] font-semibold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-800/60 rounded transition-colors active:scale-95"
+                            title="Admin Quick Return"
+                          >
+                            Check In (Return)
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onOpenCheckout(item, 'Check In', selectedTeam)}
+                            className="px-2.5 py-1 text-[11px] font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded transition-colors active:scale-95 flex items-center gap-1.5 ml-auto"
+                            title="Check In this item to return it to inventory"
+                          >
+                            <span>Check In</span>
+                            <ArrowRight className="w-3 h-3 text-zinc-400" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>
