@@ -620,12 +620,9 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                         )}
                       </td>
 
-                      {/* Category Badge */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono border border-zinc-800 bg-zinc-900/90 text-zinc-300">
-                          <span className="w-1.5 h-1.5 rounded-sm bg-zinc-500" />
-                          {item.category}
-                        </span>
+                      {/* Category - Clean unboxed text */}
+                      <td className="py-2.5 px-3 text-zinc-300 text-xs whitespace-nowrap">
+                        {item.category}
                       </td>
 
                       {/* Status - Clean unboxed text with semantic indicator (Zero-pill discipline) */}

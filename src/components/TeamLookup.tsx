@@ -245,8 +245,8 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
                         <span className="font-mono text-sm font-bold text-zinc-100">
                           {item.itemId}
                         </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-medium">
-                          {item.category}
+                        <span className="text-[11px] text-zinc-400 font-mono">
+                          · {item.category}
                         </span>
                       </div>
                       <h4 className="text-sm font-semibold text-zinc-200 mt-1">

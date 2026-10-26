@@ -198,11 +198,12 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         {/* Member Checkout Station / Kiosk Callout */}
         <div className="mt-4 p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-xs">
               <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-300 font-mono">
                 Borrower Station
               </span>
-              <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-mono">
+              <span className="text-zinc-500">·</span>
+              <span className="text-zinc-400 font-mono text-[11px]">
                 {isAdmin ? 'Admin Privileges Active' : 'Member Self-Service Kiosk'}
               </span>
             </div>
@@ -644,8 +645,9 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-200">
               Activity &amp; Checkouts Feed
             </h2>
-            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider px-1.5 py-0.5 rounded bg-zinc-800/80 border border-zinc-700/60">
-              Live Log
+            <span className="text-zinc-500">·</span>
+            <span className="text-[11px] font-mono text-zinc-400">
+              Live Feed
             </span>
           </div>
           <button

@@ -216,27 +216,27 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
                     : 'border-zinc-800 hover:border-zinc-700'
                 }`}
               >
-                {/* Header row: ID + Status Badge */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                {/* Header row: Item ID + Status */}
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="flex items-baseline gap-2">
                     <span className="font-mono text-sm font-bold text-zinc-100 tracking-tight">
                       {item.itemId}
                     </span>
-                    <span className="text-[10px] font-medium px-2 py-0.5 bg-zinc-800 text-zinc-300 rounded-md">
-                      {item.category}
+                    <span className="text-xs text-zinc-400 font-mono">
+                      · {item.category}
                     </span>
                   </div>
 
-                  <div>
+                  <div className="flex items-center gap-1.5 text-xs font-semibold">
                     {isAvailable ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold rounded-full">
+                      <span className="text-emerald-400 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                         Available
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold rounded-full">
-                        <Clock className="w-3 h-3 text-blue-400" />
-                        {item.currentUser || 'Out'}
+                      <span className="text-amber-400 flex items-center gap-1 font-mono">
+                        <Clock className="w-3.5 h-3.5" />
+                        {item.currentUser ? `Team ${item.currentUser}` : 'Checked Out'}
                       </span>
                     )}
                   </div>

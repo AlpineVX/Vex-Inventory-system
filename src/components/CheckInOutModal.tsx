@@ -9,7 +9,6 @@ import {
   Loader2,
   Wrench,
   Hash,
-  Sparkles,
 } from 'lucide-react';
 import {
   InventoryItem,

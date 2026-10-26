@@ -58,11 +58,11 @@ export const Header: React.FC<HeaderProps> = ({
                   className="w-full h-full object-contain select-none"
                 />
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-baseline gap-1.5">
                 <span className="text-sm font-semibold tracking-tight text-zinc-100 group-hover:text-white transition-colors">
                   VEX Inventory
                 </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
+                <span className="text-xs font-mono text-zinc-500">
                   654
                 </span>
               </div>
