@@ -435,14 +435,19 @@ export async function postInventoryAction(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 18000);
 
-    const normalizedId = normalizeItemId(payload.itemId);
+    const normalizedId = normalizeItemId(payload.itemId, payload.category);
+    const numDigits = normalizedId.match(/\d+/)?.[0] || '';
+    const numericNumber = numDigits ? parseInt(numDigits, 10) : '';
+    const determinedCategory = payload.category || classifyVexCategory(undefined, undefined, normalizedId);
+
     const enhancedPayload = {
       ...payload,
       itemId: normalizedId,
       userEmail: payload.email,
       currentUser: payload.action === 'Check Out' ? payload.team : '',
-      sensorType: payload.category || '',
-      number: normalizedId.match(/\d+$/)?.[0] || '',
+      category: determinedCategory,
+      sensorType: determinedCategory,
+      number: numericNumber,
     };
 
     const proxyRes = await fetch('/api/action', {
@@ -464,6 +469,10 @@ export async function postInventoryAction(
       throw new Error(json.error || `Proxy error (HTTP ${proxyRes.status})`);
     }
 
+    if (json && (json.status === 'error' || json.error)) {
+      throw new Error(json.message || json.error || 'Google Apps Script reported an error');
+    }
+
     return json;
   } catch (proxyErr: any) {
     if (proxyErr.message && !proxyErr.message.includes('Failed to fetch')) {
@@ -476,9 +485,24 @@ export async function postInventoryAction(
   const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
+    const normalizedId = normalizeItemId(payload.itemId, payload.category);
+    const numDigits = normalizedId.match(/\d+/)?.[0] || '';
+    const numericNumber = numDigits ? parseInt(numDigits, 10) : '';
+    const determinedCategory = payload.category || classifyVexCategory(undefined, undefined, normalizedId);
+
+    const enhancedPayload = {
+      ...payload,
+      itemId: normalizedId,
+      userEmail: payload.email,
+      currentUser: payload.action === 'Check Out' ? payload.team : '',
+      category: determinedCategory,
+      sensorType: determinedCategory,
+      number: numericNumber,
+    };
+
     const res = await fetch(apiUrl, {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(enhancedPayload),
       headers: {
         'Content-Type': 'text/plain;charset=utf-8',
       },
@@ -494,8 +518,15 @@ export async function postInventoryAction(
 
     const text = await res.text();
     try {
-      return JSON.parse(text);
-    } catch {
+      const parsed = JSON.parse(text);
+      if (parsed && (parsed.status === 'error' || parsed.error)) {
+        throw new Error(parsed.message || parsed.error || 'Google Apps Script returned an error');
+      }
+      return parsed;
+    } catch (parseErr: any) {
+      if (parseErr.message && !parseErr.message.includes('JSON')) {
+        throw parseErr;
+      }
       return { status: 'success', message: 'Action saved' };
     }
   } catch (err: any) {
@@ -626,9 +657,16 @@ function doPost(e) {
     var itemId = String(requestData.itemId || "").trim();
     var team = String(requestData.team || "").trim();
     var notes = String(requestData.notes || "").trim();
-    var userEmail = String(requestData.email || requestData.userEmail || "").trim();
-    var category = String(requestData.category || requestData.sensorType || "").trim();
-    var number = requestData.number || itemId.replace(/^\\D+/g, "") || "";
+    var rawNum = requestData.number;
+    var number = "";
+    if (typeof rawNum === "number") {
+      number = rawNum;
+    } else if (typeof rawNum === "string" && /^\d+$/.test(rawNum.trim())) {
+      number = parseInt(rawNum.trim(), 10);
+    } else {
+      var digits = itemId.replace(/\D+/g, "");
+      number = digits ? parseInt(digits, 10) : "";
+    }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     

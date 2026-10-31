@@ -71,29 +71,35 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
     <div className="space-y-6">
       {/* Top Header */}
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-zinc-800">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-mono text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-none uppercase">
+                [TEAM_ALLOCATIONS]
+              </span>
+              <span className="text-xs font-mono text-slate-500">654-TEAMS</span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-sans">
               Team Hardware Lookup
             </h1>
-            <p className="text-xs text-zinc-400 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Audit active equipment allocations, drive-bases, and sensor packages across robotics teams
             </p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => onOpenCheckout(undefined, 'Check Out', selectedTeam)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-md transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-sm transition-colors shadow-none font-mono"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Check Out to {selectedTeam}</span>
+              <span>[CHECK_OUT] Team {selectedTeam}</span>
             </button>
           </div>
         </div>
 
         {/* Team Selector Row */}
         <div className="flex flex-wrap items-center gap-2 mt-4">
-          <div className="flex flex-wrap items-center gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-lg">
+          <div className="flex flex-wrap items-center gap-1 p-1 bg-white border border-slate-200 rounded-sm">
             {allTeamsInSystem.map((team) => {
               const isSelected = selectedTeam === team;
               const count = items.filter((i) => i.status === 'Checked Out' && i.currentUser === team).length;
@@ -101,20 +107,20 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
                 <button
                   key={team}
                   onClick={() => onSelectTeam(team)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-sm transition-all font-mono ${
                     isSelected
-                      ? 'bg-zinc-100 text-zinc-950 font-bold shadow-sm'
-                      : 'text-zinc-400 hover:text-zinc-200'
+                      ? 'bg-slate-900 text-white font-bold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
                   <Users className="w-3.5 h-3.5" />
                   <span>Team {team}</span>
                   <span
-                    className={`font-mono text-[11px] tabular-nums ${
-                      isSelected ? 'text-zinc-700' : 'text-zinc-500'
+                    className={`text-[11px] tabular-nums font-mono ${
+                      isSelected ? 'text-amber-400 font-bold' : 'text-slate-400'
                     }`}
                   >
-                    ({count})
+                    [{count}]
                   </span>
                 </button>
               );
@@ -128,12 +134,12 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
               value={customTeamInput}
               onChange={(e) => setCustomTeamInput(e.target.value)}
               placeholder="Other Team (e.g. 654X)"
-              className="w-36 px-2.5 py-1.5 text-xs bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400"
+              className="w-40 px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-600 font-mono"
             />
             <button
               type="submit"
               disabled={!customTeamInput.trim()}
-              className="px-2.5 py-1.5 text-xs font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 rounded-lg transition-colors"
+              className="px-3 py-1.5 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 disabled:opacity-40 rounded-sm transition-colors font-mono"
             >
               Lookup
             </button>
@@ -143,27 +149,32 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
 
       {/* Selected Team Summary Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
-          <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">Total Checked Out</span>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl font-bold font-mono tabular-nums text-white">{teamItems.length}</span>
-            <span className="text-xs text-zinc-400">components</span>
+        <div className="p-4 rounded-sm bg-white border border-slate-200">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold font-mono uppercase tracking-wider text-slate-500">[TOTAL_DEPLOYED]</span>
+            <span className="font-mono text-[10px] text-amber-700 font-semibold bg-amber-50 px-1.5 py-0.5 border border-amber-200">
+              TEAM {selectedTeam}
+            </span>
           </div>
-          <div className="mt-1 text-xs text-zinc-400">
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-3xl font-bold font-mono tabular-nums text-slate-900">{teamItems.length}</span>
+            <span className="text-xs text-slate-500 font-mono">components</span>
+          </div>
+          <div className="mt-1 text-xs text-slate-500">
             Currently mounted or in pit possession
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
-          <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">Primary Subsystems</span>
-          <div className="mt-2 text-xs text-zinc-300 space-y-1">
+        <div className="p-4 rounded-sm bg-white border border-slate-200">
+          <span className="text-[10px] font-bold font-mono uppercase tracking-wider text-slate-500">[SUBSYSTEM_ALLOCATION]</span>
+          <div className="mt-2 text-xs text-slate-700 space-y-1">
             {Object.keys(categoryBreakdown).length === 0 ? (
-              <span className="text-zinc-500">No components checked out</span>
+              <span className="text-slate-400 font-mono">No active hardware registered</span>
             ) : (
               Object.entries(categoryBreakdown).map(([cat, cnt]) => (
-                <div key={cat} className="flex items-center justify-between">
-                  <span className="text-zinc-300">{cat}</span>
-                  <span className="font-mono text-zinc-400 tabular-nums">{cnt} pcs</span>
+                <div key={cat} className="flex items-center justify-between font-mono">
+                  <span className="text-slate-700">{cat}</span>
+                  <span className="text-slate-900 font-bold tabular-nums">[{cnt} pcs]</span>
                 </div>
               ))
             )}
@@ -171,39 +182,41 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
         </div>
 
         {isAdmin ? (
-          <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex flex-col justify-between">
+          <div className="p-4 rounded-sm bg-white border border-slate-200 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">Batch Team Actions</span>
-                <span className="text-[10px] font-mono font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">Admin</span>
+                <span className="text-[10px] font-bold font-mono uppercase tracking-wider text-slate-500">[BATCH_TEAM_ACTION]</span>
+                <span className="text-[10px] font-mono font-bold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded-none">
+                  ADMIN ONLY
+                </span>
               </div>
-              <p className="text-xs text-zinc-400 mt-1">Check in all parts after tournament or season rebuild</p>
+              <p className="text-xs text-slate-500 mt-1">Check in all parts after tournament or season rebuild</p>
             </div>
             <button
               onClick={() => onReturnAllForTeam(selectedTeam, teamItems)}
               disabled={teamItems.length === 0}
-              className="mt-3 w-full py-2 px-3 text-xs font-semibold text-emerald-300 bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-800/60 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+              className="mt-3 w-full py-2 px-3 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 font-mono"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Return All {teamItems.length} Items for Team {selectedTeam}</span>
+              <span>RETURN ALL ({teamItems.length}) ITEMS</span>
             </button>
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex flex-col justify-between">
+          <div className="p-4 rounded-sm bg-white border border-slate-200 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">Hardware Allocation</span>
-                <span className="text-[11px] text-zinc-400 font-mono">Team {selectedTeam}</span>
+                <span className="text-[10px] font-bold font-mono uppercase tracking-wider text-slate-500">[HARDWARE_ALLOCATION]</span>
+                <span className="text-[11px] text-slate-700 font-mono font-bold">Team {selectedTeam}</span>
               </div>
-              <p className="text-xs text-zinc-400 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 {teamItems.length > 0
-                  ? `${teamItems.length} component(s) deployed to Team ${selectedTeam}. To check out parts to this team, use the checkout workflow.`
+                  ? `${teamItems.length} component(s) deployed to Team ${selectedTeam}. Use checkout workflow to add items.`
                   : `Team ${selectedTeam} currently has zero components checked out.`}
               </p>
             </div>
             <button
               onClick={() => onOpenCheckout(undefined, 'Check Out', selectedTeam)}
-              className="mt-3 w-full py-2 px-3 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+              className="mt-3 w-full py-2 px-3 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-sm transition-colors flex items-center justify-center gap-1.5 shadow-none font-mono"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Check Out to {selectedTeam}</span>
@@ -213,58 +226,60 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
       </div>
 
       {/* Team Item Table */}
-      <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 overflow-hidden shadow-sm">
-        <div className="px-4 py-3 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between">
+      <div className="rounded-sm border border-slate-200 bg-white overflow-hidden shadow-none">
+        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-white">Active Components for Team {selectedTeam}</span>
-            <span className="text-xs text-zinc-400">· {teamItems.length} items</span>
+            <span className="text-xs font-bold font-mono uppercase text-slate-800 tracking-wider">
+              [HARDWARE_DEPLOYED] Team {selectedTeam}
+            </span>
+            <span className="text-xs font-mono text-slate-500">· {teamItems.length} active units</span>
           </div>
         </div>
 
         {teamItems.length === 0 ? (
-          <div className="py-12 text-center text-zinc-500">
-            <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500/80 mb-2" />
-            <p className="text-sm font-medium text-zinc-300">All equipment returned</p>
-            <p className="text-xs text-zinc-500 mt-1">Team {selectedTeam} has zero active checkouts.</p>
+          <div className="py-12 text-center text-slate-500">
+            <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-600 mb-2" />
+            <p className="text-sm font-semibold text-slate-800">All equipment returned</p>
+            <p className="text-xs text-slate-500 mt-1">Team {selectedTeam} has zero active checkouts.</p>
             <button
               onClick={() => onOpenCheckout(undefined, 'Check Out', selectedTeam)}
-              className="mt-3 px-4 py-2.5 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-xl transition-colors min-h-[44px]"
+              className="mt-3 px-4 py-2 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-sm transition-colors font-mono"
             >
-              Check Out Parts to {selectedTeam}
+              [CHECK_OUT_PARTS] to {selectedTeam}
             </button>
           </div>
         ) : (
           <>
             {/* Mobile Touch Cards View (phones) */}
-            <div className="block md:hidden divide-y divide-zinc-800/80">
+            <div className="block md:hidden divide-y divide-slate-200">
               {teamItems.map((item) => (
                 <div key={item.itemId} className="p-4 space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-zinc-100">
+                        <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 border border-slate-200">
                           {item.itemId}
                         </span>
-                        <span className="text-[11px] text-zinc-400 font-mono">
+                        <span className="text-[11px] text-slate-500 font-mono">
                           · {item.category}
                         </span>
                       </div>
-                      <h4 className="text-sm font-semibold text-zinc-200 mt-1">
+                      <h4 className="text-sm font-bold text-slate-900 mt-1">
                         {item.itemName}
                       </h4>
                     </div>
                   </div>
 
-                  <div className="text-xs text-zinc-400 space-y-1">
+                  <div className="text-xs text-slate-600 space-y-1">
                     {item.dateOut && (
-                      <div className="flex items-center gap-1.5 text-zinc-400">
-                        <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                        <span>Checked out: {item.dateOut}</span>
+                      <div className="flex items-center gap-1.5 font-mono text-slate-500">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <span>OUT: {item.dateOut}</span>
                       </div>
                     )}
                     {item.notes && (
-                      <div className="text-zinc-300 bg-zinc-950/60 p-2 rounded-lg border border-zinc-800/60">
-                        <span className="text-zinc-500">Subsystem: </span>
+                      <div className="text-slate-700 bg-slate-50 p-2 rounded-none border border-slate-200 font-mono text-[11px]">
+                        <span className="text-slate-400 uppercase">Subsystem: </span>
                         {item.notes}
                       </div>
                     )}
@@ -274,18 +289,18 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
                     {isAdmin ? (
                       <button
                         onClick={() => onReturnItem(item)}
-                        className="w-full py-2.5 px-3 text-xs font-semibold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-800/60 rounded-xl transition-colors min-h-[44px] flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                        className="w-full py-2 px-3 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-sm transition-colors flex items-center justify-center gap-1.5 font-mono"
                       >
                         <RotateCcw className="w-4 h-4" />
-                        <span>Check In (Admin Return)</span>
+                        <span>[ADMIN_CHECK_IN]</span>
                       </button>
                     ) : (
                       <button
                         onClick={() => onOpenCheckout(item, 'Check In', selectedTeam)}
-                        className="w-full py-2.5 px-3 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-xl transition-colors min-h-[44px] flex items-center justify-center gap-1.5 active:scale-[0.98] shadow-sm"
+                        className="w-full py-2 px-3 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-sm transition-colors flex items-center justify-center gap-1.5 font-mono"
                       >
                         <RotateCcw className="w-4 h-4" />
-                        <span>Check In this Item</span>
+                        <span>[CHECK_IN_ITEM]</span>
                       </button>
                     )}
                   </div>
@@ -296,51 +311,53 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-950/70 text-zinc-400 border-b border-zinc-800 select-none">
+                <thead className="bg-slate-100 text-slate-700 border-b border-slate-200 select-none font-mono">
                   <tr>
-                    <th className="py-2.5 px-3 font-semibold">Item ID</th>
-                    <th className="py-2.5 px-3 font-semibold">Item Name</th>
-                    <th className="py-2.5 px-3 font-semibold">Category</th>
-                    <th className="py-2.5 px-3 font-semibold">Checkout Date</th>
-                    <th className="py-2.5 px-3 font-semibold">Notes / Robot Subsystem</th>
-                    <th className="py-2.5 px-3 text-right font-semibold">Action</th>
+                    <th className="py-2.5 px-3 font-bold">[PART_ID]</th>
+                    <th className="py-2.5 px-3 font-bold">[ITEM_NAME]</th>
+                    <th className="py-2.5 px-3 font-bold">[CATEGORY]</th>
+                    <th className="py-2.5 px-3 font-bold">[DATE_OUT]</th>
+                    <th className="py-2.5 px-3 font-bold">[NOTES_/_SUBSYSTEM]</th>
+                    <th className="py-2.5 px-3 text-right font-bold">[ACTION]</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-800/60 font-sans">
+                <tbody className="divide-y divide-slate-200 font-sans">
                   {teamItems.map((item) => (
-                    <tr key={item.itemId} className="hover:bg-zinc-800/30 transition-colors">
-                      <td className="py-2.5 px-3 font-mono font-medium text-zinc-200 whitespace-nowrap">
-                        {item.itemId}
+                    <tr key={item.itemId} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-2 px-3 font-mono font-bold text-slate-900 whitespace-nowrap">
+                        <span className="bg-slate-100 px-1.5 py-0.5 border border-slate-200">
+                          {item.itemId}
+                        </span>
                       </td>
-                      <td className="py-2.5 px-3 font-medium text-zinc-100">
+                      <td className="py-2 px-3 font-semibold text-slate-900">
                         {item.itemName}
                       </td>
-                      <td className="py-2.5 px-3 text-zinc-400 whitespace-nowrap">
+                      <td className="py-2 px-3 text-slate-600 whitespace-nowrap font-mono text-[11px]">
                         {item.category}
                       </td>
-                      <td className="py-2.5 px-3 text-zinc-400 font-mono tabular-nums whitespace-nowrap">
+                      <td className="py-2 px-3 text-slate-600 font-mono tabular-nums whitespace-nowrap">
                         {item.dateOut || '—'}
                       </td>
-                      <td className="py-2.5 px-3 text-zinc-300 max-w-sm truncate">
+                      <td className="py-2 px-3 text-slate-700 font-mono text-[11px] max-w-sm truncate">
                         {item.notes || '—'}
                       </td>
-                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                      <td className="py-2 px-3 text-right whitespace-nowrap">
                         {isAdmin ? (
                           <button
                             onClick={() => onReturnItem(item)}
-                            className="px-2.5 py-1 text-[11px] font-semibold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-800/60 rounded transition-colors active:scale-95"
+                            className="px-2 py-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-sm transition-colors font-mono"
                             title="Admin Quick Return"
                           >
-                            Check In (Return)
+                            [RETURN]
                           </button>
                         ) : (
                           <button
                             onClick={() => onOpenCheckout(item, 'Check In', selectedTeam)}
-                            className="px-2.5 py-1 text-[11px] font-semibold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded transition-colors active:scale-95 flex items-center gap-1.5 ml-auto"
+                            className="px-2.5 py-1 text-[11px] font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-sm transition-colors flex items-center gap-1.5 ml-auto font-mono"
                             title="Check In this item to return it to inventory"
                           >
                             <span>Check In</span>
-                            <ArrowRight className="w-3 h-3 text-zinc-400" />
+                            <ArrowRight className="w-3 h-3 text-slate-500" />
                           </button>
                         )}
                       </td>

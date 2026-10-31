@@ -15,6 +15,7 @@ import {
   DEFAULT_ADMIN_PIN,
   getCategoryDefaultLocation,
   normalizeItemId,
+  classifyVexCategory,
 } from './types';
 import {
   generateDefaultInventory,
@@ -325,28 +326,30 @@ export default function App() {
     category?: string;
   }) => {
     const isOut = payload.action === 'Check Out';
-    const normalizedId = normalizeItemId(payload.itemId);
+    const normalizedId = normalizeItemId(payload.itemId, payload.category);
     const targetClean = normalizedId.toUpperCase();
     const targetCleanNoDash = targetClean.replace(/[-\s]/g, '');
 
     // Find matched item for log description only - DO NOT mutate inventory items directly
     const matchedItem = items.find((i) => {
-      const curClean = normalizeItemId(i.itemId).toUpperCase();
+      const curClean = normalizeItemId(i.itemId, i.category).toUpperCase();
       const curNoDash = curClean.replace(/[-\s]/g, '');
       return curClean === targetClean || curNoDash === targetCleanNoDash;
     });
+
+    const determinedCategory = matchedItem?.category || payload.category || classifyVexCategory(undefined, undefined, normalizedId);
 
     // 1. Add entry strictly to audit logs (LOGS sheet source of truth)
     const newLog: AuditLog = {
       id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       timestamp: new Date().toISOString(),
       itemId: normalizedId,
-      itemName: matchedItem?.itemName || `${payload.category || 'Component'} #${normalizedId}`,
+      itemName: matchedItem?.itemName || `VEX ${determinedCategory} #${normalizedId}`,
       action: payload.action,
       team: payload.team,
       notes: payload.notes || (isOut ? 'Checked out' : 'Returned'),
       userEmail: payload.email,
-      category: matchedItem?.category || payload.category,
+      category: determinedCategory,
     };
     const updatedLogs = [newLog, ...logs];
     setLogs(updatedLogs);
@@ -355,7 +358,11 @@ export default function App() {
     // 2. Post record to Google Apps Script (appends ONLY to LOGS sheet)
     if (syncStatus.url) {
       try {
-        await postInventoryAction(syncStatus.url, payload);
+        await postInventoryAction(syncStatus.url, {
+          ...payload,
+          itemId: normalizedId,
+          category: determinedCategory,
+        });
         addToast(
           'success',
           'Logged to LOGS Sheet',

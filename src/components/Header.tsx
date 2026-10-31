@@ -38,9 +38,9 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80">
+    <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between gap-4 h-15">
+        <div className="flex items-center justify-between gap-4 h-14">
           {/* Brand Wordmark & Club Emblem */}
           <div className="flex items-center gap-2.5 shrink-0">
             <a
@@ -51,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
               className="flex items-center gap-2.5 group"
             >
-              <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center p-1 overflow-hidden shrink-0 group-hover:border-zinc-700 transition-colors">
+              <div className="w-8 h-8 rounded-sm bg-slate-50 border border-slate-200 flex items-center justify-center p-1 overflow-hidden shrink-0 group-hover:border-slate-300 transition-colors">
                 <img
                   src="/assets/aistudio/lt_logo_transparent.png"
                   alt="Lake Travis Robotics Logo"
@@ -59,28 +59,28 @@ export const Header: React.FC<HeaderProps> = ({
                 />
               </div>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-sm font-semibold tracking-tight text-zinc-100 group-hover:text-white transition-colors">
-                  VEX Inventory
+                <span className="text-sm font-bold tracking-tight text-slate-900 group-hover:text-amber-700 transition-colors">
+                  VEX Robotics
                 </span>
-                <span className="text-xs font-mono text-zinc-500">
-                  654
+                <span className="text-xs font-mono font-medium text-slate-500">
+                  [654_INV]
                 </span>
               </div>
             </a>
           </div>
 
           {/* Compact Segmented Navigation Tabs */}
-          <nav className="hidden md:flex items-center bg-zinc-900/80 border border-zinc-800/80 rounded-lg p-1 text-xs font-medium">
+          <nav className="hidden md:flex items-center bg-slate-100 border border-slate-200 rounded-sm p-0.5 text-xs font-medium">
             {navTabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => onTabChange(tab.id)}
-                  className={`px-3 py-1.5 rounded-md transition-all whitespace-nowrap text-xs font-medium ${
+                  className={`px-3 py-1.5 rounded-sm transition-all whitespace-nowrap text-xs font-medium ${
                     isActive
-                      ? 'bg-zinc-800 text-white shadow-sm'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                      ? 'bg-white text-slate-900 font-semibold border border-slate-200/90 shadow-none'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
                   {tab.label}
@@ -97,27 +97,27 @@ export const Header: React.FC<HeaderProps> = ({
               disabled={syncStatus.isSyncing}
               title={syncStatus.url ? `Sync with Google Sheet (${syncStatus.url})` : 'Sync local data'}
               aria-label="Sync with Google Sheet"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-md transition-colors disabled:opacity-50 whitespace-nowrap shrink-0"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-sm transition-colors disabled:opacity-50 whitespace-nowrap shrink-0"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${syncStatus.isSyncing ? 'animate-spin text-zinc-200' : 'text-zinc-400'}`} />
-              <span className={`w-1.5 h-1.5 rounded-full ${syncStatus.url ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              <span className="hidden xl:inline text-zinc-400 text-[11px]">
-                {syncStatus.isSyncing ? 'Syncing...' : syncStatus.url ? 'Live' : 'Local'}
+              <RefreshCw className={`w-3.5 h-3.5 ${syncStatus.isSyncing ? 'animate-spin text-amber-600' : 'text-slate-500'}`} />
+              <span className={`w-1.5 h-1.5 rounded-none ${syncStatus.url ? 'bg-emerald-600' : 'bg-amber-500'}`} />
+              <span className="hidden xl:inline text-[11px] text-slate-600">
+                {syncStatus.isSyncing ? 'SYNCING' : syncStatus.url ? 'LIVE' : 'LOCAL'}
               </span>
             </button>
 
             {/* Admin Status / Quick Auth Toggle */}
             {adminSettings.isUnlocked ? (
-              <div className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 px-2 py-1.5 rounded-md text-xs text-amber-300 font-medium">
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-[11px]">Admin</span>
+              <div className="flex items-center gap-1 bg-amber-50 border border-amber-300 px-2 py-1 rounded-sm text-xs text-amber-800 font-mono font-medium">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                <span className="text-[11px]">ADMIN</span>
                 <button
                   onClick={onLockAdmin}
                   title="Lock Admin Mode (Return to Regular Member Mode)"
                   aria-label="Lock Admin Mode"
-                  className="ml-0.5 p-0.5 hover:text-white rounded hover:bg-amber-500/20 transition-colors"
+                  className="ml-0.5 p-0.5 hover:text-amber-950 rounded hover:bg-amber-100 transition-colors"
                 >
-                  <Lock className="w-3 h-3 text-amber-400/80 hover:text-amber-200" />
+                  <Lock className="w-3 h-3 text-amber-700" />
                 </button>
               </div>
             ) : (
@@ -125,22 +125,22 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={onOpenAdminUnlock}
                 title="Admin Authentication (Coaches / Leads)"
                 aria-label="Admin Authentication"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-md transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded-sm transition-colors"
               >
-                <Lock className="w-3.5 h-3.5 text-zinc-400" />
-                <span className="hidden lg:inline text-[11px]">Admin</span>
+                <Lock className="w-3.5 h-3.5 text-slate-400" />
+                <span className="hidden lg:inline text-[11px]">ADMIN</span>
               </button>
             )}
 
             {/* Consolidated Utility Tools: Logos/QR, Phone Preview, Settings */}
-            <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-md p-0.5">
+            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-sm p-0.5">
               {/* Club Assets / Logos Download */}
               {onOpenAssetsModal && (
                 <button
                   onClick={onOpenAssetsModal}
                   title="Download Club Logos & Custom QR Badges"
                   aria-label="Download Club Logos and QR Badges"
-                  className="p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded transition-colors"
+                  className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-white rounded-sm transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" />
                 </button>
@@ -152,7 +152,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={onToggleViewMode}
                   title="Preview / Switch to Phone View"
                   aria-label="Switch to Phone View"
-                  className="p-1.5 text-zinc-400 hover:text-blue-300 hover:bg-zinc-800 rounded transition-colors"
+                  className="p-1.5 text-slate-600 hover:text-amber-700 hover:bg-white rounded-sm transition-colors"
                 >
                   <Smartphone className="w-3.5 h-3.5" />
                 </button>
@@ -163,36 +163,36 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={onOpenSettings}
                 title={adminSettings.isUnlocked ? 'Google Sheet API & System Settings' : 'Settings (Admin Authentication Required)'}
                 aria-label="Google Sheet & System Settings"
-                className="p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded transition-colors relative"
+                className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-white rounded-sm transition-colors relative"
               >
                 <Settings className="w-3.5 h-3.5" />
                 {syncStatus.url ? (
-                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full ring-1 ring-zinc-900" />
+                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-emerald-600 rounded-none ring-1 ring-white" />
                 ) : (
-                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-amber-500 rounded-full ring-1 ring-zinc-900" />
+                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-amber-500 rounded-none ring-1 ring-white" />
                 )}
               </button>
             </div>
 
-            {/* Primary Action Button: Check In / Out */}
+            {/* Primary Action Button: Check In / Out (VEX Amber) */}
             <button
               onClick={onOpenCheckout}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-md transition-all shadow-sm whitespace-nowrap shrink-0 active:scale-[0.98]"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-sm transition-all whitespace-nowrap shrink-0 active:translate-y-px"
             >
-              <Plus className="w-3.5 h-3.5 text-zinc-950 stroke-[2.5]" />
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Check In / Out</span>
             </button>
           </div>
         </div>
 
         {/* Mobile Navigation Bar */}
-        <div className="flex md:hidden items-center justify-between border-t border-zinc-900 py-2 overflow-x-auto gap-1">
+        <div className="flex md:hidden items-center justify-between border-t border-slate-200 py-1.5 overflow-x-auto gap-1">
           {navTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`px-2.5 py-1 text-xs rounded whitespace-nowrap transition-colors ${
-                activeTab === tab.id ? 'bg-zinc-800 text-zinc-100 font-medium' : 'text-zinc-400'
+              className={`px-2.5 py-1 text-xs rounded-sm whitespace-nowrap transition-colors ${
+                activeTab === tab.id ? 'bg-slate-900 text-white font-medium' : 'text-slate-600'
               }`}
             >
               {tab.label}

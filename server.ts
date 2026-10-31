@@ -131,11 +131,20 @@ async function startServer() {
 
       function isValidVexId(rawId: string): boolean {
         if (!rawId) return false;
-        const clean = rawId.trim().toUpperCase().replace(/\s+/g, '');
+        let s = rawId.trim().toUpperCase().replace(/\s+/g, '');
+        s = s.replace(/^[#"'`]+/, '');
+        s = s.replace(/^VEX-O-/i, 'VEXS-O-');
+        s = s.replace(/^VEX-DIST-/i, 'VEXS-DIST-');
+        s = s.replace(/^VEX-ROT-/i, 'VEXS-ROT-');
+        s = s.replace(/^VEX-INER-/i, 'VEXS-INER-');
+        s = s.replace(/^VEX-SOL-/i, 'VEXSOL-');
+        s = s.replace(/^VEX-(B|BRN)-/i, 'VEXB-');
+        s = s.replace(/^VEX-(R|RAD)-/i, 'VEXR-');
+        s = s.replace(/^VEX-(M|MOT)-/i, 'VEXM-');
         return (
-          /^VEX(S-(O|DIST|INER|ROT)|SOL|B|R)-\d+$/i.test(clean) ||
-          /^VEX-O-\d+$/i.test(clean) ||
-          /^VEX(BRN|RAD|SOL)-\d+$/i.test(clean)
+          /^VEX(S-(O|DIST|INER|ROT)|SOL|B|R|M)-[A-Z0-9]+$/i.test(s) ||
+          /^VEX(S-[A-Z0-9]+|SOL|B|R|M)-[A-Z0-9]+$/i.test(s) ||
+          /^VEX(BRN|RAD|SOL)-[A-Z0-9]+$/i.test(s)
         );
       }
 
@@ -260,6 +269,14 @@ async function startServer() {
       return;
     }
 
+    // Coerce numeric part to integer to satisfy Google Sheets number validations
+    if (payload.number !== undefined && payload.number !== null && payload.number !== '') {
+      const parsedNum = parseInt(String(payload.number), 10);
+      if (!isNaN(parsedNum)) {
+        payload.number = parsedNum;
+      }
+    }
+
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 20000);
@@ -294,6 +311,14 @@ async function startServer() {
         parsed = JSON.parse(text);
       } catch {
         parsed = { status: 'success', raw: text };
+      }
+
+      if (parsed && (parsed.status === 'error' || parsed.error)) {
+        res.status(422).json({
+          error: parsed.message || parsed.error || 'Google Apps Script reported an error saving action.',
+          details: parsed,
+        });
+        return;
       }
 
       res.json(parsed);

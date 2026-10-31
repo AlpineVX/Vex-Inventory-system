@@ -37,35 +37,75 @@ export const CATEGORY_PREFIX_MAP: Record<VexCategory, string> = {
   Solenoids: 'VEXSOL',
 };
 
-export function normalizeItemId(rawId: string): string {
+export function normalizeItemId(rawId: string, categoryHint?: VexCategory | string): string {
   if (!rawId) return '';
-  const clean = rawId.trim().toUpperCase().replace(/\s+/g, '');
+  let s = String(rawId).trim().toUpperCase().replace(/\s+/g, '');
+  // Strip leading symbols (e.g. #, quotes)
+  s = s.replace(/^[#"'`]+/, '');
 
-  // Optical: VEX-O- -> VEXS-O- (resolves spreadsheet form prefix bug)
-  if (clean.startsWith('VEX-O-')) {
-    return clean.replace('VEX-O-', 'VEXS-O-');
+  // 1. Collapse accidental double prefixes (e.g. VEXS-DIST-DIST-4, VEXSOL-SOL-1)
+  s = s.replace(/^VEXS?-DIST-DIST-/i, 'VEXS-DIST-');
+  s = s.replace(/^VEXS?-ROT-ROT-/i, 'VEXS-ROT-');
+  s = s.replace(/^VEXS?-INER-INER-/i, 'VEXS-INER-');
+  s = s.replace(/^VEXS?-O-O-/i, 'VEXS-O-');
+  s = s.replace(/^VEXSOL-SOL-/i, 'VEXSOL-');
+  s = s.replace(/^VEXB-B-/i, 'VEXB-');
+  s = s.replace(/^VEXR-R-/i, 'VEXR-');
+  s = s.replace(/^VEXM-M-/i, 'VEXM-');
+
+  // 2. Standardize VEX- prefixed variations
+  s = s.replace(/^VEX-O-/i, 'VEXS-O-');
+  s = s.replace(/^VEX-DIST-/i, 'VEXS-DIST-');
+  s = s.replace(/^VEX-ROT-/i, 'VEXS-ROT-');
+  s = s.replace(/^VEX-INER-/i, 'VEXS-INER-');
+  s = s.replace(/^VEX-SOL-/i, 'VEXSOL-');
+  s = s.replace(/^VEX-B-/i, 'VEXB-');
+  s = s.replace(/^VEX-R-/i, 'VEXR-');
+  s = s.replace(/^VEX-M-/i, 'VEXM-');
+
+  s = s.replace(/^VEXBRN-/i, 'VEXB-');
+  s = s.replace(/^VEXRAD-/i, 'VEXR-');
+  s = s.replace(/^VEXMOT-/i, 'VEXM-');
+
+  s = s.replace(/^VEXSDIST-/i, 'VEXS-DIST-');
+  s = s.replace(/^VEXSROT-/i, 'VEXS-ROT-');
+  s = s.replace(/^VEXSINER-/i, 'VEXS-INER-');
+  s = s.replace(/^VEXSO-/i, 'VEXS-O-');
+
+  // 3. Short aliases without VEX prefix
+  s = s.replace(/^DIST(ANCE)?-/i, 'VEXS-DIST-');
+  s = s.replace(/^ROT(ATIONAL)?-/i, 'VEXS-ROT-');
+  s = s.replace(/^INER(TIAL)?-/i, 'VEXS-INER-');
+  s = s.replace(/^(OPT(ICAL)?|O)-/i, 'VEXS-O-');
+  s = s.replace(/^SOL(ENOID(S)?)?-/i, 'VEXSOL-');
+  s = s.replace(/^(BRAIN|BRN|B)-/i, 'VEXB-');
+  s = s.replace(/^(RADIO|RAD|R)-/i, 'VEXR-');
+  s = s.replace(/^(MOTOR|MOT|M)-/i, 'VEXM-');
+
+  // 4. If only digits were passed and we have a category hint
+  if (/^\d+$/.test(s) && categoryHint) {
+    const hintCat = String(categoryHint).toLowerCase();
+    if (hintCat.includes('optical') || hintCat === 'optical') s = `VEXS-O-${parseInt(s, 10)}`;
+    else if (hintCat.includes('dist') || hintCat === 'distance') s = `VEXS-DIST-${parseInt(s, 10)}`;
+    else if (hintCat.includes('inert') || hintCat === 'inertial') s = `VEXS-INER-${parseInt(s, 10)}`;
+    else if (hintCat.includes('rotat') || hintCat === 'rotational') s = `VEXS-ROT-${parseInt(s, 10)}`;
+    else if (hintCat.includes('sol') || hintCat === 'solenoids') s = `VEXSOL-${parseInt(s, 10)}`;
+    else if (hintCat.includes('brain') || hintCat === 'brain') s = `VEXB-${parseInt(s, 10)}`;
+    else if (hintCat.includes('radio') || hintCat === 'radio') s = `VEXR-${parseInt(s, 10)}`;
   }
-  // Alternate aliases
-  if (clean.startsWith('VEXMOT-')) {
-    return clean.replace('VEXMOT-', 'VEXM-');
-  }
-  if (clean.startsWith('VEXBRN-')) {
-    return clean.replace('VEXBRN-', 'VEXB-');
-  }
-  if (clean.startsWith('VEXRAD-')) {
-    return clean.replace('VEXRAD-', 'VEXR-');
-  }
-  if (clean.startsWith('VEX-SOL-')) {
-    return clean.replace('VEX-SOL-', 'VEXSOL-');
-  }
-  return clean;
+
+  // 5. Clean up leading zeros in the trailing numeric component (e.g. VEXS-DIST-004 -> VEXS-DIST-4)
+  s = s.replace(/-0+(\d+)$/, '-$1');
+
+  return s;
 }
 
 export function isValidVexId(rawId: string): boolean {
   if (!rawId) return false;
   const clean = normalizeItemId(rawId);
   return (
-    /^VEX(S-[A-Z0-9]+|SOL|B|R)-\d+$/i.test(clean) ||
+    /^VEX(S-(O|DIST|INER|ROT)|SOL|B|R|M)-[A-Z0-9]+$/i.test(clean) ||
+    /^VEX(S-[A-Z0-9]+|SOL|B|R|M)-[A-Z0-9]+$/i.test(clean) ||
     /^VEX-O-\d+$/i.test(clean) ||
     /^VEX(BRN|RAD|SOL)-\d+$/i.test(clean)
   );

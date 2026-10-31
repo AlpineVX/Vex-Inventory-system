@@ -16,6 +16,8 @@ import {
   CLUB_TEAMS,
   CATEGORY_PREFIX_MAP,
   normalizeItemId,
+  classifyVexCategory,
+  isValidVexId,
 } from '../types';
 
 interface CheckInOutModalProps {
@@ -99,65 +101,75 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
 
   // Derived assembled item ID
   const computedAssembledId = useMemo(() => {
-    const prefix = CATEGORY_PREFIX_MAP[assembledType] || 'VEX';
-    const cleanNum = assembledPartNum.trim().toUpperCase();
-    if (!cleanNum) return `${prefix}-1`;
+    const cleanInput = assembledPartNum.trim();
+    if (!cleanInput) {
+      const prefix = CATEGORY_PREFIX_MAP[assembledType] || 'VEX';
+      return `${prefix}-1`;
+    }
 
-    const normClean = normalizeItemId(cleanNum);
-    // 1. If user typed or pasted the full Item ID directly (e.g. "VEXSOL-21", "VEX-O-1", "VEXS-ROT-24276GS")
-    const fullMatch = items.find((i) => {
-      const cur = normalizeItemId(i.itemId).toUpperCase();
+    // 1. Direct normalization with category hint (handles "4", "DIST-4", "VEX-DIST-4", "04", etc.)
+    const normalized = normalizeItemId(cleanInput, assembledType);
+
+    // 2. Check if normalized ID matches any catalog item
+    const normUpper = normalized.toUpperCase();
+    const catalogMatch = items.find((i) => {
+      const curNorm = normalizeItemId(i.itemId, i.category).toUpperCase();
       return (
-        cur === normClean ||
-        cur === cleanNum ||
-        cur.replace(/[-\s]/g, '') === cleanNum.replace(/[-\s]/g, '') ||
-        cur.replace(/[-\s]/g, '') === normClean.replace(/[-\s]/g, '')
+        curNorm === normUpper ||
+        i.itemId.toUpperCase() === normUpper ||
+        curNorm.replace(/[-\s]/g, '') === normUpper.replace(/[-\s]/g, '')
       );
     });
-    if (fullMatch) return fullMatch.itemId;
+    if (catalogMatch) return catalogMatch.itemId;
 
-    // 2. If it already starts with the category prefix
-    if (cleanNum.startsWith(prefix.toUpperCase()) || normClean.startsWith(prefix.toUpperCase())) {
-      return normClean || cleanNum;
+    // 3. If valid VEX ID after normalization, return it
+    if (isValidVexId(normalized)) {
+      return normalized;
     }
 
-    // 3. Check exact combined ID with hyphen
-    const combinedHyphen = `${prefix}-${cleanNum}`;
-    const hyphenMatch = items.find((i) => {
-      const cur = normalizeItemId(i.itemId).toUpperCase();
-      return cur === combinedHyphen.toUpperCase() || cur === normalizeItemId(combinedHyphen).toUpperCase();
-    });
-    if (hyphenMatch) return hyphenMatch.itemId;
-
-    // 4. Check unpadded vs padded if numeric
-    const rawNum = parseInt(cleanNum, 10);
-    if (!isNaN(rawNum)) {
-      const unpaddedId = `${prefix}-${rawNum}`;
-      const directMatch = items.find((i) => {
-        const cur = normalizeItemId(i.itemId).toUpperCase();
-        return cur === unpaddedId.toUpperCase() || cur === normalizeItemId(unpaddedId).toUpperCase();
-      });
-      if (directMatch) return directMatch.itemId;
-
-      const padded = cleanNum.length < 3 ? cleanNum.padStart(3, '0') : cleanNum;
-      const paddedId = `${prefix}-${padded}`;
-      const paddedMatch = items.find((i) => {
-        const cur = normalizeItemId(i.itemId).toUpperCase();
-        return cur === paddedId.toUpperCase() || cur === normalizeItemId(paddedId).toUpperCase();
-      });
-      if (paddedMatch) return paddedMatch.itemId;
+    // 4. Fallback: prepend category prefix if not already present
+    const prefix = CATEGORY_PREFIX_MAP[assembledType] || 'VEX';
+    if (!cleanInput.toUpperCase().startsWith(prefix.toUpperCase())) {
+      const numOnly = cleanInput.replace(/\D+/g, '');
+      const cleanNum = numOnly ? parseInt(numOnly, 10) : cleanInput;
+      return `${prefix}-${cleanNum}`;
     }
 
-    return combinedHyphen;
+    return normalized;
   }, [assembledType, assembledPartNum, items]);
 
   // Currently matched item in database
-  const effectiveItemId = selectionMode === 'assemble' ? computedAssembledId : selectedItemId;
+  const effectiveItemId = useMemo(() => {
+    if (selectionMode === 'assemble') {
+      return computedAssembledId;
+    }
+    // In search mode: if an item was explicitly clicked
+    if (selectedItemId) {
+      return selectedItemId;
+    }
+    // Fallback: if user typed directly into search box
+    if (itemSearch.trim()) {
+      const normSearch = normalizeItemId(itemSearch.trim());
+      const normUpper = normSearch.toUpperCase();
+      const found = items.find((i) => {
+        const curNorm = normalizeItemId(i.itemId, i.category).toUpperCase();
+        return (
+          curNorm === normUpper ||
+          i.itemId.toUpperCase() === normUpper ||
+          curNorm.replace(/[-\s]/g, '') === normUpper.replace(/[-\s]/g, '')
+        );
+      });
+      if (found) return found.itemId;
+      if (isValidVexId(normSearch)) return normSearch;
+    }
+    return '';
+  }, [selectionMode, computedAssembledId, selectedItemId, itemSearch, items]);
 
   const currentMatchedItem = useMemo(() => {
+    if (!effectiveItemId) return undefined;
     const normEff = normalizeItemId(effectiveItemId).toUpperCase();
     return items.find((i) => {
-      const cur = normalizeItemId(i.itemId).toUpperCase();
+      const cur = normalizeItemId(i.itemId, i.category).toUpperCase();
       return cur === normEff || i.itemId.toUpperCase() === effectiveItemId.toUpperCase();
     });
   }, [items, effectiveItemId]);
@@ -185,9 +197,8 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
         setAssembledPartNum(numPart);
         setSelectionMode('assemble');
       } else {
-        // Default to Solenoids or Motors as requested
         setAssembledType('Solenoids');
-        setAssembledPartNum('001');
+        setAssembledPartNum('1');
         setSelectedItemId('');
         setSelectionMode('assemble');
       }
@@ -276,7 +287,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
         team: effectiveTeam,
         notes: notes.trim(),
         email: cleanEmail,
-        category: currentMatchedItem?.category || assembledType,
+        category: currentMatchedItem?.category || classifyVexCategory(undefined, undefined, finalItemId) || assembledType,
       });
       onClose();
     } catch (err: any) {

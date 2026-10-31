@@ -100,85 +100,85 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
     <div className="space-y-3 pb-24">
       {/* Search Bar */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by ID (e.g. VEXS-O-001), team, name..."
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-9 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors"
+          placeholder="Search by Part ID, team, name..."
+          className="w-full bg-white border border-slate-300 rounded-sm pl-9 pr-9 py-2 text-xs font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-600 transition-colors"
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 p-1"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
           >
             <X className="w-4 h-4" />
           </button>
         )}
       </div>
 
-      {/* Category Pills Horizontal Scroller */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 -mx-1 px-1">
+      {/* Category Monospace Filter Row */}
+      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 -mx-1 px-1 font-mono text-xs">
         {CATEGORIES.map((cat) => {
           const isSelected = selectedCategory === cat;
           return (
             <button
               key={cat}
               onClick={() => onSelectCategory(cat)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors min-h-[36px] flex items-center justify-center ${
+              className={`px-2.5 py-1.5 rounded-sm text-xs font-semibold whitespace-nowrap shrink-0 transition-colors min-h-[32px] flex items-center justify-center border ${
                 isSelected
-                  ? 'bg-zinc-100 text-zinc-950 font-semibold shadow-sm'
-                  : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+                  ? 'bg-slate-900 text-white border-slate-900'
+                  : 'bg-white text-slate-700 hover:text-slate-900 border-slate-200'
               }`}
             >
-              {cat}
+              [{cat.toUpperCase()}]
             </button>
           );
         })}
       </div>
 
       {/* Status Segmented Control */}
-      <div className="grid grid-cols-3 gap-1 p-1 bg-zinc-900 border border-zinc-800/80 rounded-xl">
+      <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 border border-slate-200 rounded-sm font-mono text-xs">
         <button
           onClick={() => setStatusFilter('All')}
-          className={`py-1.5 text-xs font-medium rounded-lg transition-colors min-h-[36px] flex items-center justify-center ${
+          className={`py-1 text-xs font-semibold rounded-sm transition-colors min-h-[32px] flex items-center justify-center ${
             statusFilter === 'All'
-              ? 'bg-zinc-800 text-zinc-100 font-semibold shadow-sm'
-              : 'text-zinc-400 hover:text-zinc-200'
+              ? 'bg-slate-900 text-white'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          All ({filteredItems.length})
+          ALL [{filteredItems.length}]
         </button>
         <button
           onClick={() => setStatusFilter('Available')}
-          className={`py-1.5 text-xs font-medium rounded-lg transition-colors min-h-[36px] flex items-center justify-center ${
+          className={`py-1 text-xs font-semibold rounded-sm transition-colors min-h-[32px] flex items-center justify-center ${
             statusFilter === 'Available'
-              ? 'bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 font-semibold'
-              : 'text-zinc-400 hover:text-zinc-200'
+              ? 'bg-emerald-700 text-white'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          Available ({availableCount})
+          READY [{availableCount}]
         </button>
         <button
           onClick={() => setStatusFilter('Checked Out')}
-          className={`py-1.5 text-xs font-medium rounded-lg transition-colors min-h-[36px] flex items-center justify-center ${
+          className={`py-1 text-xs font-semibold rounded-sm transition-colors min-h-[32px] flex items-center justify-center ${
             statusFilter === 'Checked Out'
-              ? 'bg-blue-950/60 border border-blue-500/40 text-blue-300 font-semibold'
-              : 'text-zinc-400 hover:text-zinc-200'
+              ? 'bg-amber-600 text-white'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          Checked Out ({checkedOutCount})
+          OUT [{checkedOutCount}]
         </button>
       </div>
 
       {/* Item count ticker */}
-      <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
-        <span>Showing {filteredItems.length} items</span>
+      <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 px-1">
+        <span>SHOWING {filteredItems.length} HARDWARE ITEMS</span>
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="text-zinc-400 hover:text-zinc-200 underline text-[11px]"
+            className="text-slate-700 hover:text-slate-900 underline"
           >
             Clear Search
           </button>
@@ -186,12 +186,12 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
       </div>
 
       {/* Cards List */}
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         {filteredItems.length === 0 ? (
-          <div className="p-8 text-center bg-zinc-900/40 border border-zinc-800 rounded-2xl">
-            <Tag className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
-            <p className="text-sm font-medium text-zinc-300">No hardware found</p>
-            <p className="text-xs text-zinc-500 mt-1">Try resetting filters or search terms</p>
+          <div className="p-8 text-center bg-white border border-slate-200 rounded-sm font-mono">
+            <Tag className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+            <p className="text-sm font-bold text-slate-800">[NO_HARDWARE_FOUND]</p>
+            <p className="text-xs text-slate-500 mt-1">Try resetting filters or search terms</p>
           </div>
         ) : (
           filteredItems.map((item) => {
@@ -210,33 +210,31 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
             return (
               <div
                 key={item.itemId}
-                className={`bg-zinc-900/90 border rounded-2xl p-3.5 transition-all shadow-sm ${
+                className={`bg-white border rounded-sm p-3 transition-colors ${
                   isOverdue
-                    ? 'border-red-500/50 bg-red-950/10'
-                    : 'border-zinc-800 hover:border-zinc-700'
+                    ? 'border-red-300 bg-red-50/40'
+                    : 'border-slate-200'
                 }`}
               >
                 {/* Header row: Item ID + Status */}
-                <div className="flex items-baseline justify-between gap-2">
+                <div className="flex items-baseline justify-between gap-2 font-mono">
                   <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-sm font-bold text-zinc-100 tracking-tight">
+                    <span className="text-xs font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 border border-slate-200">
                       {item.itemId}
                     </span>
-                    <span className="text-xs text-zinc-400 font-mono">
+                    <span className="text-[11px] text-slate-500">
                       · {item.category}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-1.5 text-xs font-semibold">
                     {isAvailable ? (
-                      <span className="text-emerald-400 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                        Available
+                      <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 border border-emerald-300 text-[10px]">
+                        [AVAILABLE]
                       </span>
                     ) : (
-                      <span className="text-amber-400 flex items-center gap-1 font-mono">
-                        <Clock className="w-3.5 h-3.5" />
-                        {item.currentUser ? `Team ${item.currentUser}` : 'Checked Out'}
+                      <span className="text-amber-800 font-bold bg-amber-50 px-1.5 py-0.5 border border-amber-300 text-[10px]">
+                        {item.currentUser ? `[TEAM ${item.currentUser}]` : '[CHECKED_OUT]'}
                       </span>
                     )}
                   </div>
@@ -244,19 +242,19 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
 
                 {/* Name & Location */}
                 <div className="mt-1.5">
-                  <h3 className="text-sm font-semibold text-zinc-200 leading-snug">
+                  <h3 className="text-sm font-bold text-slate-900 leading-snug font-sans">
                     {item.itemName}
                   </h3>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-zinc-400 flex-wrap">
+                  <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 flex-wrap font-mono">
                     {item.location && (
-                      <span className="flex items-center gap-1 text-zinc-400">
-                        <MapPin className="w-3 h-3 text-zinc-500" />
+                      <span className="flex items-center gap-1 text-slate-600">
+                        <MapPin className="w-3 h-3 text-slate-400" />
                         {item.location}
                       </span>
                     )}
                     {!isAvailable && item.dateOut && (
-                      <span className="text-zinc-500">
-                        Checked out {daysOut}d ago
+                      <span className="text-slate-600">
+                        · OUT: {daysOut}d ago
                       </span>
                     )}
                   </div>
@@ -264,58 +262,58 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
 
                 {/* Overdue Warning Alert */}
                 {isOverdue && (
-                  <div className="mt-2 p-2 bg-red-500/15 border border-red-500/30 rounded-xl flex items-center gap-2 text-xs text-red-300 font-medium">
-                    <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                    <span>Overdue for return ({daysOut} days held &gt; 100 day limit)</span>
+                  <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-none flex items-center gap-2 text-xs text-red-800 font-mono font-bold">
+                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                    <span>[OVERDUE_ALERT] ({daysOut} days held &gt; 100d limit)</span>
                   </div>
                 )}
 
                 {/* Expandable details drawer */}
                 {isExpanded && (
-                  <div className="mt-2.5 pt-2.5 border-t border-zinc-800/80 text-xs text-zinc-400 space-y-1">
+                  <div className="mt-2.5 pt-2.5 border-t border-slate-200 text-xs text-slate-600 space-y-1 font-mono">
                     {item.notes && (
-                      <div>
-                        <span className="text-zinc-500">Condition/Notes: </span>
-                        <span className="text-zinc-300">{item.notes}</span>
+                      <div className="bg-slate-50 p-1.5 border border-slate-200 text-slate-800">
+                        <span className="text-slate-500 uppercase">Subsystem/Notes: </span>
+                        <span>{item.notes}</span>
                       </div>
                     )}
-                    <div>
-                      <span className="text-zinc-500">Total Checkouts: </span>
-                      <span className="font-mono text-zinc-300">{item.timesCheckedOut || 0} times</span>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Checkouts Logged:</span>
+                      <span className="text-slate-900 font-bold">{item.timesCheckedOut || 0} times</span>
                     </div>
-                    <div>
-                      <span className="text-zinc-500">Default Bay: </span>
-                      <span className="text-zinc-300">{item.location || 'Cabinet'}</span>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Pit Cabinet Bay:</span>
+                      <span className="text-slate-900 font-bold">{item.location || 'Central Shelf'}</span>
                     </div>
                   </div>
                 )}
 
                 {/* Bottom Action Bar */}
-                <div className="mt-3 pt-2 border-t border-zinc-800/50 flex items-center gap-2">
+                <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
                   <button
                     onClick={() => setExpandedItemId(isExpanded ? null : item.itemId)}
-                    className="p-2 text-zinc-400 hover:text-zinc-200 text-xs flex items-center gap-1 min-h-[44px] min-w-[44px]"
+                    className="py-1 px-2 text-slate-500 hover:text-slate-900 text-xs font-mono flex items-center gap-1"
                   >
-                    <span>{isExpanded ? 'Less' : 'Details'}</span>
-                    {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    <span>{isExpanded ? '[-LESS]' : '[+DETAILS]'}</span>
+                    {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                   </button>
 
-                  <div className="flex-1 flex justify-end">
+                  <div>
                     {isAvailable ? (
                       <button
                         onClick={() => onOpenCheckout(item, 'Check Out')}
-                        className="w-full sm:w-auto px-4 py-2.5 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98] transition-all min-h-[44px]"
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-mono font-bold text-xs rounded-sm flex items-center gap-1 transition-colors"
                       >
-                        <ArrowUpRight className="w-4 h-4" />
-                        <span>Check Out</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                        <span>[CHECK_OUT]</span>
                       </button>
                     ) : (
                       <button
                         onClick={() => onOpenCheckout(item, 'Check In')}
-                        className="w-full sm:w-auto px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98] transition-all min-h-[44px]"
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-mono font-bold text-xs rounded-sm flex items-center gap-1 transition-colors"
                       >
-                        <RotateCcw className="w-4 h-4" />
-                        <span>Check In</span>
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>[CHECK_IN]</span>
                       </button>
                     )}
                   </div>
