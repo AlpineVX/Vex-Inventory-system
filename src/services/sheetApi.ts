@@ -436,15 +436,19 @@ export async function postInventoryAction(
     const timeoutId = setTimeout(() => controller.abort(), 18000);
 
     const normalizedId = normalizeItemId(payload.itemId, payload.category);
-    const numDigits = normalizedId.match(/\d+/)?.[0] || '';
+    const trailingMatch = normalizedId.match(/(\d+)\s*$/) || normalizedId.match(/\d+/);
+    const numDigits = trailingMatch ? (trailingMatch[1] || trailingMatch[0]) : '';
     const numericNumber = numDigits ? parseInt(numDigits, 10) : '';
     const determinedCategory = payload.category || classifyVexCategory(undefined, undefined, normalizedId);
 
     const enhancedPayload = {
       ...payload,
+      action: payload.action === 'Check In' ? 'Check In' : 'Check Out',
       itemId: normalizedId,
-      userEmail: payload.email,
-      currentUser: payload.action === 'Check Out' ? payload.team : '',
+      team: payload.team || '',
+      notes: payload.notes || '',
+      userEmail: payload.email || '',
+      currentUser: payload.action === 'Check Out' ? (payload.team || '') : '',
       category: determinedCategory,
       sensorType: determinedCategory,
       number: numericNumber,
@@ -486,15 +490,19 @@ export async function postInventoryAction(
 
   try {
     const normalizedId = normalizeItemId(payload.itemId, payload.category);
-    const numDigits = normalizedId.match(/\d+/)?.[0] || '';
+    const trailingMatch = normalizedId.match(/(\d+)\s*$/) || normalizedId.match(/\d+/);
+    const numDigits = trailingMatch ? (trailingMatch[1] || trailingMatch[0]) : '';
     const numericNumber = numDigits ? parseInt(numDigits, 10) : '';
     const determinedCategory = payload.category || classifyVexCategory(undefined, undefined, normalizedId);
 
     const enhancedPayload = {
       ...payload,
+      action: payload.action === 'Check In' ? 'Check In' : 'Check Out',
       itemId: normalizedId,
-      userEmail: payload.email,
-      currentUser: payload.action === 'Check Out' ? payload.team : '',
+      team: payload.team || '',
+      notes: payload.notes || '',
+      userEmail: payload.email || '',
+      currentUser: payload.action === 'Check Out' ? (payload.team || '') : '',
       category: determinedCategory,
       sensorType: determinedCategory,
       number: numericNumber,
@@ -657,6 +665,8 @@ function doPost(e) {
     var itemId = String(requestData.itemId || "").trim();
     var team = String(requestData.team || "").trim();
     var notes = String(requestData.notes || "").trim();
+    var userEmail = String(requestData.userEmail || requestData.email || "").trim();
+    var category = String(requestData.category || requestData.sensorType || "").trim();
     var rawNum = requestData.number;
     var number = "";
     if (typeof rawNum === "number") {
@@ -664,8 +674,8 @@ function doPost(e) {
     } else if (typeof rawNum === "string" && /^\d+$/.test(rawNum.trim())) {
       number = parseInt(rawNum.trim(), 10);
     } else {
-      var digits = itemId.replace(/\D+/g, "");
-      number = digits ? parseInt(digits, 10) : "";
+      var match = itemId.match(/(\d+)\s*$/) || itemId.match(/\d+/);
+      number = match ? parseInt(match[1] || match[0], 10) : "";
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -687,8 +697,7 @@ function doPost(e) {
       notes,
       userEmail,
       category,
-      number,
-      ""
+      number
     ]);
 
     return ContentService.createTextOutput(JSON.stringify({

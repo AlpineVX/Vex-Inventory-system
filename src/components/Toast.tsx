@@ -21,28 +21,28 @@ export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-sm border shadow-md transition-all duration-200 bg-white ${
+          className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-xl border shadow-xl transition-all duration-200 bg-[#12161f] ${
             toast.type === 'success'
-              ? 'border-emerald-400 text-slate-900'
+              ? 'border-emerald-500/40 text-white'
               : toast.type === 'error'
-              ? 'border-rose-400 text-slate-900'
-              : 'border-slate-300 text-slate-900'
+              ? 'border-rose-500/40 text-white'
+              : 'border-[#1e242c] text-white'
           }`}
         >
           <div className="mt-0.5 shrink-0">
-            {toast.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-            {toast.type === 'error' && <AlertCircle className="w-4 h-4 text-rose-600" />}
-            {toast.type === 'info' && <Info className="w-4 h-4 text-slate-600" />}
+            {toast.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+            {toast.type === 'error' && <AlertCircle className="w-4 h-4 text-rose-400" />}
+            {toast.type === 'info' && <Info className="w-4 h-4 text-zinc-400" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-slate-900 leading-tight font-mono">[{toast.title.toUpperCase()}]</p>
+            <p className="text-xs font-bold text-white leading-tight font-mono">{toast.title}</p>
             {toast.message && (
-              <p className="text-xs text-slate-600 mt-0.5 leading-relaxed break-words">{toast.message}</p>
+              <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed break-words">{toast.message}</p>
             )}
           </div>
           <button
             onClick={() => onDismiss(toast.id)}
-            className="text-slate-400 hover:text-slate-700 p-1 rounded-sm transition-colors"
+            className="text-zinc-500 hover:text-white p-1 rounded-lg transition-colors"
             aria-label="Dismiss notification"
           >
             <X className="w-3.5 h-3.5" />

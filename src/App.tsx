@@ -317,27 +317,30 @@ export default function App() {
   };
 
   // Check In / Check Out submission
-  const handleSubmitAction = async (payload: {
-    action: 'Check Out' | 'Check In';
-    itemId: string;
-    team: string;
-    notes: string;
-    email: string;
-    category?: string;
-  }) => {
+  const handleSubmitAction = async (
+    payload: {
+      action: 'Check Out' | 'Check In';
+      itemId: string;
+      team: string;
+      notes: string;
+      email: string;
+      category?: string;
+    },
+    skipLiveSync = false
+  ) => {
     const isOut = payload.action === 'Check Out';
     const normalizedId = normalizeItemId(payload.itemId, payload.category);
     const targetClean = normalizedId.toUpperCase();
     const targetCleanNoDash = targetClean.replace(/[-\s]/g, '');
 
-    // Find matched item for log description only - DO NOT mutate inventory items directly
+    // Find matched item for log description & category
     const matchedItem = items.find((i) => {
       const curClean = normalizeItemId(i.itemId, i.category).toUpperCase();
       const curNoDash = curClean.replace(/[-\s]/g, '');
       return curClean === targetClean || curNoDash === targetCleanNoDash;
     });
 
-    const determinedCategory = matchedItem?.category || payload.category || classifyVexCategory(undefined, undefined, normalizedId);
+    const determinedCategory: VexCategory = classifyVexCategory(matchedItem?.category || payload.category, undefined, normalizedId);
 
     // 1. Add entry strictly to audit logs (LOGS sheet source of truth)
     const newLog: AuditLog = {
@@ -355,7 +358,45 @@ export default function App() {
     setLogs(updatedLogs);
     saveCachedLogs(updatedLogs);
 
-    // 2. Post record to Google Apps Script (appends ONLY to LOGS sheet)
+    // 2. Optimistically update local inventory items so immediate UI reflects checkout/return
+    setItems((prevItems) => {
+      const matchIndex = prevItems.findIndex((i) => {
+        const curClean = normalizeItemId(i.itemId, i.category).toUpperCase();
+        return curClean === targetClean || curClean.replace(/[-\s]/g, '') === targetCleanNoDash;
+      });
+
+      if (matchIndex >= 0) {
+        const updated = [...prevItems];
+        const existing = updated[matchIndex];
+        updated[matchIndex] = {
+          ...existing,
+          status: isOut ? 'Checked Out' : 'Available',
+          currentUser: isOut ? payload.team : '',
+          dateOut: isOut ? new Date().toISOString().split('T')[0] : '',
+          notes: payload.notes || (isOut ? existing.notes : ''),
+          timesCheckedOut: isOut ? (existing.timesCheckedOut || 0) + 1 : existing.timesCheckedOut,
+        };
+        saveCachedInventory(updated);
+        return updated;
+      } else {
+        const newItem: InventoryItem = {
+          itemId: normalizedId,
+          itemName: `VEX ${determinedCategory} ${normalizedId}`,
+          category: determinedCategory,
+          status: isOut ? 'Checked Out' : 'Available',
+          currentUser: isOut ? payload.team : '',
+          dateOut: isOut ? new Date().toISOString().split('T')[0] : '',
+          notes: payload.notes || '',
+          timesCheckedOut: isOut ? 1 : 0,
+          location: getCategoryDefaultLocation(determinedCategory),
+        };
+        const updated = [...prevItems, newItem];
+        saveCachedInventory(updated);
+        return updated;
+      }
+    });
+
+    // 3. Post record to Google Apps Script (appends ONLY to LOGS sheet)
     if (syncStatus.url) {
       try {
         await postInventoryAction(syncStatus.url, {
@@ -363,21 +404,25 @@ export default function App() {
           itemId: normalizedId,
           category: determinedCategory,
         });
-        addToast(
-          'success',
-          'Logged to LOGS Sheet',
-          `Added ${payload.action} for ${normalizedId} to LOGS sheet. Spreadsheet formulas will update item status automatically.`
-        );
-        // Refresh live formula-computed items & logs from Google Sheet
-        handleLiveSync(syncStatus.url, false);
+        if (!skipLiveSync) {
+          addToast(
+            'success',
+            'Logged to LOGS Sheet',
+            `Added ${payload.action} for ${normalizedId} to LOGS sheet. Spreadsheet formulas will update item status automatically.`
+          );
+          // Refresh live formula-computed items & logs from Google Sheet
+          handleLiveSync(syncStatus.url, false);
+        }
       } catch (err: any) {
-        addToast(
-          'error',
-          'Google Sheet Notice',
-          `Log saved locally, but Google Sheet returned: ${err.message}`
-        );
+        if (!skipLiveSync) {
+          addToast(
+            'error',
+            'Google Sheet Notice',
+            `Log saved locally, but Google Sheet returned: ${err.message}`
+          );
+        }
       }
-    } else {
+    } else if (!skipLiveSync) {
       addToast(
         'success',
         'Log Added',
@@ -397,7 +442,7 @@ export default function App() {
     await handleSubmitAction({
       action: 'Check In',
       itemId: item.itemId,
-      team: item.currentUser,
+      team: item.currentUser || '654V',
       notes: 'Returned by Admin from Team Hardware Lookup',
       email: adminSettings.adminEmails[0] || 'admin@vex.club',
       category: item.category,
@@ -415,16 +460,22 @@ export default function App() {
     if (itemsToReturn.length === 0) return;
 
     for (const item of itemsToReturn) {
-      await handleSubmitAction({
-        action: 'Check In',
-        itemId: item.itemId,
-        team,
-        notes: `Batch return for Team ${team}`,
-        email: adminSettings.adminEmails[0] || 'admin@vex.club',
-        category: item.category,
-      });
+      await handleSubmitAction(
+        {
+          action: 'Check In',
+          itemId: item.itemId,
+          team,
+          notes: `Batch return for Team ${team}`,
+          email: adminSettings.adminEmails[0] || 'admin@vex.club',
+          category: item.category,
+        },
+        true // Skip individual live sync to avoid flooding
+      );
     }
 
+    if (syncStatus.url) {
+      handleLiveSync(syncStatus.url, false);
+    }
     addToast('success', 'Batch Return Completed', `All ${itemsToReturn.length} items checked in for Team ${team}.`);
   };
 
@@ -437,14 +488,21 @@ export default function App() {
     }
 
     for (const item of selected) {
-      await handleSubmitAction({
-        action,
-        itemId: item.itemId,
-        team: action === 'Check Out' ? selectedTeam || '654V' : item.currentUser,
-        notes: `Bulk ${action}`,
-        email: adminSettings.adminEmails[0] || 'admin@vex.club',
-        category: item.category,
-      });
+      await handleSubmitAction(
+        {
+          action,
+          itemId: item.itemId,
+          team: action === 'Check Out' ? selectedTeam || '654V' : item.currentUser || '654V',
+          notes: `Bulk ${action}`,
+          email: adminSettings.adminEmails[0] || 'admin@vex.club',
+          category: item.category,
+        },
+        true // Skip individual live sync to avoid flooding
+      );
+    }
+
+    if (syncStatus.url) {
+      handleLiveSync(syncStatus.url, false);
     }
     addToast('success', 'Batch Operation Completed', `${selected.length} items processed.`);
   };
@@ -488,7 +546,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0d10] text-zinc-100 flex flex-col font-sans selection:bg-zinc-700 selection:text-zinc-100">
+    <div className="min-h-screen bg-[#0b0d10] text-zinc-100 flex flex-col font-sans selection:bg-amber-500/20 selection:text-amber-200">
       {/* Top Header: Specialized Mobile Header or Desktop Header */}
       {isMobile ? (
         <MobileTopHeader
@@ -529,7 +587,7 @@ export default function App() {
             onNavigateToCategory={handleNavigateToCategory}
             onNavigateToTeam={handleNavigateToTeam}
             onNavigateTab={setActiveTab}
-            onOpenCheckout={(item) => handleOpenCheckoutModal(item, 'Check Out')}
+            onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
           />
         )}
 
@@ -581,35 +639,35 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className={`mt-auto border-t border-zinc-900 bg-zinc-950/80 py-4 text-xs text-zinc-500 ${isMobile ? 'pb-24' : ''}`}>
+      <footer className={`mt-auto border-t border-[#1c222b] bg-[#0c0e12] py-4 text-xs text-zinc-500 ${isMobile ? 'pb-24' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-            <span>VEX Robotics Inventory Control</span>
+            <span className="font-semibold text-zinc-300">VEX Robotics Inventory Control</span>
             <span>·</span>
             <span>{items.length} Items System</span>
             <span>·</span>
             <span className="font-mono text-zinc-400">Club Teams (654K, 654J, 654A, 654B, 654G, 654T, 654V, 654Y, 654X, 654Z, RECF)</span>
           </div>
           <div className="flex items-center gap-3 text-zinc-400 shrink-0 flex-wrap justify-center">
-            <span>Website made by <strong className="text-zinc-200 font-medium">Trishanth Yakkala</strong></span>
+            <span>Website made by <strong className="text-white font-semibold">Trishanth Yakkala</strong></span>
             <span>·</span>
             <button
               onClick={() => setIsAssetsModalOpen(true)}
-              className="hover:text-zinc-200 transition-colors underline"
+              className="hover:text-white transition-colors underline"
             >
               Logos &amp; QR Badges
             </button>
             <span>·</span>
             <button
               onClick={handleToggleViewMode}
-              className="hover:text-blue-300 transition-colors"
+              className="hover:text-amber-400 transition-colors"
             >
               {isMobile ? 'Switch to Desktop UI' : 'Switch to Phone UI'}
             </button>
             <span>·</span>
             <button
               onClick={handleOpenSettingsProtected}
-              className="hover:text-zinc-200 transition-colors"
+              className="hover:text-white transition-colors"
             >
               Spreadsheet API Settings
             </button>

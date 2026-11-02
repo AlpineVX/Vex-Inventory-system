@@ -262,37 +262,28 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
       <div className="hidden md:block space-y-4">
         {/* Top Header & Fast Filter Bar */}
         <div>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#1c222b]">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-bold text-amber-700 uppercase tracking-wider">
-                  [CATALOG_BROWSER]
-                </span>
-                <span className="text-slate-300">/</span>
-                <span className="font-mono text-xs text-slate-500">
-                  {items.length}_PARTS_INDEXED
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 mt-0.5">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white mt-0.5">
                 Universal Inventory Master Catalog
               </h1>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-zinc-400 mt-0.5">
                 Search, audit, and batch process {items.length} registered hardware items.
               </p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={exportToCSV}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-sm transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-medium text-zinc-200 bg-[#161a22] hover:bg-[#21262d] border border-[#1e242c] rounded-lg transition-colors"
               >
-                <Download className="w-3.5 h-3.5 text-slate-500" />
-                <span>[EXPORT_CSV]</span>
+                <Download className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Export CSV</span>
               </button>
             </div>
           </div>
 
           {/* Category Segmented Filter Tabs */}
-          <div className="flex items-center gap-1 mt-3.5 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex items-center gap-1.5 mt-3.5 overflow-x-auto pb-1 scrollbar-none">
             {CATEGORIES.map((cat) => {
               const isActive = selectedCategory === cat;
               const count = categoryCounts[cat] || 0;
@@ -300,16 +291,16 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                 <button
                   key={cat}
                   onClick={() => onSelectCategory(cat)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors whitespace-nowrap shrink-0 border ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 border ${
                     isActive
-                      ? 'bg-slate-900 text-white font-semibold border-slate-900'
-                      : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-slate-200'
+                      ? 'bg-[#222834] text-white font-semibold border-zinc-700 shadow-sm'
+                      : 'bg-[#12161f] text-zinc-400 hover:text-white hover:bg-[#1a202a] border-[#1e242c]'
                   }`}
                 >
                   <span>{cat}</span>
                   <span
                     className={`font-mono text-[11px] tabular-nums ${
-                      isActive ? 'text-slate-300' : 'text-slate-500'
+                      isActive ? 'text-amber-400 font-bold' : 'text-zinc-500'
                     }`}
                   >
                     [{count}]
@@ -321,22 +312,22 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
         </div>
 
         {/* Control Bar: Search + Status Filter + Team Filter */}
-        <div className="p-3 bg-white border border-slate-200 rounded-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        <div className="p-3 bg-[#12161f] border border-[#1e242c] rounded-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Search Input */}
           <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
             <input
               ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search item ID, specs, team... (Press '/' to focus)"
-              className="w-full pl-9 pr-8 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-600 focus:bg-white font-sans"
+              className="w-full pl-9 pr-8 py-1.5 text-xs bg-[#0b0d11] border border-[#1e242c] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-sans"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-white"
               >
                 ✕
               </button>
@@ -346,31 +337,31 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
           {/* Secondary Filter Buttons */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Status Segmented Control */}
-            <div className="flex items-center bg-slate-50 p-0.5 rounded-sm border border-slate-200 text-xs font-mono">
+            <div className="flex items-center bg-[#0b0d11] p-0.5 rounded-lg border border-[#1e242c] text-xs font-mono">
               <button
                 onClick={() => setStatusFilter('All')}
-                className={`px-2.5 py-1 rounded-sm transition-colors ${
-                  statusFilter === 'All' ? 'bg-white text-slate-900 font-bold border border-slate-200' : 'text-slate-600 hover:text-slate-900'
+                className={`px-2.5 py-1 rounded-md transition-colors ${
+                  statusFilter === 'All' ? 'bg-[#222834] text-white font-bold' : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 ALL
               </button>
               <button
                 onClick={() => setStatusFilter('Available')}
-                className={`px-2.5 py-1 rounded-sm transition-colors ${
+                className={`px-2.5 py-1 rounded-md transition-colors ${
                   statusFilter === 'Available'
-                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 AVAILABLE
               </button>
               <button
                 onClick={() => setStatusFilter('Checked Out')}
-                className={`px-2.5 py-1 rounded-sm transition-colors ${
+                className={`px-2.5 py-1 rounded-md transition-colors ${
                   statusFilter === 'Checked Out'
-                    ? 'bg-amber-50 text-amber-800 border border-amber-300 font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 font-bold'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 OUT
@@ -381,7 +372,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
             <select
               value={teamFilter}
               onChange={(e) => setTeamFilter(e.target.value)}
-              className="px-2.5 py-1 text-xs bg-white border border-slate-200 rounded-sm text-slate-700 font-mono focus:outline-none focus:border-amber-600"
+              className="px-2.5 py-1.5 text-xs bg-[#0b0d11] border border-[#1e242c] rounded-lg text-zinc-300 font-mono focus:outline-none focus:border-amber-500"
             >
               <option value="All">[ALL_TEAMS]</option>
               {activeTeams.map((t) => (
@@ -395,7 +386,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
             {(searchQuery || selectedCategory !== 'All' || statusFilter !== 'All' || teamFilter !== 'All') && (
               <button
                 onClick={resetFilters}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200 rounded-sm transition-colors"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs text-zinc-400 hover:text-white bg-[#161a22] border border-[#1e242c] rounded-lg transition-colors"
               >
                 <RotateCcw className="w-3 h-3" />
                 <span>Reset</span>
@@ -406,25 +397,25 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
 
         {/* Instant Item Profile & Scan Tool */}
         {matchedExactItem && (
-          <div className="p-3.5 bg-white border border-slate-300 rounded-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="p-4 bg-[#161a22] border border-[#212631] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 font-mono">
-                  [QUICK_ITEM_LOOKUP]
+                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 font-mono">
+                  QUICK ITEM LOOKUP
                 </span>
-                <span className="text-xs font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 border border-slate-200">
+                <span className="text-xs font-mono font-bold text-white bg-[#0b0d11] px-2 py-0.5 rounded border border-[#212631]">
                   {matchedExactItem.itemId}
                 </span>
               </div>
-              <div className="text-sm font-semibold text-slate-900">{matchedExactItem.itemName}</div>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+              <div className="text-sm font-semibold text-white">{matchedExactItem.itemName}</div>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
                 <span>
                   Status:{' '}
                   <strong
                     className={
                       matchedExactItem.status === 'Available'
-                        ? 'text-emerald-700 font-mono'
-                        : 'text-amber-700 font-mono'
+                        ? 'text-emerald-400 font-mono'
+                        : 'text-amber-400 font-mono'
                     }
                   >
                     [{matchedExactItem.status.toUpperCase()}]
@@ -433,7 +424,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                 <span>·</span>
                 <span>
                   Current Holder:{' '}
-                  <strong className="text-slate-800">
+                  <strong className="text-zinc-200">
                     {matchedExactItem.currentUser
                       ? `Team ${matchedExactItem.currentUser}`
                       : 'In Pit Warehouse'}
@@ -442,14 +433,14 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                 <span>·</span>
                 <span>
                   Season Checkouts:{' '}
-                  <strong className="text-slate-800 font-mono">
+                  <strong className="text-zinc-200 font-mono">
                     {matchedExactItem.timesCheckedOut}
                   </strong>
                 </span>
                 {matchedExactItem.dateOut && (
                   <>
                     <span>·</span>
-                    <span>Date Out: <span className="font-mono text-slate-700">{matchedExactItem.dateOut}</span></span>
+                    <span>Date Out: <span className="font-mono text-zinc-300">{matchedExactItem.dateOut}</span></span>
                   </>
                 )}
               </div>
@@ -458,14 +449,14 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
               {matchedExactItem.status === 'Available' ? (
                 <button
                   onClick={() => onOpenCheckout(matchedExactItem, 'Check Out')}
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-sm transition-colors"
+                  className="px-4 py-2 text-xs font-semibold text-white bg-[#ea580c] hover:bg-orange-600 rounded-lg transition-colors shadow-sm"
                 >
                   Check Out {matchedExactItem.itemId}
                 </button>
               ) : (
                 <button
                   onClick={() => onOpenCheckout(matchedExactItem, 'Check In')}
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-sm transition-colors"
+                  className="px-4 py-2 text-xs font-semibold text-white bg-[#059669] hover:bg-emerald-600 rounded-lg transition-colors shadow-sm"
                 >
                   Check In (Return)
                 </button>
@@ -476,27 +467,33 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
 
         {/* Bulk Action Toolbar if items selected */}
         {selectedIds.size > 0 && onBatchAction && (
-          <div className="flex items-center justify-between p-2.5 px-3 bg-white border border-slate-300 rounded-sm text-xs font-mono">
+          <div className="flex items-center justify-between p-3 bg-[#161a22] border border-[#212631] rounded-xl text-xs font-mono">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-900">[{selectedIds.size}_ITEMS_SELECTED]</span>
-              <span className="text-slate-500">· Batch action:</span>
+              <span className="font-bold text-white">[{selectedIds.size}_ITEMS_SELECTED]</span>
+              <span className="text-zinc-400">· Batch action:</span>
             </div>
             <div className="flex items-center gap-2 font-sans">
               <button
-                onClick={() => onBatchAction(selectedItemsList, 'Check Out')}
-                className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-sm transition-colors"
+                onClick={() => {
+                  onBatchAction(selectedItemsList, 'Check Out');
+                  setSelectedIds(new Set());
+                }}
+                className="px-3 py-1.5 bg-[#ea580c] hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors"
               >
                 Batch Check Out
               </button>
               <button
-                onClick={() => onBatchAction(selectedItemsList, 'Check In')}
-                className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-sm transition-colors"
+                onClick={() => {
+                  onBatchAction(selectedItemsList, 'Check In');
+                  setSelectedIds(new Set());
+                }}
+                className="px-3 py-1.5 bg-[#059669] hover:bg-emerald-600 text-white font-semibold rounded-lg transition-colors"
               >
                 Batch Check In
               </button>
               <button
                 onClick={() => setSelectedIds(new Set())}
-                className="px-2 py-1 text-slate-600 hover:text-slate-900"
+                className="px-2.5 py-1.5 text-zinc-400 hover:text-white"
               >
                 Clear
               </button>
@@ -505,78 +502,78 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
         )}
 
         {/* Dense High-Performance Data Table */}
-        <div className="border border-slate-200 bg-white rounded-sm overflow-hidden">
+        <div className="border border-[#1e242c] bg-[#12161f] rounded-xl overflow-hidden">
           <div className="overflow-x-auto max-h-[640px]">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 text-slate-600 select-none font-mono text-[11px]">
+              <thead className="sticky top-0 z-10 bg-[#0e1218] border-b border-[#1e242c] text-zinc-400 select-none font-medium">
                 <tr>
-                  <th className="py-2.5 px-3 w-10 text-center">
+                  <th className="py-3 px-3.5 w-10 text-center">
                     <input
                       type="checkbox"
                       checked={filteredItems.length > 0 && selectedIds.size === filteredItems.length}
                       onChange={(e) => handleSelectAll(e.target.checked)}
-                      className="rounded-none border-slate-300 bg-white text-slate-900 accent-amber-600 cursor-pointer"
+                      className="rounded border-zinc-700 bg-[#0b0d11] text-amber-500 accent-amber-500 cursor-pointer"
                     />
                   </th>
                   <th
                     onClick={() => toggleSort('itemId')}
-                    className="py-2.5 px-3 w-32 font-semibold hover:text-slate-900 cursor-pointer transition-colors"
+                    className="py-3 px-3 w-32 font-semibold hover:text-white cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>[PART_ID]</span>
-                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                      <span>PART ID</span>
+                      <ArrowUpDown className="w-3 h-3 text-zinc-500" />
                     </div>
                   </th>
                   <th
                     onClick={() => toggleSort('itemName')}
-                    className="py-2.5 px-3 w-64 font-semibold hover:text-slate-900 cursor-pointer transition-colors"
+                    className="py-3 px-3 w-64 font-semibold hover:text-white cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>[ITEM_NAME_&amp;_SPECS]</span>
-                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                      <span>ITEM NAME &amp; SPECS</span>
+                      <ArrowUpDown className="w-3 h-3 text-zinc-500" />
                     </div>
                   </th>
                   <th
                     onClick={() => toggleSort('category')}
-                    className="py-2.5 px-3 w-32 font-semibold hover:text-slate-900 cursor-pointer transition-colors"
+                    className="py-3 px-3 w-32 font-semibold hover:text-white cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>[CATEGORY]</span>
-                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                      <span>CATEGORY</span>
+                      <ArrowUpDown className="w-3 h-3 text-zinc-500" />
                     </div>
                   </th>
                   <th
                     onClick={() => toggleSort('status')}
-                    className="py-2.5 px-3 w-28 font-semibold hover:text-slate-900 cursor-pointer transition-colors"
+                    className="py-3 px-3 w-28 font-semibold hover:text-white cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>[STATUS]</span>
-                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                      <span>STATUS</span>
+                      <ArrowUpDown className="w-3 h-3 text-zinc-500" />
                     </div>
                   </th>
-                  <th className="py-2.5 px-3 w-36 font-semibold">[CURRENT_HOLDER]</th>
+                  <th className="py-3 px-3 w-36 font-semibold">CURRENT HOLDER</th>
                   <th
                     onClick={() => toggleSort('dateOut')}
-                    className="py-2.5 px-3 w-28 font-semibold hover:text-slate-900 cursor-pointer transition-colors"
+                    className="py-3 px-3 w-28 font-semibold hover:text-white cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>[DATE_OUT]</span>
-                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                      <span>DATE OUT</span>
+                      <ArrowUpDown className="w-3 h-3 text-zinc-500" />
                     </div>
                   </th>
-                  <th className="py-2.5 px-3 min-w-[180px] font-semibold">[LOCATION_&amp;_NOTES]</th>
-                  <th className="py-2.5 px-3 w-24 text-right font-semibold">[ACTION]</th>
+                  <th className="py-3 px-3 min-w-[180px] font-semibold">LOCATION &amp; NOTES</th>
+                  <th className="py-3 px-3 w-24 text-right font-semibold">ACTION</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-sans">
+              <tbody className="divide-y divide-[#1a2029] font-sans">
                 {filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-500 font-mono">
-                      <p className="text-sm font-medium text-slate-700">[NO_MATCHING_ITEMS_FOUND]</p>
-                      <p className="text-xs text-slate-500 mt-1 font-sans">Try adjusting search parameters or reset filters</p>
+                    <td colSpan={9} className="py-12 text-center text-zinc-400 font-mono">
+                      <p className="text-sm font-medium text-white">[NO_MATCHING_ITEMS_FOUND]</p>
+                      <p className="text-xs text-zinc-500 mt-1 font-sans">Try adjusting search parameters or reset filters</p>
                       <button
                         onClick={resetFilters}
-                        className="mt-3 px-3 py-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-sm transition-colors"
+                        className="mt-3 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white bg-[#161a22] hover:bg-[#21262d] border border-[#1e242c] rounded-lg transition-colors"
                       >
                         Reset All Filters
                       </button>
@@ -598,51 +595,53 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                     return (
                       <tr
                         key={item.itemId}
-                        className={`group hover:bg-slate-50 transition-colors ${
-                          isChecked ? 'bg-amber-50/50' : ''
+                        className={`group hover:bg-[#181d27] transition-colors ${
+                          isChecked ? 'bg-amber-500/10' : ''
                         }`}
                       >
                         {/* Checkbox */}
-                        <td className="py-2.5 px-3 text-center">
+                        <td className="py-2.5 px-3.5 text-center">
                           <input
                             type="checkbox"
                             checked={isChecked}
                             onChange={() => handleToggleSelect(item.itemId)}
-                            className="rounded-none border-slate-300 bg-white text-slate-900 accent-amber-600 cursor-pointer"
+                            className="rounded border-zinc-700 bg-[#0b0d11] text-amber-500 accent-amber-500 cursor-pointer"
                           />
                         </td>
 
-                        {/* Item ID in tabular mono */}
-                        <td className="py-2.5 px-3 font-mono font-bold text-slate-900 whitespace-nowrap">
-                          <span className="truncate max-w-[140px] inline-block">{item.itemId}</span>
+                        {/* Item ID */}
+                        <td className="py-2.5 px-3 font-mono font-bold text-white whitespace-nowrap">
+                          <span className="truncate max-w-[140px] inline-block bg-[#161a22] px-2 py-0.5 rounded border border-zinc-700">
+                            {item.itemId}
+                          </span>
                         </td>
 
                         {/* Item Name */}
                         <td className="py-2.5 px-3">
-                          <div className="font-medium text-slate-900 group-hover:text-amber-700 line-clamp-1">
+                          <div className="font-medium text-white group-hover:text-amber-400 line-clamp-1 transition-colors">
                             {cleanItemName}
                           </div>
                           {item.timesCheckedOut > 0 && (
-                            <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                            <div className="text-[11px] text-zinc-500 font-mono mt-0.5">
                               Checkouts: {item.timesCheckedOut}x
                             </div>
                           )}
                         </td>
 
                         {/* Category */}
-                        <td className="py-2.5 px-3 text-slate-700 text-xs whitespace-nowrap">
+                        <td className="py-2.5 px-3 text-zinc-300 text-xs whitespace-nowrap">
                           {item.category}
                         </td>
 
-                        {/* Status - Industrial Functional State Tag */}
+                        {/* Status */}
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           {isAvailable ? (
-                            <span className="inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold uppercase bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-none">
-                              [AVAILABLE]
+                            <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded">
+                              AVAILABLE
                             </span>
                           ) : (
-                            <span className="inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold uppercase bg-amber-50 text-amber-800 border border-amber-300 rounded-none">
-                              [CHECKED_OUT]
+                            <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded">
+                              CHECKED OUT
                             </span>
                           )}
                         </td>
@@ -650,25 +649,25 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                         {/* Team / Holder */}
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           {item.currentUser ? (
-                            <span className="font-mono font-bold text-slate-900">
+                            <span className="font-mono font-bold text-white">
                               Team {item.currentUser}
                             </span>
                           ) : (
-                            <span className="text-slate-400 font-mono">—</span>
+                            <span className="text-zinc-600 font-mono">—</span>
                           )}
                         </td>
 
                         {/* Date Out */}
-                        <td className="py-2.5 px-3 text-slate-600 font-mono tabular-nums whitespace-nowrap">
+                        <td className="py-2.5 px-3 text-zinc-400 font-mono tabular-nums whitespace-nowrap">
                           {item.dateOut || '—'}
                         </td>
 
                         {/* Notes / Location */}
-                        <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate" title={cleanNotes || item.location}>
-                          <div className="truncate text-slate-800">{cleanNotes || '—'}</div>
+                        <td className="py-2.5 px-3 text-zinc-300 max-w-xs truncate" title={cleanNotes || item.location}>
+                          <div className="truncate text-zinc-300">{cleanNotes || '—'}</div>
                           {item.location && (
-                            <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5 font-mono">
-                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                            <div className="text-[11px] text-zinc-500 flex items-center gap-1 mt-0.5 font-mono">
+                              <MapPin className="w-3 h-3 text-zinc-500 shrink-0" />
                               <span className="truncate">{item.location}</span>
                             </div>
                           )}
@@ -679,14 +678,14 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                           {isAvailable ? (
                             <button
                               onClick={() => onOpenCheckout(item, 'Check Out')}
-                              className="px-2.5 py-1 text-[11px] font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-sm transition-colors active:translate-y-px"
+                              className="px-2.5 py-1 text-xs font-semibold text-white bg-[#ea580c] hover:bg-orange-600 rounded-md transition-colors active:translate-y-px"
                             >
                               Check Out
                             </button>
                           ) : (
                             <button
                               onClick={() => onOpenCheckout(item, 'Check In')}
-                              className="px-2.5 py-1 text-[11px] font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-sm transition-colors active:translate-y-px"
+                              className="px-2.5 py-1 text-xs font-semibold text-white bg-[#059669] hover:bg-emerald-600 rounded-md transition-colors active:translate-y-px"
                             >
                               Check In
                             </button>
@@ -701,21 +700,21 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
           </div>
 
           {/* Table Footer Summary */}
-          <div className="px-3 py-2.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600 font-mono">
+          <div className="px-4 py-3 bg-[#0e1218] border-t border-[#1e242c] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-zinc-400 font-mono">
             <div className="flex items-center gap-2">
               <span>
-                SHOWING <span className="font-bold text-slate-900">{filteredItems.length}</span> OF{' '}
-                <span className="font-bold text-slate-900">{items.length}</span> ITEMS
+                SHOWING <span className="font-bold text-white">{filteredItems.length}</span> OF{' '}
+                <span className="font-bold text-white">{items.length}</span> ITEMS
               </span>
               {selectedCategory !== 'All' && <span>IN [{selectedCategory.toUpperCase()}]</span>}
             </div>
             <div className="flex items-center gap-3">
               <span>
-                <strong className="text-emerald-700 font-bold">{filteredItems.filter((i) => i.status === 'Available').length}</strong> AVAILABLE
+                <strong className="text-emerald-400 font-bold">{filteredItems.filter((i) => i.status === 'Available').length}</strong> AVAILABLE
               </span>
               <span>·</span>
               <span>
-                <strong className="text-amber-700 font-bold">{filteredItems.filter((i) => i.status === 'Checked Out').length}</strong> DEPLOYED
+                <strong className="text-amber-400 font-bold">{filteredItems.filter((i) => i.status === 'Checked Out').length}</strong> DEPLOYED
               </span>
             </div>
           </div>

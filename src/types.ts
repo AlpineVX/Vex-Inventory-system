@@ -40,8 +40,10 @@ export const CATEGORY_PREFIX_MAP: Record<VexCategory, string> = {
 export function normalizeItemId(rawId: string, categoryHint?: VexCategory | string): string {
   if (!rawId) return '';
   let s = String(rawId).trim().toUpperCase().replace(/\s+/g, '');
-  // Strip leading symbols (e.g. #, quotes)
-  s = s.replace(/^[#"'`]+/, '');
+  // Strip quotes and convert hash symbols anywhere to hyphen (e.g. Brain #1 -> BRAIN-1, #VEXB-1 -> VEXB-1)
+  s = s.replace(/["'`]/g, '').replace(/#/g, '-').replace(/-+/g, '-');
+  // Strip leading hyphen if hash was at start
+  s = s.replace(/^-+/, '');
 
   // 1. Collapse accidental double prefixes (e.g. VEXS-DIST-DIST-4, VEXSOL-SOL-1)
   s = s.replace(/^VEXS?-DIST-DIST-/i, 'VEXS-DIST-');
@@ -53,7 +55,13 @@ export function normalizeItemId(rawId: string, categoryHint?: VexCategory | stri
   s = s.replace(/^VEXR-R-/i, 'VEXR-');
   s = s.replace(/^VEXM-M-/i, 'VEXM-');
 
-  // 2. Standardize VEX- prefixed variations
+  // 2. Standardize VEX- prefixed variations and VEX-S- to VEXS-
+  s = s.replace(/^VEX[-_]S[-_]O[-_]/i, 'VEXS-O-');
+  s = s.replace(/^VEX[-_]S[-_]DIST[-_]/i, 'VEXS-DIST-');
+  s = s.replace(/^VEX[-_]S[-_]ROT[-_]/i, 'VEXS-ROT-');
+  s = s.replace(/^VEX[-_]S[-_]INER[-_]/i, 'VEXS-INER-');
+  s = s.replace(/^VEX[-_]S[-_]/i, 'VEXS-');
+
   s = s.replace(/^VEX-O-/i, 'VEXS-O-');
   s = s.replace(/^VEX-DIST-/i, 'VEXS-DIST-');
   s = s.replace(/^VEX-ROT-/i, 'VEXS-ROT-');
@@ -72,26 +80,54 @@ export function normalizeItemId(rawId: string, categoryHint?: VexCategory | stri
   s = s.replace(/^VEXSINER-/i, 'VEXS-INER-');
   s = s.replace(/^VEXSO-/i, 'VEXS-O-');
 
-  // 3. Short aliases without VEX prefix
+  // 3. Short aliases without VEX prefix (with or without hyphen/space)
+  // Supports: SOLENOID / SOLONOID, INERTIA / INERTIAL, ROTATION / ROTATIONAL, OPTICAL / OPTIC, PNEUMATIC(S)
+  s = s.replace(/^DIST(ANCE)?[-_]?(\d+)$/i, 'VEXS-DIST-$2');
+  s = s.replace(/^ROT(ATION(AL)?)?[-_]?(\d+)$/i, 'VEXS-ROT-$3');
+  s = s.replace(/^INER(TIA(L)?)?[-_]?(\d+)$/i, 'VEXS-INER-$3');
+  s = s.replace(/^(OPT(IC(AL)?)?|O)[-_]?(\d+)$/i, 'VEXS-O-$4');
+  s = s.replace(/^(SOL([EO]NOID(S)?)?|PNEU(MATIC(S)?)?)[-_]?(\d+)$/i, 'VEXSOL-$6');
+  s = s.replace(/^(BRAIN|BRN|B)[-_]?(\d+)$/i, 'VEXB-$2');
+  s = s.replace(/^(RADIO|RAD|R)[-_]?(\d+)$/i, 'VEXR-$2');
+  s = s.replace(/^(MOTOR|MOT|M)[-_]?(\d+)$/i, 'VEXM-$2');
+
+  // Short aliases with hyphen prefix
   s = s.replace(/^DIST(ANCE)?-/i, 'VEXS-DIST-');
-  s = s.replace(/^ROT(ATIONAL)?-/i, 'VEXS-ROT-');
-  s = s.replace(/^INER(TIAL)?-/i, 'VEXS-INER-');
-  s = s.replace(/^(OPT(ICAL)?|O)-/i, 'VEXS-O-');
-  s = s.replace(/^SOL(ENOID(S)?)?-/i, 'VEXSOL-');
+  s = s.replace(/^ROT(ATION(AL)?)?-/i, 'VEXS-ROT-');
+  s = s.replace(/^INER(TIA(L)?)?-/i, 'VEXS-INER-');
+  s = s.replace(/^(OPT(IC(AL)?)?|O)-/i, 'VEXS-O-');
+  s = s.replace(/^(SOL([EO]NOID(S)?)?|PNEU(MATIC(S)?)?)-/i, 'VEXSOL-');
   s = s.replace(/^(BRAIN|BRN|B)-/i, 'VEXB-');
   s = s.replace(/^(RADIO|RAD|R)-/i, 'VEXR-');
   s = s.replace(/^(MOTOR|MOT|M)-/i, 'VEXM-');
 
-  // 4. If only digits were passed and we have a category hint
-  if (/^\d+$/.test(s) && categoryHint) {
+  // 3b. VEX-prefixed without hyphen to digits (e.g. VEXDIST4 -> VEXS-DIST-4, VEXSOL1 -> VEXSOL-1)
+  s = s.replace(/^VEX[-_]?DIST(ANCE)?[-_]?(\d+)$/i, 'VEXS-DIST-$2');
+  s = s.replace(/^VEX[-_]?ROT(ATION(AL)?)?[-_]?(\d+)$/i, 'VEXS-ROT-$3');
+  s = s.replace(/^VEX[-_]?INER(TIA(L)?)?[-_]?(\d+)$/i, 'VEXS-INER-$3');
+  s = s.replace(/^VEX[-_]?(OPT(IC(AL)?)?|O)[-_]?(\d+)$/i, 'VEXS-O-$4');
+  s = s.replace(/^VEX[-_]?(SOL([EO]NOID(S)?)?|PNEU(MATIC(S)?)?)[-_]?(\d+)$/i, 'VEXSOL-$5');
+  s = s.replace(/^VEX[-_]?(BRAIN|BRN|B)[-_]?(\d+)$/i, 'VEXB-$2');
+  s = s.replace(/^VEX[-_]?(RADIO|RAD|R)[-_]?(\d+)$/i, 'VEXR-$2');
+  s = s.replace(/^VEX[-_]?(MOTOR|MOT|M)[-_]?(\d+)$/i, 'VEXM-$2');
+
+  // 4. Single-letter shorthands or digits when a category hint is provided
+  if (categoryHint) {
     const hintCat = String(categoryHint).toLowerCase();
-    if (hintCat.includes('optical') || hintCat === 'optical') s = `VEXS-O-${parseInt(s, 10)}`;
-    else if (hintCat.includes('dist') || hintCat === 'distance') s = `VEXS-DIST-${parseInt(s, 10)}`;
-    else if (hintCat.includes('inert') || hintCat === 'inertial') s = `VEXS-INER-${parseInt(s, 10)}`;
-    else if (hintCat.includes('rotat') || hintCat === 'rotational') s = `VEXS-ROT-${parseInt(s, 10)}`;
-    else if (hintCat.includes('sol') || hintCat === 'solenoids') s = `VEXSOL-${parseInt(s, 10)}`;
-    else if (hintCat.includes('brain') || hintCat === 'brain') s = `VEXB-${parseInt(s, 10)}`;
-    else if (hintCat.includes('radio') || hintCat === 'radio') s = `VEXR-${parseInt(s, 10)}`;
+    const trailingDigits = s.match(/(\d+)$/)?.[1];
+    if (trailingDigits) {
+      const num = parseInt(trailingDigits, 10);
+      // Check if s is just digits or single letter like D4, R4, I4, O4, S4, B4
+      if (/^\d+$/.test(s) || /^[A-Z][-_]?\d+$/i.test(s)) {
+        if (hintCat.includes('optical') || hintCat === 'optical') s = `VEXS-O-${num}`;
+        else if (hintCat.includes('dist') || hintCat === 'distance') s = `VEXS-DIST-${num}`;
+        else if (hintCat.includes('inert') || hintCat === 'inertial' || hintCat.includes('inertia')) s = `VEXS-INER-${num}`;
+        else if (hintCat.includes('rotat') || hintCat === 'rotational' || hintCat.includes('rotation')) s = `VEXS-ROT-${num}`;
+        else if (hintCat.includes('sol') || hintCat === 'solenoids' || hintCat.includes('pneumat')) s = `VEXSOL-${num}`;
+        else if (hintCat.includes('brain')) s = `VEXB-${num}`;
+        else if (hintCat.includes('radio')) s = `VEXR-${num}`;
+      }
+    }
   }
 
   // 5. Clean up leading zeros in the trailing numeric component (e.g. VEXS-DIST-004 -> VEXS-DIST-4)

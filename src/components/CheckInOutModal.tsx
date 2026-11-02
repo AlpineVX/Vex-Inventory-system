@@ -261,8 +261,9 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
       return;
     }
 
-    const effectiveTeam = isCustomTeam ? customTeam.trim().toUpperCase() : team;
-    if (action === 'Check Out' && !effectiveTeam) {
+    const rawTeam = isCustomTeam ? customTeam.trim().toUpperCase() : team;
+    const effectiveTeam = rawTeam || currentMatchedItem?.currentUser || presetTeam || '654V';
+    if (action === 'Check Out' && !rawTeam) {
       setErrorMessage('Please assign a team or user for this checkout.');
       return;
     }
@@ -279,15 +280,17 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
       return;
     }
 
+    const normalizedFinalId = normalizeItemId(finalItemId, currentMatchedItem?.category || assembledType);
+
     setIsSubmitting(true);
     try {
       await onSubmit({
         action,
-        itemId: finalItemId,
+        itemId: normalizedFinalId,
         team: effectiveTeam,
         notes: notes.trim(),
         email: cleanEmail,
-        category: currentMatchedItem?.category || classifyVexCategory(undefined, undefined, finalItemId) || assembledType,
+        category: currentMatchedItem?.category || classifyVexCategory(undefined, undefined, normalizedFinalId) || assembledType,
       });
       onClose();
     } catch (err: any) {
@@ -455,8 +458,9 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          const n = Math.max(1, (parseInt(assembledPartNum, 10) || 1) - 1);
-                          setAssembledPartNum(String(n));
+                          const match = assembledPartNum.match(/\d+/);
+                          const currentNum = match ? parseInt(match[0], 10) : 1;
+                          setAssembledPartNum(String(Math.max(1, currentNum - 1)));
                         }}
                         className="px-3 py-2.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors font-mono font-semibold"
                         title="Previous part number"
@@ -467,8 +471,9 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          const n = (parseInt(assembledPartNum, 10) || 0) + 1;
-                          setAssembledPartNum(String(n));
+                          const match = assembledPartNum.match(/\d+/);
+                          const currentNum = match ? parseInt(match[0], 10) : 0;
+                          setAssembledPartNum(String(currentNum + 1));
                         }}
                         className="px-3 py-2.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors font-mono font-semibold"
                         title="Next part number"
@@ -489,9 +494,11 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                     <div className="flex flex-wrap items-center gap-1.5 max-h-48 overflow-y-auto pr-0.5">
                       {categoryItems.map((item) => {
                         const numStr = item.itemId.split('-').pop() || item.itemId;
+                        const parsedInput = parseInt(assembledPartNum.replace(/\D+/g, ''), 10);
+                        const parsedNumStr = parseInt(numStr.replace(/\D+/g, ''), 10);
                         const isCurrent =
                           assembledPartNum === numStr ||
-                          assembledPartNum === String(parseInt(numStr, 10));
+                          (!isNaN(parsedInput) && !isNaN(parsedNumStr) && parsedInput === parsedNumStr);
                         const isAvailable = item.status === 'Available';
 
                         return (

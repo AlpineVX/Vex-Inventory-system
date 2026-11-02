@@ -47,6 +47,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // Admin configuration state
   const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [adminEmailError, setAdminEmailError] = useState<string | null>(null);
   const [newPin, setNewPin] = useState(adminSettings.adminPin);
   const [pinSavedNotice, setPinSavedNotice] = useState(false);
 
@@ -81,6 +82,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleAddAdminEmail = (e: React.FormEvent) => {
     e.preventDefault();
+    setAdminEmailError(null);
     const clean = newAdminEmail.trim().toLowerCase();
     if (clean && !adminSettings.adminEmails.some((em) => em.toLowerCase() === clean)) {
       onUpdateAdminSettings({
@@ -92,8 +94,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleRemoveAdminEmail = (emailToRemove: string) => {
+    setAdminEmailError(null);
     if (adminSettings.adminEmails.length <= 1) {
-      alert('You must keep at least one authorized admin email.');
+      setAdminEmailError('You must keep at least one authorized admin email.');
+      setTimeout(() => setAdminEmailError(null), 4000);
       return;
     }
     onUpdateAdminSettings({
@@ -116,65 +120,65 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-none animate-fade-in font-sans">
-      <div className="bg-white border border-slate-300 rounded-sm shadow-xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in font-sans">
+      <div className="bg-[#12161f] border border-[#1e242c] rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="px-6 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div className="px-6 py-4 bg-[#0e1218] border-b border-[#1e242c] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-none uppercase">
-              [SYSTEM_CONFIG]
+            <span className="font-mono text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase">
+              System Config
             </span>
-            <h2 className="text-sm font-bold text-slate-900 font-sans">System Settings &amp; Administration</h2>
+            <h2 className="text-sm font-bold text-white font-sans">System Settings &amp; Administration</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 p-1 rounded-sm transition-colors"
+            className="text-zinc-400 hover:text-white p-1 rounded-lg transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Navigation Tabs */}
-        <div className="px-6 pt-3 border-b border-slate-200 flex items-center gap-4 text-xs font-mono overflow-x-auto bg-slate-50/50">
+        <div className="px-6 pt-3 border-b border-[#1e242c] flex items-center gap-4 text-xs font-mono overflow-x-auto bg-[#0e1218]/50">
           <button
             onClick={() => setActiveTab('url')}
             className={`pb-2.5 transition-colors whitespace-nowrap shrink-0 border-b-2 font-bold ${
               activeTab === 'url'
-                ? 'text-slate-900 border-amber-600'
-                : 'text-slate-500 hover:text-slate-900 border-transparent'
+                ? 'text-white border-amber-500'
+                : 'text-zinc-400 hover:text-zinc-200 border-transparent'
             }`}
           >
-            [API_ENDPOINT]
+            API Endpoint
           </button>
           <button
             onClick={() => setActiveTab('security')}
             className={`pb-2.5 transition-colors whitespace-nowrap shrink-0 border-b-2 font-bold ${
               activeTab === 'security'
-                ? 'text-slate-900 border-amber-600'
-                : 'text-slate-500 hover:text-slate-900 border-transparent'
+                ? 'text-white border-amber-500'
+                : 'text-zinc-400 hover:text-zinc-200 border-transparent'
             }`}
           >
-            [ADMIN_SECURITY]
+            Admin Security
           </button>
           <button
             onClick={() => setActiveTab('instructions')}
             className={`pb-2.5 transition-colors whitespace-nowrap shrink-0 border-b-2 font-bold ${
               activeTab === 'instructions'
-                ? 'text-slate-900 border-amber-600'
-                : 'text-slate-500 hover:text-slate-900 border-transparent'
+                ? 'text-white border-amber-500'
+                : 'text-zinc-400 hover:text-zinc-200 border-transparent'
             }`}
           >
-            [SETUP_GUIDE]
+            Setup Guide
           </button>
           <button
             onClick={() => setActiveTab('code')}
             className={`pb-2.5 transition-colors whitespace-nowrap shrink-0 border-b-2 font-bold ${
               activeTab === 'code'
-                ? 'text-slate-900 border-amber-600'
-                : 'text-slate-500 hover:text-slate-900 border-transparent'
+                ? 'text-white border-amber-500'
+                : 'text-zinc-400 hover:text-zinc-200 border-transparent'
             }`}
           >
-            [BACKEND_CODE]
+            Backend Code
           </button>
         </div>
 
@@ -184,11 +188,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="space-y-4">
               <form onSubmit={handleTestAndSave} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold font-mono text-slate-800 mb-1.5">
+                  <label className="block text-xs font-bold font-mono text-zinc-200 mb-1.5">
                     GOOGLE APPS SCRIPT WEB APP URL
                   </label>
-                  <p className="text-xs text-slate-500 mb-2">
-                    Paste the Web App URL generated from <span className="text-slate-700 font-mono">Deploy &gt; New deployment &gt; Web app</span> in your Google Sheet.
+                  <p className="text-xs text-zinc-400 mb-2">
+                    Paste the Web App URL generated from <span className="text-zinc-200 font-mono">Deploy &gt; New deployment &gt; Web app</span> in your Google Sheet.
                   </p>
                   <div className="relative">
                     <input
@@ -196,7 +200,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       value={urlInput}
                       onChange={(e) => setUrlInput(e.target.value)}
                       placeholder="https://script.google.com/macros/s/AKfycb.../exec"
-                      className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-600 font-mono"
+                      className="w-full px-3.5 py-2 text-xs bg-[#0b0d11] border border-[#1e242c] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-mono"
                     />
                   </div>
                 </div>
@@ -204,14 +208,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="flex items-center justify-between pt-2">
                   <div className="flex items-center gap-2 font-mono">
                     <span
-                      className={`w-2 h-2 rounded-none ${
-                        syncStatus.url ? 'bg-emerald-600' : 'bg-amber-600'
+                      className={`w-2 h-2 rounded-full ${
+                        syncStatus.url ? 'bg-emerald-500' : 'bg-amber-500'
                       }`}
                     />
-                    <span className="text-slate-600 text-xs">
+                    <span className="text-zinc-400 text-xs">
                       STATUS:{' '}
-                      <strong className="text-slate-900">
-                        {syncStatus.url ? '[LIVE_LINKED_TO_SHEET]' : '[LOCAL_BENCHMARK_279_ITEMS]'}
+                      <strong className="text-white">
+                        {syncStatus.url ? 'Live Linked to Sheet' : 'Local Benchmark (279 Items)'}
                       </strong>
                     </span>
                   </div>
@@ -224,25 +228,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           setUrlInput('');
                           onSaveUrl('');
                         }}
-                        className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-sm transition-colors"
+                        className="px-3 py-1.5 text-xs text-zinc-400 hover:text-white bg-[#161a22] border border-[#1e242c] rounded-lg transition-colors"
                       >
-                        [DISCONNECT]
+                        Disconnect
                       </button>
                     )}
                     <button
                       type="submit"
                       disabled={isTesting || !urlInput.trim()}
-                      className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-40 rounded-sm transition-colors"
+                      className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 disabled:opacity-40 rounded-lg transition-colors"
                     >
                       {isTesting ? (
                         <>
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>TESTING...</span>
+                          <span>Testing...</span>
                         </>
                       ) : (
                         <>
                           <Link className="w-3.5 h-3.5" />
-                          <span>[CONNECT_&amp;_SYNC]</span>
+                          <span>Connect &amp; Sync</span>
                         </>
                       )}
                     </button>
@@ -253,29 +257,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {/* Test Result Message */}
               {testResult && (
                 <div
-                  className={`p-3 rounded-sm border flex items-start gap-2.5 font-mono ${
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 font-mono ${
                     testResult.success
-                      ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                      : 'bg-rose-50 border-rose-200 text-rose-800'
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                      : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
                   }`}
                 >
                   {testResult.success ? (
-                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
                   ) : (
-                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
                   )}
                   <div>
-                    <div className="font-bold">{testResult.success ? '[CONNECTION_SUCCESSFUL]' : '[CONNECTION_FAILED]'}</div>
-                    <p className="mt-0.5 text-xs font-sans">{testResult.message}</p>
+                    <div className="font-bold">{testResult.success ? 'Connection Successful' : 'Connection Failed'}</div>
+                    <p className="mt-0.5 text-xs font-sans text-zinc-300">{testResult.message}</p>
                   </div>
                 </div>
               )}
 
               {/* Factory Reset Section */}
-              <div className="pt-4 mt-6 border-t border-slate-200 flex items-center justify-between">
+              <div className="pt-4 mt-6 border-t border-[#1e242c] flex items-center justify-between">
                 <div>
-                  <div className="font-bold text-slate-800 font-mono">[RESET_BENCHMARK_DATA]</div>
-                  <p className="text-slate-500 text-[11px] mt-0.5">
+                  <div className="font-bold text-white font-mono">RESET BENCHMARK DATA</div>
+                  <p className="text-zinc-400 text-[11px] mt-0.5">
                     Restore the exact 279-item benchmark inventory (238 Available, 41 Checked Out matching Google Sheet).
                   </p>
                 </div>
@@ -287,10 +291,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       onClose();
                     }
                   }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-bold text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded-sm transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-lg transition-colors"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>[RESET_INVENTORY]</span>
+                  <span>Reset Inventory</span>
                 </button>
               </div>
             </div>
@@ -299,24 +303,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {activeTab === 'security' && (
             <div className="space-y-6">
               {/* Admin Privileges Explanation */}
-              <div className="p-3.5 bg-slate-50 rounded-sm border border-slate-200 space-y-1">
-                <span className="font-bold text-slate-900 text-xs font-mono">[ROLE_BASED_ACCESS_CONTROL]</span>
-                <p className="text-slate-600 text-xs">
+              <div className="p-3.5 bg-[#0b0d11] rounded-xl border border-[#1e242c] space-y-1">
+                <span className="font-bold text-white text-xs font-mono">ROLE-BASED ACCESS CONTROL</span>
+                <p className="text-zinc-400 text-xs">
                   Regular members and students in the lab are restricted to the <strong>Checkout &amp; Checkin</strong> tool, scanner, and inventory lookup. Only designated admins can modify API links, reset data, or manage system parameters.
                 </p>
               </div>
 
               {/* 1. Admin PIN Management */}
-              <div className="p-4 bg-white rounded-sm border border-slate-200 space-y-3">
+              <div className="p-4 bg-[#0b0d11] rounded-xl border border-[#1e242c] space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <KeyRound className="w-4 h-4 text-amber-600" />
-                    <span className="font-bold text-slate-800 font-mono">[ADMIN_SECURITY_PIN]</span>
+                    <KeyRound className="w-4 h-4 text-amber-500" />
+                    <span className="font-bold text-white font-mono">ADMIN SECURITY PIN</span>
                   </div>
                   {pinSavedNotice && (
-                    <span className="text-emerald-700 font-mono font-bold text-xs flex items-center gap-1">
+                    <span className="text-emerald-400 font-mono font-bold text-xs flex items-center gap-1">
                       <Check className="w-3.5 h-3.5" />
-                      <span>[PIN_UPDATED]</span>
+                      <span>PIN UPDATED</span>
                     </span>
                   )}
                 </div>
@@ -327,22 +331,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     value={newPin}
                     onChange={(e) => setNewPin(e.target.value)}
                     placeholder="Enter 3-8 digit PIN"
-                    className="w-40 px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-sm text-slate-900 font-mono"
+                    className="w-44 px-3 py-1.5 text-xs bg-[#161a22] border border-[#1e242c] rounded-lg text-white font-mono focus:outline-none focus:border-amber-500"
                   />
                   <button
                     type="submit"
-                    className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-sm transition-colors font-bold text-xs"
+                    className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors font-bold text-xs"
                   >
-                    UPDATE PIN
+                    Update PIN
                   </button>
                 </form>
               </div>
 
               {/* 2. Authorized Admin Emails */}
-              <div className="p-4 bg-white rounded-sm border border-slate-200 space-y-3">
+              <div className="p-4 bg-[#0b0d11] rounded-xl border border-[#1e242c] space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-800 font-mono">[AUTHORIZED_ADMIN_EMAILS]</span>
-                  <span className="text-slate-500 font-mono text-[11px]">{adminSettings.adminEmails.length} coaches/leads</span>
+                  <span className="font-bold text-white font-mono">AUTHORIZED ADMIN EMAILS</span>
+                  <span className="text-zinc-400 font-mono text-[11px]">{adminSettings.adminEmails.length} coaches/leads</span>
                 </div>
 
                 <form onSubmit={handleAddAdminEmail} className="flex items-center gap-2 font-mono">
@@ -351,26 +355,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     value={newAdminEmail}
                     onChange={(e) => setNewAdminEmail(e.target.value)}
                     placeholder="coach@school.edu"
-                    className="flex-1 px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-sm text-slate-900 font-mono"
+                    className="flex-1 px-3 py-1.5 text-xs bg-[#161a22] border border-[#1e242c] rounded-lg text-white font-mono focus:outline-none focus:border-amber-500"
                   />
                   <button
                     type="submit"
                     disabled={!newAdminEmail.trim()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-sm transition-colors disabled:opacity-40"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-lg transition-colors disabled:opacity-40"
                   >
                     <UserPlus className="w-3.5 h-3.5" />
-                    <span>ADD</span>
+                    <span>Add</span>
                   </button>
                 </form>
 
-                <div className="divide-y divide-slate-200 border border-slate-200 rounded-sm overflow-hidden bg-white max-h-48 overflow-y-auto font-mono">
+                <div className="divide-y divide-[#1e242c] border border-[#1e242c] rounded-lg overflow-hidden bg-[#161a22] max-h-48 overflow-y-auto font-mono">
                   {adminSettings.adminEmails.map((email) => (
                     <div key={email} className="px-3 py-2 flex items-center justify-between text-xs">
-                      <span className="text-slate-800">{email}</span>
+                      <span className="text-zinc-200">{email}</span>
                       <button
                         type="button"
                         onClick={() => handleRemoveAdminEmail(email)}
-                        className="text-slate-400 hover:text-rose-600 p-1 rounded-sm transition-colors"
+                        className="text-zinc-500 hover:text-rose-400 p-1 rounded transition-colors"
                         title="Remove admin email"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -378,13 +382,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                   ))}
                 </div>
+
+                {adminEmailError && (
+                  <div className="text-[11px] text-rose-400 bg-rose-500/10 border border-rose-500/30 p-2 rounded-lg font-sans flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+                    <span>{adminEmailError}</span>
+                  </div>
+                )}
               </div>
 
               {/* 3. Strict Kiosk Mode Toggle */}
-              <div className="p-4 bg-white rounded-sm border border-slate-200 flex items-center justify-between font-mono">
+              <div className="p-4 bg-[#0b0d11] rounded-xl border border-[#1e242c] flex items-center justify-between font-mono">
                 <div>
-                  <div className="font-bold text-slate-800">[STRICT_KIOSK_MODE]</div>
-                  <p className="text-slate-500 text-[11px] mt-0.5 font-sans">
+                  <div className="font-bold text-white">STRICT KIOSK MODE</div>
+                  <p className="text-zinc-400 text-[11px] mt-0.5 font-sans">
                     When active, non-admin members can only access the Checkout/Checkin panel and Inventory search.
                   </p>
                 </div>
@@ -396,48 +407,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       kioskOnly: !adminSettings.kioskOnly,
                     })
                   }
-                  className={`px-3 py-1.5 text-xs font-bold rounded-sm border transition-colors ${
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${
                     adminSettings.kioskOnly
-                      ? 'bg-amber-50 text-amber-800 border-amber-300'
-                      : 'bg-slate-100 text-slate-700 border-slate-300'
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                      : 'bg-[#161a22] text-zinc-400 border-[#1e242c] hover:text-white'
                   }`}
                 >
-                  {adminSettings.kioskOnly ? '[KIOSK_ON]' : '[KIOSK_OFF]'}
+                  {adminSettings.kioskOnly ? 'KIOSK ON' : 'KIOSK OFF'}
                 </button>
               </div>
             </div>
           )}
 
           {activeTab === 'instructions' && (
-            <div className="space-y-4 text-slate-700 leading-relaxed font-sans">
-              <div className="p-4 bg-slate-50 rounded-sm border border-slate-200">
-                <span className="font-bold text-slate-900 font-mono">[3_MINUTE_SETUP_OVERVIEW]</span>
-                <ol className="list-decimal list-inside space-y-2.5 mt-2.5 text-slate-600 text-xs">
+            <div className="space-y-4 text-zinc-300 leading-relaxed font-sans">
+              <div className="p-4 bg-[#0b0d11] rounded-xl border border-[#1e242c]">
+                <span className="font-bold text-white font-mono">3-MINUTE SETUP OVERVIEW</span>
+                <ol className="list-decimal list-inside space-y-2.5 mt-2.5 text-zinc-400 text-xs">
                   <li>
-                    <strong className="text-slate-900">Upload to Google Sheets:</strong>
-                    <p className="pl-4 mt-0.5 text-slate-600">
-                      In Google Drive, click <span className="font-mono text-slate-800">+ New &gt; File upload</span> and select your inventory spreadsheet. Open it and select <span className="font-mono text-slate-800">File &gt; Save as Google Sheets</span>.
+                    <strong className="text-white">Upload to Google Sheets:</strong>
+                    <p className="pl-4 mt-0.5 text-zinc-400">
+                      In Google Drive, click <span className="font-mono text-zinc-300">+ New &gt; File upload</span> and select your inventory spreadsheet. Open it and select <span className="font-mono text-zinc-300">File &gt; Save as Google Sheets</span>.
                     </p>
                   </li>
                   <li>
-                    <strong className="text-slate-900">Add the Google Apps Script:</strong>
-                    <p className="pl-4 mt-0.5 text-slate-600">
-                      In your Google Sheet, click <span className="font-mono text-slate-800">Extensions &gt; Apps Script</span> in the top menu. Delete any existing code in <code className="text-slate-900 bg-slate-200 px-1 py-0.5 rounded-none font-mono">Code.gs</code>, paste the code from the <em>[BACKEND_CODE]</em> tab, and click Save.
+                    <strong className="text-white">Add the Google Apps Script:</strong>
+                    <p className="pl-4 mt-0.5 text-zinc-400">
+                      In your Google Sheet, click <span className="font-mono text-zinc-300">Extensions &gt; Apps Script</span> in the top menu. Delete any existing code in <code className="text-zinc-200 bg-[#161a22] px-1.5 py-0.5 rounded font-mono">Code.gs</code>, paste the code from the <em>Backend Code</em> tab, and click Save.
                     </p>
                   </li>
                   <li>
-                    <strong className="text-slate-900">Deploy as Web App API:</strong>
-                    <p className="pl-4 mt-0.5 text-slate-600">
-                      Click <span className="font-mono text-slate-800">Deploy &gt; New deployment</span>. Select <span className="font-mono text-slate-800">Web app</span>.<br />
-                      Set <strong>Execute as:</strong> <code className="text-slate-900 font-mono">Me</code>.<br />
-                      Set <strong>Who has access:</strong> <code className="text-emerald-700 font-mono font-bold">Anyone</code>.<br />
+                    <strong className="text-white">Deploy as Web App API:</strong>
+                    <p className="pl-4 mt-0.5 text-zinc-400">
+                      Click <span className="font-mono text-zinc-300">Deploy &gt; New deployment</span>. Select <span className="font-mono text-zinc-300">Web app</span>.<br />
+                      Set <strong>Execute as:</strong> <code className="text-zinc-200 font-mono">Me</code>.<br />
+                      Set <strong>Who has access:</strong> <code className="text-emerald-400 font-mono font-bold">Anyone</code>.<br />
                       Click <strong>Deploy</strong>, grant Google account access, and copy the Web App URL.
                     </p>
                   </li>
                   <li>
-                    <strong className="text-slate-900">Connect Web App to Website:</strong>
-                    <p className="pl-4 mt-0.5 text-slate-600">
-                      Paste the copied Web App URL into the <em>[API_ENDPOINT]</em> field in this modal and click <strong>Connect &amp; Sync</strong>!
+                    <strong className="text-white">Connect Web App to Website:</strong>
+                    <p className="pl-4 mt-0.5 text-zinc-400">
+                      Paste the copied Web App URL into the <em>API Endpoint</em> field in this modal and click <strong>Connect &amp; Sync</strong>!
                     </p>
                   </li>
                 </ol>
@@ -447,35 +458,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {activeTab === 'code' && (
             <div className="space-y-3 font-sans">
-              <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-sm text-emerald-800 text-xs font-mono">
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 text-xs font-mono">
                 <strong className="block mb-1 font-bold">
-                  [LOGS_ONLY_ARCHITECTURE] (Zero Category Sheet Overwrites):
+                  LOGS-ONLY ARCHITECTURE (Zero Category Sheet Overwrites):
                 </strong>
                 Checkouts and check-ins <strong>only append a new row to your LOGS sheet</strong>. All category sheets and spreadsheet formulas calculate status automatically.
               </div>
 
               <div className="flex items-center justify-between font-mono">
-                <span className="text-slate-700 font-bold text-xs">[APPS_SCRIPT_SOURCE] (`Code.gs`)</span>
+                <span className="text-zinc-300 font-bold text-xs">APPS SCRIPT SOURCE (<code>Code.gs</code>)</span>
                 <button
                   onClick={handleCopyCode}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 rounded-sm transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-zinc-200 bg-[#161a22] hover:bg-[#21262d] border border-[#1e242c] rounded-lg transition-colors"
                 >
                   {copiedCode ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>[COPIED!]</span>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Copied!</span>
                     </>
                   ) : (
                     <>
                       <Copy className="w-3.5 h-3.5" />
-                      <span>[COPY_CODE]</span>
+                      <span>Copy Code</span>
                     </>
                   )}
                 </button>
               </div>
 
               <div className="relative">
-                <pre className="p-4 bg-slate-900 border border-slate-800 rounded-sm overflow-x-auto text-[11px] font-mono text-slate-200 max-h-80 leading-relaxed">
+                <pre className="p-4 bg-[#0b0d11] border border-[#1e242c] rounded-xl overflow-x-auto text-[11px] font-mono text-zinc-300 max-h-80 leading-relaxed">
                   {APPS_SCRIPT_SOURCE}
                 </pre>
               </div>
@@ -484,13 +495,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 bg-slate-50 font-mono">
-          <span>Settings persist automatically in localStorage</span>
+        <div className="px-6 py-3.5 border-t border-[#1e242c] flex items-center justify-between text-xs text-zinc-400 bg-[#0e1218] font-mono">
+          <span>Settings persist automatically in browser storage</span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-sm font-bold transition-colors"
+            className="px-4 py-1.5 bg-[#161a22] hover:bg-[#21262d] text-white border border-[#1e242c] rounded-lg font-bold transition-colors"
           >
-            CLOSE
+            Close
           </button>
         </div>
       </div>

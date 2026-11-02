@@ -132,7 +132,12 @@ async function startServer() {
       function isValidVexId(rawId: string): boolean {
         if (!rawId) return false;
         let s = rawId.trim().toUpperCase().replace(/\s+/g, '');
-        s = s.replace(/^[#"'`]+/, '');
+        s = s.replace(/["'`]/g, '').replace(/#/g, '-').replace(/-+/g, '-').replace(/^-+/, '');
+        s = s.replace(/^VEX[-_]S[-_]O[-_]/i, 'VEXS-O-');
+        s = s.replace(/^VEX[-_]S[-_]DIST[-_]/i, 'VEXS-DIST-');
+        s = s.replace(/^VEX[-_]S[-_]ROT[-_]/i, 'VEXS-ROT-');
+        s = s.replace(/^VEX[-_]S[-_]INER[-_]/i, 'VEXS-INER-');
+        s = s.replace(/^VEX[-_]S[-_]/i, 'VEXS-');
         s = s.replace(/^VEX-O-/i, 'VEXS-O-');
         s = s.replace(/^VEX-DIST-/i, 'VEXS-DIST-');
         s = s.replace(/^VEX-ROT-/i, 'VEXS-ROT-');
@@ -269,11 +274,24 @@ async function startServer() {
       return;
     }
 
+    // Sanitize action and identifiers
+    payload.action = payload.action === 'Check In' ? 'Check In' : 'Check Out';
+    payload.itemId = String(payload.itemId || '').trim();
+    payload.team = String(payload.team || payload.currentUser || '').trim();
+    payload.notes = String(payload.notes || '').trim();
+    payload.userEmail = String(payload.userEmail || payload.email || '').trim();
+    payload.category = String(payload.category || payload.sensorType || '').trim();
+
     // Coerce numeric part to integer to satisfy Google Sheets number validations
     if (payload.number !== undefined && payload.number !== null && payload.number !== '') {
       const parsedNum = parseInt(String(payload.number), 10);
       if (!isNaN(parsedNum)) {
         payload.number = parsedNum;
+      }
+    } else if (payload.itemId) {
+      const trailingMatch = String(payload.itemId).match(/(\d+)\s*$/) || String(payload.itemId).match(/\d+/);
+      if (trailingMatch) {
+        payload.number = parseInt(trailingMatch[1] || trailingMatch[0], 10);
       }
     }
 
