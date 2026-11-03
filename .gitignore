@@ -2,7 +2,11 @@ node_modules/
 build/
 dist/
 coverage/
+.aistudio/
+.vite/
+.turbo/
 .DS_Store
 *.log
+*.tsbuildinfo
 .env*
 !.env.example
