@@ -267,6 +267,10 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
                 <span className="text-zinc-500">Print Engine:</span>
                 <span className="text-white">@media print Clean Competition Custody Manifest</span>
               </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-500">Source Repository:</span>
+                <span className="text-emerald-400">VEX Robotics Team 654 · MIT License</span>
+              </div>
             </div>
           </div>
         </div>
