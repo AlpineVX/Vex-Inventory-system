@@ -1270,14 +1270,14 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                             hasBrain ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
                           }`}
                         >
-                          Brain: {hasBrain ? '✓' : '—'}
+                          Brain: {hasBrain ? 'YES' : '—'}
                         </div>
                         <div
                           className={`p-1 rounded ${
                             hasRadio ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
                           }`}
                         >
-                          Radio: {hasRadio ? '✓' : '—'}
+                          Radio: {hasRadio ? 'YES' : '—'}
                         </div>
                         <div
                           className={`p-1 rounded ${

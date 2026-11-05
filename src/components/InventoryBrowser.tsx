@@ -13,6 +13,7 @@ import {
   ExternalLink,
   ChevronDown,
   Lock,
+  X,
 } from 'lucide-react';
 import { InventoryItem, VexCategory, CLUB_TEAMS, SENSOR_CATEGORIES } from '../types';
 import { MobileInventoryList } from './MobileInventoryList';
@@ -329,9 +330,9 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-white"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
               >
-                ✕
+                <X className="w-3 h-3" />
               </button>
             )}
           </div>

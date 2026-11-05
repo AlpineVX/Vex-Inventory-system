@@ -40,12 +40,12 @@ Designed specifically around the **VEX V5 ecosystem**, the system bridges physic
 
 ## Key Capabilities
 
-### ⚡ Rapid-Fire Borrower Kiosk
+### Rapid-Fire Borrower Kiosk
 - **Self-Service Checkout & Return**: Single-click component selection (Type + Part Number stepper) eliminating typing fatigue in pit conditions.
 - **Strict Accountability Guardrails**: Enforces student borrower email capture (`@ltisdschools.net` or school domain) and club team routing (`654A`, `654B`, `654C`, `654D`, `654E`, `654H`, `654J`, `654M`, `654S`, `654T`, `654V`).
 - **Smart ID Normalization**: Automatically maps freehand input like `sol 1`, `4`, `DIST-4`, or `VEX-DIST-004` to standardized VEX catalog identifiers.
 
-### 🔬 Authentic VEX V5 Telemetry Registry
+### Authentic VEX V5 Telemetry Registry
 - Built-in hardware specifications for all core VEX components:
   - **V5 Robot Brain (`276-4810`)**: Dual Cortex-A9 @ 667 MHz, 21 Smart Ports, 8 3-Wire ports (`<R11>`).
   - **V5 Robot Radio (`276-4831`)**: 2.4 GHz DSSS frequency hopping, VEXnet 3.0 / Bluetooth 4.2 (`<R11>`).
@@ -55,21 +55,21 @@ Designed specifically around the **VEX V5 ecosystem**, the system bridges physic
   - **Rotational Sensor (`276-6010`)**: 4,096 tick/rev magnetic encoder for autonomous dead-wheel pods (`<R13>`).
   - **Pneumatics Solenoids (`276-8140`)**: 5/2 SMC solenoid valves with 100 PSI working limit (`<R12>`).
 
-### 🔊 Procedural Web Audio Synthesis Engine
+### Procedural Web Audio Synthesis Engine
 - Zero external audio files or network requests. Synthesizes mechanical clicks, double-frequency notification chirps, and dual-tone harmonic chimes in real time using the browser's native **Web Audio API** (`AudioContext`).
 - Fully accessible with a one-click header mute toggle (`Key M`) and persistent `localStorage` synchronization.
 
-### 🛡️ System Architecture & Telemetry Inspector
+### System Architecture & Telemetry Inspector
 - Interactive diagnostics modal (`Key D` or Activity icon):
   - **Real-time byte consumption**: Monitors UTF-16 storage utilization across `localStorage` buckets.
   - **SHA-256 State Integrity Hash**: Cryptographically computes state consistency across client sessions.
   - **Round-Trip Latency Benchmark**: Live HTTP ping diagnostics to the backend proxy.
   - **Telemetry Export**: One-click JSON snapshot download for club leadership and mentor audits.
 
-### 🖨️ Tournament Competition Custody Manifest
+### Tournament Competition Custody Manifest
 - Clean print stylesheet (`@media print` / `Ctrl+P` / `Key P`) that converts the dark-mode dashboard into an official high-contrast, black-and-white physical equipment manifest ready for tournament check-in inspectors and pit tables.
 
-### ⌨️ Power-User Keyboard Command System
+### Power-User Keyboard Command System
 | Key | Action | Description |
 |:---:|:---|:---|
 | `1` | **Command Center** | Jump directly to fleet overview KPIs and telemetry |
