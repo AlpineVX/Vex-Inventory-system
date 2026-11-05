@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { CompetitionPackItem, InventoryItem, VexCategory, classifyVexCategory } from '../types';
 import { INITIAL_PACK_LIST } from '../data/mockInventory';
+import { playClick, playSuccess, playBeep } from '../services/soundFx';
 
 interface CompetitionPackListProps {
   items: InventoryItem[];
@@ -66,8 +67,15 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
   }, [items]);
 
   const togglePacked = (id: string) => {
-    setPackList((prev) =>
-      prev.map((item) => {
+    setPackList((prev) => {
+      const target = prev.find((item) => item.id === id);
+      const willBePacked = target ? !target.isPacked : false;
+      if (willBePacked) {
+        playSuccess();
+      } else {
+        playClick();
+      }
+      return prev.map((item) => {
         if (item.id === id) {
           const nextPacked = !item.isPacked;
           return {
@@ -77,15 +85,19 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
           };
         }
         return item;
-      })
-    );
+      });
+    });
   };
 
   const updatePackedCount = (id: string, delta: number) => {
+    playClick();
     setPackList((prev) =>
       prev.map((item) => {
         if (item.id === id) {
           const next = Math.max(0, Math.min(item.targetCount, item.packedCount + delta));
+          if (next === item.targetCount && item.packedCount < item.targetCount) {
+            playSuccess();
+          }
           return {
             ...item,
             packedCount: next,
@@ -98,6 +110,7 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
   };
 
   const resetAllPacked = () => {
+    playClick();
     setPackList((prev) =>
       prev.map((item) => ({
         ...item,
@@ -108,6 +121,7 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
   };
 
   const markAllPacked = () => {
+    playSuccess();
     setPackList((prev) =>
       prev.map((item) => ({
         ...item,
@@ -200,16 +214,22 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1 p-1 bg-[#12161f] border border-[#1e242c] rounded-lg text-xs font-mono">
           <button
-            onClick={() => setFilterState('all')}
-            className={`px-3 py-1 rounded-md transition-colors ${
+            onClick={() => {
+              playClick();
+              setFilterState('all');
+            }}
+            className={`px-3 py-1 rounded-md transition-colors btn-tactile ${
               filterState === 'all' ? 'bg-[#222834] text-white font-bold' : 'text-zinc-400 hover:text-white'
             }`}
           >
             ALL [{packList.length}]
           </button>
           <button
-            onClick={() => setFilterState('unpacked')}
-            className={`px-3 py-1 rounded-md transition-colors ${
+            onClick={() => {
+              playClick();
+              setFilterState('unpacked');
+            }}
+            className={`px-3 py-1 rounded-md transition-colors btn-tactile ${
               filterState === 'unpacked'
                 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 font-bold'
                 : 'text-zinc-400 hover:text-white'
@@ -218,8 +238,11 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
             NEEDS PACKING [{packList.filter((i) => !i.isPacked).length}]
           </button>
           <button
-            onClick={() => setFilterState('packed')}
-            className={`px-3 py-1 rounded-md transition-colors ${
+            onClick={() => {
+              playClick();
+              setFilterState('packed');
+            }}
+            className={`px-3 py-1 rounded-md transition-colors btn-tactile ${
               filterState === 'packed'
                 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold'
                 : 'text-zinc-400 hover:text-white'

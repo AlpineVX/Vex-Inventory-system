@@ -30,6 +30,8 @@ import {
   classifyVexCategory,
   getCategoryDefaultLocation,
 } from '../types';
+import { playClick, playBeep, playSuccess } from '../services/soundFx';
+import { getVexHardwareSpec, VEX_HARDWARE_SPECS } from '../data/vexSpecs';
 
 interface CommandCenterProps {
   items: InventoryItem[];
@@ -287,38 +289,51 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
       {/* 1. Header Strip: Command Center Title & Top Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-            VEX Robotics Inventory — Command Center
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2.5">
+            <span>VEX Robotics Inventory — Command Center</span>
           </h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            Live view — updates automatically as parts are scanned in and out across all 11 club teams
+          <p className="text-sm text-zinc-400 mt-1 flex items-center gap-2 font-mono text-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 radar-dot shrink-0" />
+            <span>Live telemetry — updates automatically as parts are scanned in and out across all 11 club teams</span>
           </p>
         </div>
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           <button
-            onClick={() => onNavigateTab('packlist')}
-            className="px-3.5 py-2 text-xs font-medium text-zinc-200 bg-[#161a22] hover:bg-[#21262d] border border-zinc-700/80 rounded-lg transition-colors flex items-center gap-1.5"
+            onClick={() => {
+              playClick();
+              onNavigateTab('packlist');
+            }}
+            className="px-3.5 py-2 text-xs font-medium text-zinc-200 bg-[#161a22] hover:bg-[#21262d] border border-zinc-700/80 rounded-lg transition-colors flex items-center gap-1.5 btn-tactile"
           >
             <Box className="w-3.5 h-3.5 text-zinc-400" />
             <span>Pack List</span>
           </button>
           <button
-            onClick={handleExportCSV}
+            onClick={() => {
+              playClick();
+              handleExportCSV();
+            }}
             title="Download CSV snapshot of all 178 inventory items"
-            className="px-3.5 py-2 text-xs font-medium text-zinc-200 bg-[#161a22] hover:bg-[#21262d] border border-zinc-700/80 rounded-lg transition-colors flex items-center gap-1.5"
+            className="px-3.5 py-2 text-xs font-medium text-zinc-200 bg-[#161a22] hover:bg-[#21262d] border border-zinc-700/80 rounded-lg transition-colors flex items-center gap-1.5 btn-tactile"
           >
             <Download className="w-3.5 h-3.5 text-zinc-400" />
             <span className="hidden sm:inline">Export CSV</span>
           </button>
           <button
-            onClick={() => onOpenCheckout(undefined, 'Check Out')}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#ea580c] hover:bg-orange-600 rounded-lg transition-colors shadow-sm active:scale-[0.98]"
+            onClick={() => {
+              playBeep();
+              onOpenCheckout(undefined, 'Check Out');
+            }}
+            className="px-4 py-2 text-xs font-semibold text-white bg-[#ea580c] hover:bg-orange-600 rounded-lg transition-colors shadow-sm active:scale-[0.97] btn-tactile"
           >
             Check Out
           </button>
           <button
-            onClick={() => onOpenCheckout(undefined, 'Check In')}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#059669] hover:bg-emerald-600 rounded-lg transition-colors shadow-sm active:scale-[0.98]"
+            onClick={() => {
+              playBeep();
+              onOpenCheckout(undefined, 'Check In');
+            }}
+            className="px-4 py-2 text-xs font-semibold text-white bg-[#059669] hover:bg-emerald-600 rounded-lg transition-colors shadow-sm active:scale-[0.97] btn-tactile"
           >
             Check In
           </button>
@@ -635,12 +650,15 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Row 1 */}
         <div
-          onClick={() => onNavigateTab('inventory')}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-colors group"
+          onClick={() => {
+            playClick();
+            onNavigateTab('inventory');
+          }}
+          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>TOTAL ITEMS</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-white transition-colors" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 transition-colors" />
           </div>
           <div className="text-3xl font-bold font-mono tabular-nums text-white mt-2">
             {totalCount}
@@ -650,15 +668,16 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
 
         <div
           onClick={() => {
+            playClick();
             setCategoryFilter('Available');
             const searchEl = document.querySelector('input[type="text"]');
             if (searchEl) (searchEl as HTMLInputElement).focus();
           }}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-colors group"
+          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>AVAILABLE NOW</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-white transition-colors" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-emerald-400 transition-colors" />
           </div>
           <div className="text-3xl font-bold font-mono tabular-nums text-emerald-400 mt-2">
             {availableCount}
@@ -667,12 +686,15 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         </div>
 
         <div
-          onClick={() => setActiveDrilldown('overdue')}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-colors group"
+          onClick={() => {
+            playClick();
+            setActiveDrilldown('overdue');
+          }}
+          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>CHECKED OUT NOW</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-white transition-colors" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 transition-colors" />
           </div>
           <div className="text-3xl font-bold font-mono tabular-nums text-amber-400 mt-2">
             {checkedOutCount}
@@ -680,7 +702,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           <div className="text-xs text-zinc-500 mt-1">Click to view borrowers</div>
         </div>
 
-        <div className="bg-[#12161f] border border-[#1e242c] rounded-xl p-5">
+        <div className="bg-[#12161f] border border-[#1e242c] rounded-xl p-5 card-hover-lift shadow-sm">
           <div className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             UTILIZATION
           </div>
@@ -692,12 +714,15 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
 
         {/* Row 2 */}
         <div
-          onClick={() => setActiveDrilldown('overdue')}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-colors group"
+          onClick={() => {
+            playClick();
+            setActiveDrilldown('overdue');
+          }}
+          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>OVERDUE ITEMS</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-white transition-colors" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 transition-colors" />
           </div>
           <div className="text-3xl font-bold font-mono tabular-nums text-white mt-2">
             {overdueItems100d.length}
@@ -712,8 +737,11 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         </div>
 
         <div
-          onClick={() => onNavigateTab('logs')}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-colors group"
+          onClick={() => {
+            playClick();
+            onNavigateTab('logs');
+          }}
+          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>TOTAL LOG ENTRIES</span>
@@ -726,8 +754,11 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         </div>
 
         <div
-          onClick={() => setActiveDrilldown('readiness')}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-colors group"
+          onClick={() => {
+            playClick();
+            setActiveDrilldown('readiness');
+          }}
+          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>ACTIVE BORROWERS</span>
@@ -740,12 +771,15 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         </div>
 
         <div
-          onClick={() => setActiveDrilldown('maintenance')}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-colors group"
+          onClick={() => {
+            playClick();
+            setActiveDrilldown('maintenance');
+          }}
+          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>MAINTENANCE REPORTS</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-white transition-colors" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 transition-colors" />
           </div>
           <div className="text-3xl font-bold font-mono tabular-nums text-amber-400 mt-2">
             {maintenanceLogs.length}

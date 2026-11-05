@@ -44,7 +44,10 @@ import { ActivityLogs } from './components/ActivityLogs';
 import { CheckInOutModal } from './components/CheckInOutModal';
 import { SettingsModal } from './components/SettingsModal';
 import { AdminUnlockModal } from './components/AdminUnlockModal';
+import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
+import { SystemDiagnosticsModal } from './components/SystemDiagnosticsModal';
 import { ToastContainer, ToastMessage } from './components/Toast';
+import { isSoundEnabled, setSoundEnabled, playToggle, playSuccess, playClick } from './services/soundFx';
 
 export default function App() {
   // 1. Core State
@@ -123,7 +126,78 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [isAdminUnlockModalOpen, setIsAdminUnlockModalOpen] = useState<boolean>(false);
   const [isAssetsModalOpen, setIsAssetsModalOpen] = useState<boolean>(false);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState<boolean>(false);
+  const [isDiagnosticsModalOpen, setIsDiagnosticsModalOpen] = useState<boolean>(false);
+  const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => isSoundEnabled());
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const handleToggleSound = useCallback(() => {
+    const next = !soundEnabled;
+    setSoundEnabledState(next);
+    setSoundEnabled(next);
+    if (next) playToggle();
+  }, [soundEnabled]);
+
+  // Global Keyboard Shortcuts Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept when user is typing in form controls
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+        if (e.key === 'Escape') {
+          (document.activeElement as HTMLElement)?.blur();
+        }
+        return;
+      }
+
+      if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+        e.preventDefault();
+        playClick();
+        setIsShortcutsModalOpen((prev) => !prev);
+      } else if (e.key === '1') {
+        e.preventDefault();
+        playClick();
+        setActiveTab('dashboard');
+      } else if (e.key === '2') {
+        e.preventDefault();
+        playClick();
+        setActiveTab('inventory');
+      } else if (e.key === '3') {
+        e.preventDefault();
+        playClick();
+        setActiveTab('teams');
+      } else if (e.key === '4') {
+        e.preventDefault();
+        playClick();
+        setActiveTab('packlist');
+      } else if (e.key === '5') {
+        e.preventDefault();
+        playClick();
+        setActiveTab('logs');
+      } else if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        playClick();
+        setIsCheckoutModalOpen(true);
+      } else if (e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        playClick();
+        setIsDiagnosticsModalOpen(true);
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        handleToggleSound();
+      } else if (e.key === 'Escape') {
+        setIsCheckoutModalOpen(false);
+        setIsSettingsModalOpen(false);
+        setIsAdminUnlockModalOpen(false);
+        setIsAssetsModalOpen(false);
+        setIsShortcutsModalOpen(false);
+        setIsDiagnosticsModalOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleToggleSound]);
 
   // Mobile viewport detection and manual layout mode switch
   const [viewMode, setViewMode] = useState<'auto' | 'mobile' | 'desktop'>(() => {
@@ -559,6 +633,9 @@ export default function App() {
           isMobileModeForced={viewMode === 'mobile'}
           onToggleViewMode={handleToggleViewMode}
           onOpenAssetsModal={() => setIsAssetsModalOpen(true)}
+          soundEnabled={soundEnabled}
+          onToggleSound={handleToggleSound}
+          onOpenDiagnostics={() => setIsDiagnosticsModalOpen(true)}
         />
       ) : (
         <Header
@@ -573,6 +650,10 @@ export default function App() {
           onLockAdmin={handleLockAdmin}
           onToggleViewMode={handleToggleViewMode}
           onOpenAssetsModal={() => setIsAssetsModalOpen(true)}
+          soundEnabled={soundEnabled}
+          onToggleSound={handleToggleSound}
+          onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
+          onOpenDiagnostics={() => setIsDiagnosticsModalOpen(true)}
         />
       )}
 
@@ -710,6 +791,21 @@ export default function App() {
       <ClubAssetsModal
         isOpen={isAssetsModalOpen}
         onClose={() => setIsAssetsModalOpen(false)}
+      />
+
+      {/* Keyboard Shortcuts Cheatsheet Modal */}
+      <KeyboardShortcutsModal
+        isOpen={isShortcutsModalOpen}
+        onClose={() => setIsShortcutsModalOpen(false)}
+      />
+
+      {/* System Telemetry & Architecture Diagnostics Modal */}
+      <SystemDiagnosticsModal
+        isOpen={isDiagnosticsModalOpen}
+        onClose={() => setIsDiagnosticsModalOpen(false)}
+        items={items}
+        logs={logs}
+        syncStatus={syncStatus}
       />
 
       {/* Toast Notification Container */}

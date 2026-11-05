@@ -19,6 +19,8 @@ import {
   classifyVexCategory,
   isValidVexId,
 } from '../types';
+import { playClick, playSuccess } from '../services/soundFx';
+import { getVexHardwareSpec } from '../data/vexSpecs';
 
 interface CheckInOutModalProps {
   isOpen: boolean;
@@ -249,6 +251,10 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
     return pool.slice(0, 24);
   }, [items, action, itemSearch]);
 
+  const activeSpec = useMemo(() => {
+    return getVexHardwareSpec(currentMatchedItem?.category || assembledType);
+  }, [currentMatchedItem, assembledType]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -292,6 +298,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
         email: cleanEmail,
         category: currentMatchedItem?.category || classifyVexCategory(undefined, undefined, normalizedFinalId) || assembledType,
       });
+      playSuccess();
       onClose();
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to submit transaction.');
@@ -315,7 +322,10 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
             <span className="text-xs text-zinc-400">· VEX Robotics Control</span>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => {
+              playClick();
+              onClose();
+            }}
             className="text-zinc-400 hover:text-zinc-200 p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg transition-colors"
           >
             <X className="w-4 h-4" />
@@ -327,7 +337,10 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
           <div className="grid grid-cols-2 gap-1.5 p-1 bg-zinc-950 rounded-xl border border-zinc-800">
             <button
               type="button"
-              onClick={() => setAction('Check Out')}
+              onClick={() => {
+                playClick();
+                setAction('Check Out');
+              }}
               className={`flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-md transition-all ${
                 action === 'Check Out'
                   ? 'bg-amber-600 text-white shadow-sm'
@@ -339,7 +352,10 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setAction('Check In')}
+              onClick={() => {
+                playClick();
+                setAction('Check In');
+              }}
               className={`flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-md transition-all ${
                 action === 'Check In'
                   ? 'bg-emerald-600 text-white shadow-sm'
@@ -363,7 +379,10 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
               <div className="flex items-center gap-1 text-[11px] bg-zinc-950 p-0.5 rounded border border-zinc-800">
                 <button
                   type="button"
-                  onClick={() => setSelectionMode('assemble')}
+                  onClick={() => {
+                    playClick();
+                    setSelectionMode('assemble');
+                  }}
                   className={`px-2 py-0.5 rounded transition-colors ${
                     selectionMode === 'assemble'
                       ? 'bg-zinc-800 text-white font-medium'
@@ -374,7 +393,10 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectionMode('search')}
+                  onClick={() => {
+                    playClick();
+                    setSelectionMode('search');
+                  }}
                   className={`px-2 py-0.5 rounded transition-colors ${
                     selectionMode === 'search'
                       ? 'bg-zinc-800 text-white font-medium'
@@ -404,8 +426,11 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                         <button
                           key={cat}
                           type="button"
-                          onClick={() => setAssembledType(cat)}
-                          className={`px-2 py-1.5 text-xs rounded-lg border text-left transition-all ${
+                          onClick={() => {
+                            playClick();
+                            setAssembledType(cat);
+                          }}
+                          className={`px-2 py-1.5 text-xs rounded-lg border text-left transition-all btn-tactile ${
                             isSelected
                               ? 'bg-zinc-100 text-zinc-950 border-zinc-200 font-bold shadow-sm'
                               : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
@@ -458,6 +483,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                       <button
                         type="button"
                         onClick={() => {
+                          playClick();
                           const match = assembledPartNum.match(/\d+/);
                           const currentNum = match ? parseInt(match[0], 10) : 1;
                           setAssembledPartNum(String(Math.max(1, currentNum - 1)));
@@ -471,6 +497,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                       <button
                         type="button"
                         onClick={() => {
+                          playClick();
                           const match = assembledPartNum.match(/\d+/);
                           const currentNum = match ? parseInt(match[0], 10) : 0;
                           setAssembledPartNum(String(currentNum + 1));
@@ -505,9 +532,12 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                           <button
                             key={item.itemId}
                             type="button"
-                            onClick={() => setAssembledPartNum(numStr)}
+                            onClick={() => {
+                              playClick();
+                              setAssembledPartNum(numStr);
+                            }}
                             title={`${item.itemName} · ${item.status}${item.currentUser ? ` (Team ${item.currentUser})` : ''}`}
-                            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-mono rounded-lg border transition-all ${
+                            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-mono rounded-lg border transition-all btn-tactile ${
                               isCurrent
                                 ? 'bg-zinc-100 text-zinc-950 border-zinc-200 font-bold shadow-sm'
                                 : isAvailable
@@ -528,62 +558,77 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                   </div>
                 </div>
 
-                {/* Identified Component Confirmation Card */}
-                <div className="mt-3 p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center font-mono text-sm font-bold text-zinc-300 shrink-0">
-                      #
+                {/* Identified Component Confirmation Card with VEX Hardware Telemetry */}
+                <div className="mt-3 p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800 flex flex-col gap-2.5 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center font-mono text-sm font-bold text-zinc-300 shrink-0">
+                        #
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                          Resolved Hardware ID
+                        </div>
+                        <div className="text-sm font-bold font-mono text-white flex items-center gap-2 mt-0.5">
+                          <span className="text-zinc-100">{effectiveItemId}</span>
+                          {currentMatchedItem ? (
+                            <span className="text-xs font-sans text-zinc-300 font-normal truncate max-w-[200px]">
+                              · {currentMatchedItem.itemName}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-sans text-zinc-500 font-normal">
+                              · Custom Component
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                        Resolved Hardware ID
-                      </div>
-                      <div className="text-sm font-bold font-mono text-white flex items-center gap-2 mt-0.5">
-                        <span className="text-zinc-100">{effectiveItemId}</span>
-                        {currentMatchedItem ? (
-                          <span className="text-xs font-sans text-zinc-300 font-normal truncate max-w-[200px]">
-                            · {currentMatchedItem.itemName}
-                          </span>
-                        ) : (
-                          <span className="text-xs font-sans text-zinc-500 font-normal">
-                            · Custom Component
-                          </span>
-                        )}
-                      </div>
+
+                    <div className="sm:text-right shrink-0">
+                      {currentMatchedItem ? (
+                        <div>
+                          <div className="flex items-center sm:justify-end gap-1.5">
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                currentMatchedItem.status === 'Available'
+                                  ? 'bg-emerald-400'
+                                  : 'bg-amber-400'
+                              }`}
+                            />
+                            <span
+                              className={`text-xs font-semibold ${
+                                currentMatchedItem.status === 'Available'
+                                  ? 'text-emerald-400'
+                                  : 'text-amber-400'
+                              }`}
+                            >
+                              {currentMatchedItem.status}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-zinc-400 font-mono mt-0.5">
+                            {currentMatchedItem.currentUser
+                              ? `Held by Team ${currentMatchedItem.currentUser}`
+                              : 'Ready in Pit Storage'}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-zinc-500">Uncataloged Hardware</span>
+                      )}
                     </div>
                   </div>
 
-                  <div className="sm:text-right shrink-0">
-                    {currentMatchedItem ? (
-                      <div>
-                        <div className="flex items-center sm:justify-end gap-1.5">
-                          <span
-                            className={`w-2 h-2 rounded-full ${
-                              currentMatchedItem.status === 'Available'
-                                ? 'bg-emerald-400'
-                                : 'bg-amber-400'
-                            }`}
-                          />
-                          <span
-                            className={`text-xs font-semibold ${
-                              currentMatchedItem.status === 'Available'
-                                ? 'text-emerald-400'
-                                : 'text-amber-400'
-                            }`}
-                          >
-                            {currentMatchedItem.status}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-zinc-400 font-mono mt-0.5">
-                          {currentMatchedItem.currentUser
-                            ? `Held by Team ${currentMatchedItem.currentUser}`
-                            : 'Ready in Pit Storage'}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-zinc-500">Uncataloged Hardware</span>
-                    )}
-                  </div>
+                  {/* VEX Hardware Spec Telemetry Strip */}
+                  {activeSpec && (
+                    <div className="pt-2 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-400 font-mono">
+                      <span className="text-zinc-300">
+                        <span className="text-zinc-500">PN:</span> {activeSpec.officialPartNumber} ·{' '}
+                        <span className="text-zinc-500">Port:</span> {activeSpec.interfaceProtocol}
+                      </span>
+                      <span className="text-amber-400/90 font-medium truncate">
+                        {activeSpec.operatingRange}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -667,10 +712,11 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                     key={t}
                     type="button"
                     onClick={() => {
+                      playClick();
                       setTeam(t);
                       setIsCustomTeam(false);
                     }}
-                    className={`py-1.5 text-xs font-mono font-semibold rounded-lg border transition-all ${
+                    className={`py-1.5 text-xs font-mono font-semibold rounded-lg border transition-all btn-tactile ${
                       isSelected
                         ? 'bg-zinc-100 text-zinc-950 border-white shadow-sm'
                         : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
@@ -682,8 +728,11 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
               })}
               <button
                 type="button"
-                onClick={() => setIsCustomTeam(true)}
-                className={`py-1.5 text-xs font-mono font-semibold rounded-lg border transition-all ${
+                onClick={() => {
+                  playClick();
+                  setIsCustomTeam(true);
+                }}
+                className={`py-1.5 text-xs font-mono font-semibold rounded-lg border transition-all btn-tactile ${
                   isCustomTeam
                     ? 'bg-zinc-100 text-zinc-950 border-white shadow-sm'
                     : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
@@ -725,8 +774,11 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                 <button
                   key={quick}
                   type="button"
-                  onClick={() => setNotes(quick)}
-                  className="text-[10px] text-zinc-400 hover:text-zinc-200 bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800/80 transition-colors"
+                  onClick={() => {
+                    playClick();
+                    setNotes(quick);
+                  }}
+                  className="text-[10px] text-zinc-400 hover:text-zinc-200 bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800/80 transition-colors btn-tactile"
                 >
                   + {quick}
                 </button>

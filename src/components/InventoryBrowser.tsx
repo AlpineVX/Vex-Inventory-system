@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { InventoryItem, VexCategory, CLUB_TEAMS, SENSOR_CATEGORIES } from '../types';
 import { MobileInventoryList } from './MobileInventoryList';
+import { playClick, playBeep } from '../services/soundFx';
+import { getVexHardwareSpec } from '../data/vexSpecs';
 
 interface InventoryBrowserProps {
   items: InventoryItem[];
@@ -591,6 +593,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                       item.notes && !item.notes.includes('█') && !item.notes.includes('#') && !item.notes.includes('░')
                         ? item.notes
                         : '';
+                    const spec = getVexHardwareSpec(item.category);
 
                     return (
                       <tr
@@ -604,14 +607,17 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                           <input
                             type="checkbox"
                             checked={isChecked}
-                            onChange={() => handleToggleSelect(item.itemId)}
+                            onChange={() => {
+                              playClick();
+                              handleToggleSelect(item.itemId);
+                            }}
                             className="rounded border-zinc-700 bg-[#0b0d11] text-amber-500 accent-amber-500 cursor-pointer"
                           />
                         </td>
 
                         {/* Item ID */}
                         <td className="py-2.5 px-3 font-mono font-bold text-white whitespace-nowrap">
-                          <span className="truncate max-w-[140px] inline-block bg-[#161a22] px-2 py-0.5 rounded border border-zinc-700">
+                          <span className="truncate max-w-[140px] inline-block bg-[#161a22] px-2 py-0.5 rounded border border-zinc-700 font-mono">
                             {item.itemId}
                           </span>
                         </td>
@@ -621,15 +627,18 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                           <div className="font-medium text-white group-hover:text-amber-400 line-clamp-1 transition-colors">
                             {cleanItemName}
                           </div>
-                          {item.timesCheckedOut > 0 && (
-                            <div className="text-[11px] text-zinc-500 font-mono mt-0.5">
-                              Checkouts: {item.timesCheckedOut}x
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono mt-0.5">
+                            <span className="text-zinc-400 truncate max-w-[180px]" title={spec.interfaceProtocol}>
+                              {spec.interfaceProtocol}
+                            </span>
+                            {item.timesCheckedOut > 0 && (
+                              <span className="text-zinc-500">· {item.timesCheckedOut}x out</span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Category */}
-                        <td className="py-2.5 px-3 text-zinc-300 text-xs whitespace-nowrap">
+                        <td className="py-2.5 px-3 text-zinc-300 text-xs whitespace-nowrap font-mono">
                           {item.category}
                         </td>
 
@@ -677,15 +686,21 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                         <td className="py-2.5 px-3 text-right whitespace-nowrap">
                           {isAvailable ? (
                             <button
-                              onClick={() => onOpenCheckout(item, 'Check Out')}
-                              className="px-2.5 py-1 text-xs font-semibold text-white bg-[#ea580c] hover:bg-orange-600 rounded-md transition-colors active:translate-y-px"
+                              onClick={() => {
+                                playBeep();
+                                onOpenCheckout(item, 'Check Out');
+                              }}
+                              className="px-2.5 py-1 text-xs font-semibold text-white bg-[#ea580c] hover:bg-orange-600 rounded-md transition-colors active:translate-y-px btn-tactile"
                             >
                               Check Out
                             </button>
                           ) : (
                             <button
-                              onClick={() => onOpenCheckout(item, 'Check In')}
-                              className="px-2.5 py-1 text-xs font-semibold text-white bg-[#059669] hover:bg-emerald-600 rounded-md transition-colors active:translate-y-px"
+                              onClick={() => {
+                                playBeep();
+                                onOpenCheckout(item, 'Check In');
+                              }}
+                              className="px-2.5 py-1 text-xs font-semibold text-white bg-[#059669] hover:bg-emerald-600 rounded-md transition-colors active:translate-y-px btn-tactile"
                             >
                               Check In
                             </button>
