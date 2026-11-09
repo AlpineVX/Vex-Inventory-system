@@ -15,7 +15,7 @@ import {
   ShieldCheck,
   Lock,
 } from 'lucide-react';
-import { InventoryItem, VexCategory, SENSOR_CATEGORIES } from '../types';
+import { InventoryItem, VexCategory, SENSOR_CATEGORIES, classifyVexCategory } from '../types';
 
 interface MobileInventoryListProps {
   items: InventoryItem[];
@@ -62,7 +62,7 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
         );
       } else if (selectedCategory === 'Solenoids') {
         result = result.filter(
-          (i) => i.category === 'Solenoids' || (i as any).category === 'Solenoid'
+          (i) => classifyVexCategory(i.category, i.itemName, i.itemId) === 'Solenoids'
         );
       } else {
         result = result.filter((i) => i.category === selectedCategory);

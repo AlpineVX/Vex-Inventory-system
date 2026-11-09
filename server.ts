@@ -125,6 +125,10 @@ async function startServer() {
         'ROTATIONAL',
         'SOLENOIDS',
         'SOLENOID',
+        'SOLONOIDS',
+        'SOLONOID',
+        'PNEUMATICS',
+        'PNEUMATIC',
         'RADIO',
         'BRAIN',
       ]);
@@ -238,10 +242,29 @@ async function startServer() {
           }
         }
 
+        let category = String(item.category || '').trim();
+        const catUpper = category.toUpperCase();
+        if (catUpper.includes('SOL') || catUpper.includes('PNEU') || rawId.startsWith('VEXSOL')) {
+          category = 'Solenoids';
+        } else if (catUpper.includes('OPT') || rawId.startsWith('VEXS-O')) {
+          category = 'Optical';
+        } else if (catUpper.includes('DIST') || rawId.startsWith('VEXS-DIST')) {
+          category = 'Distance';
+        } else if (catUpper.includes('INER') || rawId.startsWith('VEXS-INER')) {
+          category = 'Inertial';
+        } else if (catUpper.includes('ROT') || rawId.startsWith('VEXS-ROT')) {
+          category = 'Rotational';
+        } else if (catUpper.includes('BRAIN') || rawId.startsWith('VEXB')) {
+          category = 'Brain';
+        } else if (catUpper.includes('RADIO') || rawId.startsWith('VEXR')) {
+          category = 'Radio';
+        }
+
         return {
           ...item,
           itemId: rawId,
           itemName,
+          category,
           notes,
           status,
           currentUser,

@@ -82,34 +82,34 @@ export function normalizeItemId(rawId: string, categoryHint?: VexCategory | stri
 
   // 3. Short aliases without VEX prefix (with or without hyphen/space)
   // Supports: SOLENOID / SOLONOID, INERTIA / INERTIAL, ROTATION / ROTATIONAL, OPTICAL / OPTIC, PNEUMATIC(S)
-  s = s.replace(/^DIST(ANCE)?[-_]?(\d+)$/i, 'VEXS-DIST-$2');
-  s = s.replace(/^ROT(ATION(AL)?)?[-_]?(\d+)$/i, 'VEXS-ROT-$3');
-  s = s.replace(/^INER(TIA(L)?)?[-_]?(\d+)$/i, 'VEXS-INER-$3');
-  s = s.replace(/^(OPT(IC(AL)?)?|O)[-_]?(\d+)$/i, 'VEXS-O-$4');
-  s = s.replace(/^(SOL([EO]NOID(S)?)?|PNEU(MATIC(S)?)?)[-_]?(\d+)$/i, 'VEXSOL-$6');
-  s = s.replace(/^(BRAIN|BRN|B)[-_]?(\d+)$/i, 'VEXB-$2');
-  s = s.replace(/^(RADIO|RAD|R)[-_]?(\d+)$/i, 'VEXR-$2');
-  s = s.replace(/^(MOTOR|MOT|M)[-_]?(\d+)$/i, 'VEXM-$2');
+  s = s.replace(/^DIST(?:ANCE)?[-_]?(\d+)$/i, 'VEXS-DIST-$1');
+  s = s.replace(/^ROT(?:ATION(?:AL)?)?[-_]?(\d+)$/i, 'VEXS-ROT-$1');
+  s = s.replace(/^INER(?:TIA(?:L)?)?[-_]?(\d+)$/i, 'VEXS-INER-$1');
+  s = s.replace(/^(?:OPT(?:IC(?:AL)?)?|O)[-_]?(\d+)$/i, 'VEXS-O-$1');
+  s = s.replace(/^(?:SOL(?:[EO]NOID(?:S)?)?|PNEU(?:MATIC(?:S)?)?)[-_]?(\d+)$/i, 'VEXSOL-$1');
+  s = s.replace(/^(?:BRAIN|BRN|B)[-_]?(\d+)$/i, 'VEXB-$1');
+  s = s.replace(/^(?:RADIO|RAD|R)[-_]?(\d+)$/i, 'VEXR-$1');
+  s = s.replace(/^(?:MOTOR|MOT|M)[-_]?(\d+)$/i, 'VEXM-$1');
 
   // Short aliases with hyphen prefix
-  s = s.replace(/^DIST(ANCE)?-/i, 'VEXS-DIST-');
-  s = s.replace(/^ROT(ATION(AL)?)?-/i, 'VEXS-ROT-');
-  s = s.replace(/^INER(TIA(L)?)?-/i, 'VEXS-INER-');
-  s = s.replace(/^(OPT(IC(AL)?)?|O)-/i, 'VEXS-O-');
-  s = s.replace(/^(SOL([EO]NOID(S)?)?|PNEU(MATIC(S)?)?)-/i, 'VEXSOL-');
-  s = s.replace(/^(BRAIN|BRN|B)-/i, 'VEXB-');
-  s = s.replace(/^(RADIO|RAD|R)-/i, 'VEXR-');
-  s = s.replace(/^(MOTOR|MOT|M)-/i, 'VEXM-');
+  s = s.replace(/^DIST(?:ANCE)?-/i, 'VEXS-DIST-');
+  s = s.replace(/^ROT(?:ATION(?:AL)?)?-/i, 'VEXS-ROT-');
+  s = s.replace(/^INER(?:TIA(?:L)?)?-/i, 'VEXS-INER-');
+  s = s.replace(/^(?:OPT(?:IC(?:AL)?)?|O)-/i, 'VEXS-O-');
+  s = s.replace(/^(?:SOL(?:[EO]NOID(?:S)?)?|PNEU(?:MATIC(?:S)?)?)-/i, 'VEXSOL-');
+  s = s.replace(/^(?:BRAIN|BRN|B)-/i, 'VEXB-');
+  s = s.replace(/^(?:RADIO|RAD|R)-/i, 'VEXR-');
+  s = s.replace(/^(?:MOTOR|MOT|M)-/i, 'VEXM-');
 
   // 3b. VEX-prefixed without hyphen to digits (e.g. VEXDIST4 -> VEXS-DIST-4, VEXSOL1 -> VEXSOL-1)
-  s = s.replace(/^VEX[-_]?DIST(ANCE)?[-_]?(\d+)$/i, 'VEXS-DIST-$2');
-  s = s.replace(/^VEX[-_]?ROT(ATION(AL)?)?[-_]?(\d+)$/i, 'VEXS-ROT-$3');
-  s = s.replace(/^VEX[-_]?INER(TIA(L)?)?[-_]?(\d+)$/i, 'VEXS-INER-$3');
-  s = s.replace(/^VEX[-_]?(OPT(IC(AL)?)?|O)[-_]?(\d+)$/i, 'VEXS-O-$4');
-  s = s.replace(/^VEX[-_]?(SOL([EO]NOID(S)?)?|PNEU(MATIC(S)?)?)[-_]?(\d+)$/i, 'VEXSOL-$5');
-  s = s.replace(/^VEX[-_]?(BRAIN|BRN|B)[-_]?(\d+)$/i, 'VEXB-$2');
-  s = s.replace(/^VEX[-_]?(RADIO|RAD|R)[-_]?(\d+)$/i, 'VEXR-$2');
-  s = s.replace(/^VEX[-_]?(MOTOR|MOT|M)[-_]?(\d+)$/i, 'VEXM-$2');
+  s = s.replace(/^VEX[-_]?DIST(?:ANCE)?[-_]?(\d+)$/i, 'VEXS-DIST-$1');
+  s = s.replace(/^VEX[-_]?ROT(?:ATION(?:AL)?)?[-_]?(\d+)$/i, 'VEXS-ROT-$1');
+  s = s.replace(/^VEX[-_]?INER(?:TIA(?:L)?)?[-_]?(\d+)$/i, 'VEXS-INER-$1');
+  s = s.replace(/^VEX[-_]?(?:OPT(?:IC(?:AL)?)?|O)[-_]?(\d+)$/i, 'VEXS-O-$1');
+  s = s.replace(/^VEX[-_]?(?:SOL(?:[EO]NOID(?:S)?)?|PNEU(?:MATIC(?:S)?)?)[-_]?(\d+)$/i, 'VEXSOL-$1');
+  s = s.replace(/^VEX[-_]?(?:BRAIN|BRN|B)[-_]?(\d+)$/i, 'VEXB-$1');
+  s = s.replace(/^VEX[-_]?(?:RADIO|RAD|R)[-_]?(\d+)$/i, 'VEXR-$1');
+  s = s.replace(/^VEX[-_]?(?:MOTOR|MOT|M)[-_]?(\d+)$/i, 'VEXM-$1');
 
   // 4. Single-letter shorthands or digits when a category hint is provided
   if (categoryHint) {

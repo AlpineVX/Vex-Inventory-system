@@ -53,10 +53,10 @@ export default function App() {
   // 1. Core State
   const [items, setItems] = useState<InventoryItem[]>(() => {
     const version = typeof window !== 'undefined' ? localStorage.getItem('vex_schema_ver') : null;
-    if (version !== 'v7') {
+    if (version !== 'v9') {
       const fresh = generateDefaultInventory();
       if (typeof window !== 'undefined') {
-        localStorage.setItem('vex_schema_ver', 'v7');
+        localStorage.setItem('vex_schema_ver', 'v9');
       }
       saveCachedInventory(fresh);
       return fresh;

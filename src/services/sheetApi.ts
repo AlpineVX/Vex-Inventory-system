@@ -275,6 +275,10 @@ export async function fetchLiveInventory(apiUrl: string): Promise<{
     'ROTATIONAL',
     'SOLENOIDS',
     'SOLENOID',
+    'SOLONOIDS',
+    'SOLONOID',
+    'PNEUMATICS',
+    'PNEUMATIC',
     'RADIO',
     'BRAIN',
   ]);

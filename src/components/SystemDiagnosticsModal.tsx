@@ -110,7 +110,7 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
     playBeep();
     const bundle = {
       timestamp: new Date().toISOString(),
-      schemaVersions: { inventory: 'v7', logs: 'v4', admin: 'v1' },
+      schemaVersions: { inventory: 'v8', logs: 'v4', admin: 'v1' },
       hardwareRecordCount: items.length,
       availableCount: items.filter((i) => i.status === 'Available').length,
       deployedCount: items.filter((i) => i.status === 'Checked Out').length,

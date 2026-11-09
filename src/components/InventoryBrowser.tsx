@@ -15,7 +15,7 @@ import {
   Lock,
   X,
 } from 'lucide-react';
-import { InventoryItem, VexCategory, CLUB_TEAMS, SENSOR_CATEGORIES } from '../types';
+import { InventoryItem, VexCategory, CLUB_TEAMS, SENSOR_CATEGORIES, classifyVexCategory } from '../types';
 import { MobileInventoryList } from './MobileInventoryList';
 import { playClick, playBeep } from '../services/soundFx';
 import { getVexHardwareSpec } from '../data/vexSpecs';
@@ -84,7 +84,9 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
             (i) => SENSOR_CATEGORIES.includes(i.category) || i.category === 'Sensors'
           ).length;
         } else if (cat === 'Solenoids') {
-          counts[cat] = items.filter((i) => i.category === 'Solenoids' || (i as any).category === 'Solenoid').length;
+          counts[cat] = items.filter(
+            (i) => classifyVexCategory(i.category, i.itemName, i.itemId) === 'Solenoids'
+          ).length;
         } else {
           counts[cat] = items.filter((i) => i.category === cat).length;
         }
@@ -113,7 +115,9 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
           (i) => SENSOR_CATEGORIES.includes(i.category) || i.category === 'Sensors'
         );
       } else if (selectedCategory === 'Solenoids') {
-        result = result.filter((i) => i.category === 'Solenoids' || (i as any).category === 'Solenoid');
+        result = result.filter(
+          (i) => classifyVexCategory(i.category, i.itemName, i.itemId) === 'Solenoids'
+        );
       } else {
         result = result.filter((i) => i.category === selectedCategory);
       }

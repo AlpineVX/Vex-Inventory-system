@@ -10,7 +10,7 @@ import {
   AlertCircle,
   FileSpreadsheet,
 } from 'lucide-react';
-import { InventoryItem, CLUB_TEAMS } from '../types';
+import { InventoryItem, CLUB_TEAMS, classifyVexCategory } from '../types';
 
 interface TeamLookupProps {
   items: InventoryItem[];
@@ -53,7 +53,8 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
   const categoryBreakdown = useMemo(() => {
     const map: Record<string, number> = {};
     teamItems.forEach((i) => {
-      map[i.category] = (map[i.category] || 0) + 1;
+      const cat = classifyVexCategory(i.category, i.itemName, i.itemId);
+      map[cat] = (map[cat] || 0) + 1;
     });
     return map;
   }, [teamItems]);

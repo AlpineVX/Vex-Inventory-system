@@ -24,7 +24,9 @@ import { InventoryItem, AuditLog, CompetitionPackItem, CLUB_TEAMS } from '../typ
 
 // Precise record of active checkouts directly from the Google Sheet
 const ACTIVE_CHECKOUTS_REGISTRY: Record<string, { team: string; dateOut: string; notes: string }> = {
-  // Solenoids (2)
+  // Solenoids (4)
+  'VEXSOL-1': { team: '654V', dateOut: '2026-10-31', notes: 'Solenoid test' },
+  'VEXSOL-29': { team: '654B', dateOut: '2026-10-25', notes: 'It is working' },
   'VEXSOL-30': { team: '654V', dateOut: '2026-10-06', notes: 'It is working' },
   'VEXSOL-31': { team: '654V', dateOut: '2026-10-06', notes: 'It is working' },
 
