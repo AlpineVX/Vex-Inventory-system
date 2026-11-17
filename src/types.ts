@@ -19,6 +19,7 @@ export const CLUB_TEAMS = [
   '654Y',
   '654X',
   '654Z',
+  '654W',
   'RECF',
 ] as const;
 

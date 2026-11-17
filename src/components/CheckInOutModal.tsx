@@ -747,7 +747,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                 type="text"
                 value={customTeam}
                 onChange={(e) => setCustomTeam(e.target.value)}
-                placeholder="Enter custom team or builder identifier (e.g. 654W or Mentor)"
+                placeholder="Enter custom team or builder identifier (e.g. 654M or Mentor)"
                 className="mt-2 w-full px-3 py-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400 font-mono"
               />
             )}

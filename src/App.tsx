@@ -13,6 +13,7 @@ import {
   AdminSettings,
   DEFAULT_ADMIN_EMAILS,
   DEFAULT_ADMIN_PIN,
+  CLUB_TEAMS,
   getCategoryDefaultLocation,
   normalizeItemId,
   classifyVexCategory,
@@ -727,7 +728,7 @@ export default function App() {
             <span>·</span>
             <span>{items.length} Items System</span>
             <span>·</span>
-            <span className="font-mono text-zinc-400">Club Teams (654K, 654J, 654A, 654B, 654G, 654T, 654V, 654Y, 654X, 654Z, RECF)</span>
+            <span className="font-mono text-zinc-400">Club Teams ({CLUB_TEAMS.join(', ')})</span>
           </div>
           <div className="flex items-center gap-3 text-zinc-400 shrink-0 flex-wrap justify-center">
             <span>Website made by <strong className="text-white font-semibold">Trishanth Yakkala</strong></span>

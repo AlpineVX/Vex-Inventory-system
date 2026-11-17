@@ -767,7 +767,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           <div className="text-3xl font-bold font-mono tabular-nums text-white mt-2">
             {activeBorrowersCount}
           </div>
-          <div className="text-xs text-zinc-500 mt-1">11 teams in club</div>
+          <div className="text-xs text-zinc-500 mt-1">{CLUB_TEAMS.length} teams in club</div>
         </div>
 
         <div
@@ -1229,10 +1229,10 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>11-Team Hardware Allocation Matrix</span>
+                  <span>{CLUB_TEAMS.length}-Team Hardware Allocation Matrix</span>
                 </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Detailed distribution of VEX brains, radios, solenoids, and sensors across all 11 teams.
+                  Detailed distribution of VEX brains, radios, solenoids, and sensors across all {CLUB_TEAMS.length} teams.
                 </p>
               </div>
               <button
