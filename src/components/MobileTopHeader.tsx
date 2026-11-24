@@ -42,10 +42,10 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
   onOpenDiagnostics,
 }) => {
   return (
-    <header className="sticky top-0 z-30 bg-[#0c0e12]/95 backdrop-blur-md border-b border-[#1c222b] h-13 px-3 flex items-center justify-between no-print">
+    <header className="sticky top-0 z-30 bg-[#09090b]/95 backdrop-blur-md border-b border-[#27272d] h-13 px-3 flex items-center justify-between no-print">
       {/* Left: Logo & Title */}
       <div className="flex items-center gap-2 min-w-0">
-        <div className="w-8 h-8 rounded-full bg-[#161a22] border border-zinc-800 flex items-center justify-center p-0.5 overflow-hidden shrink-0">
+        <div className="w-8 h-8 rounded-full bg-[#1a1a1f] border border-zinc-800 flex items-center justify-center p-0.5 overflow-hidden shrink-0">
           <img
             src="/assets/aistudio/lt_logo_transparent.png"
             alt="Lake Travis Robotics Logo"
@@ -53,9 +53,9 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
           />
         </div>
         <div className="min-w-0">
-          <h1 className="text-xs font-bold tracking-tight text-white truncate flex items-center gap-1.5">
+          <h1 className="text-xs font-bold tracking-tight text-zinc-100 truncate flex items-center gap-1.5">
             <span>VEX 654</span>
-            <span className="text-[10px] text-amber-400 font-mono font-semibold">KIOSK</span>
+            <span className="text-[10px] text-red-400 font-mono font-semibold">Kiosk</span>
           </h1>
         </div>
       </div>
@@ -67,9 +67,9 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
           <button
             onClick={onToggleSound}
             aria-label="Toggle Sound"
-            className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-zinc-400 hover:text-white bg-[#141820] border border-[#212631] rounded-lg transition-colors"
+            className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-zinc-400 hover:text-zinc-100 bg-[#111114] border border-[#27272d] rounded-lg transition-colors"
           >
-            {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-amber-400" /> : <VolumeX className="w-3.5 h-3.5 text-zinc-500" />}
+            {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-red-400" /> : <VolumeX className="w-3.5 h-3.5 text-zinc-500" />}
           </button>
         )}
 
@@ -81,7 +81,7 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
               onOpenDiagnostics();
             }}
             aria-label="System Diagnostics"
-            className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-zinc-400 hover:text-white bg-[#141820] border border-[#212631] rounded-lg transition-colors"
+            className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-zinc-400 hover:text-zinc-100 bg-[#111114] border border-[#27272d] rounded-lg transition-colors"
           >
             <Activity className="w-3.5 h-3.5" />
           </button>
@@ -95,7 +95,7 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
           }}
           disabled={syncStatus.isSyncing}
           aria-label="Sync with Google Sheet"
-          className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-zinc-300 hover:text-white bg-[#141820] hover:bg-[#1c222c] border border-[#212631] rounded-lg transition-colors"
+          className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-zinc-300 hover:text-zinc-100 bg-[#111114] hover:bg-[#1a1a1f] border border-[#27272d] rounded-lg transition-colors"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${syncStatus.isSyncing ? 'animate-spin text-zinc-300' : ''}`} />
         </button>
@@ -108,10 +108,10 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
               onLockAdmin();
             }}
             title="Admin Unlocked (Tap to lock)"
-            className="flex items-center gap-1 px-2.5 py-1 min-h-[32px] bg-[#141820] border border-amber-500/50 rounded-lg text-amber-400 text-xs font-medium font-mono"
+            className="flex items-center gap-1 px-2.5 py-1 min-h-[32px] bg-[#111114] border border-amber-500/50 rounded-lg text-amber-400 text-xs font-medium"
           >
             <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-[11px]">ADMIN</span>
+            <span className="text-[11px]">Admin</span>
           </button>
         ) : (
           <button
@@ -121,7 +121,7 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
             }}
             title="Admin Login"
             aria-label="Admin Login"
-            className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-zinc-300 hover:text-white bg-[#141820] hover:bg-[#1c222c] border border-[#212631] rounded-lg transition-colors"
+            className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-zinc-300 hover:text-zinc-100 bg-[#111114] hover:bg-[#1a1a1f] border border-[#27272d] rounded-lg transition-colors"
           >
             <Lock className="w-3.5 h-3.5" />
           </button>
@@ -134,12 +134,12 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
             onToggleViewMode();
           }}
           title={isMobileModeForced ? 'Switch to Desktop Layout' : 'Switch to Dedicated Mobile Layout'}
-          className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-zinc-300 hover:text-white bg-[#141820] hover:bg-[#1c222c] border border-[#212631] rounded-lg transition-colors"
+          className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-zinc-300 hover:text-zinc-100 bg-[#111114] hover:bg-[#1a1a1f] border border-[#27272d] rounded-lg transition-colors"
         >
           {isMobileModeForced ? (
             <Monitor className="w-3.5 h-3.5 text-zinc-300" />
           ) : (
-            <Smartphone className="w-3.5 h-3.5 text-amber-400" />
+            <Smartphone className="w-3.5 h-3.5 text-red-400" />
           )}
         </button>
 
@@ -150,11 +150,11 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
             onOpenSettings();
           }}
           aria-label="Settings"
-          className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-zinc-300 hover:text-white bg-[#141820] hover:bg-[#1c222c] border border-[#212631] rounded-lg transition-colors relative"
+          className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-zinc-300 hover:text-zinc-100 bg-[#111114] hover:bg-[#1a1a1f] border border-[#27272d] rounded-lg transition-colors relative"
         >
           <Settings className="w-3.5 h-3.5" />
           {syncStatus.url && (
-            <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+            <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
           )}
         </button>
       </div>

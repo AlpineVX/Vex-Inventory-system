@@ -32,7 +32,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
     {
       category: 'Search & Rapid Actions',
       items: [
-        { keys: ['/'], description: 'Focus instant inventory catalog search' },
+        { keys: ['/', '⌘K'], description: 'Focus instant inventory or dashboard search' },
         { keys: ['C'], description: 'Open Hardware Check Out / Check In Station' },
         { keys: ['P'], description: 'Print official hardware manifest sheet (Ctrl+P)' },
         { keys: ['Esc'], description: 'Close any active dialog, modal or drawer' },
@@ -49,16 +49,16 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#12161f] border border-[#232b38] rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
+      <div className="bg-[#111114] border border-[#27272d] rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh] animate-modal-enter">
         {/* Header */}
-        <div className="px-5 py-4 bg-[#0e1218] border-b border-[#1e242c] flex items-center justify-between">
+        <div className="px-5 py-4 bg-[#09090b] border-b border-[#27272d] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
+            <div className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
               <Keyboard className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white tracking-wide">
+              <h2 className="text-sm font-bold text-zinc-100 tracking-wide">
                 Keyboard Shortcuts &amp; Ergonomics
               </h2>
               <p className="text-[11px] text-zinc-400 font-mono">
@@ -68,7 +68,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
           </div>
           <button
             onClick={handleClose}
-            className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-[#1a202c] transition-colors"
+            className="text-zinc-400 hover:text-zinc-100 p-1 rounded-lg hover:bg-[#1a1a1f] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -78,21 +78,21 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
         <div className="p-5 space-y-5 overflow-y-auto">
           {SHORTCUTS.map((section) => (
             <div key={section.category} className="space-y-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400/90 font-mono">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-red-400/90 font-mono">
                 {section.category}
               </span>
-              <div className="rounded-xl border border-[#1e242c] bg-[#0b0d11] divide-y divide-[#1e242c]/60 overflow-hidden">
+              <div className="rounded-xl border border-[#27272d] bg-[#09090b] divide-y divide-[#27272d]/60 overflow-hidden">
                 {section.items.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between px-3.5 py-2 text-xs hover:bg-[#161a22]/50 transition-colors"
+                    className="flex items-center justify-between px-3.5 py-2 text-xs hover:bg-[#1a1a1f]/50 transition-colors"
                   >
                     <span className="text-zinc-300">{item.description}</span>
                     <div className="flex items-center gap-1 shrink-0 ml-3">
                       {item.keys.map((k, ki) => (
                         <kbd
                           key={ki}
-                          className="px-2 py-0.5 rounded bg-[#1e242c] border border-zinc-700 text-zinc-200 font-mono text-[11px] font-bold shadow-sm"
+                          className="px-2 py-0.5 rounded bg-[#1a1a1f] border border-zinc-700 text-zinc-200 font-mono text-[11px] font-bold shadow-sm"
                         >
                           {k}
                         </kbd>
@@ -104,17 +104,17 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
             </div>
           ))}
 
-          <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl text-[11px] text-zinc-400 font-mono flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-            <span>Tip: Press <kbd className="px-1.5 py-0.5 bg-[#1e242c] rounded border border-zinc-700 text-zinc-200">?</kbd> anywhere in the app to open this guide.</span>
+          <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-[11px] text-zinc-400 font-mono flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping" />
+            <span>Tip: Press <kbd className="px-1.5 py-0.5 bg-[#1a1a1f] rounded border border-zinc-700 text-zinc-200">?</kbd> anywhere in the app to open this guide.</span>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 bg-[#0e1218] border-t border-[#1e242c] flex items-center justify-end">
+        <div className="px-5 py-3 bg-[#09090b] border-t border-[#27272d] flex items-center justify-end">
           <button
             onClick={handleClose}
-            className="px-4 py-1.5 text-xs font-semibold text-zinc-200 bg-[#161a22] hover:bg-[#21262d] border border-[#1e242c] rounded-lg transition-colors font-mono"
+            className="px-4 py-1.5 text-xs font-semibold text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors font-mono"
           >
             Got it (Esc)
           </button>

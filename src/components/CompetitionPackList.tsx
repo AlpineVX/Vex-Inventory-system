@@ -12,6 +12,7 @@ import {
 import { CompetitionPackItem, InventoryItem, VexCategory, classifyVexCategory } from '../types';
 import { INITIAL_PACK_LIST } from '../data/mockInventory';
 import { playClick, playSuccess, playBeep } from '../services/soundFx';
+import { SpotlightCard, AnimatedNumber, AnimatedRingGauge } from './MotionPrimitives';
 
 interface CompetitionPackListProps {
   items: InventoryItem[];
@@ -147,9 +148,9 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#1c222b]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#27272d]">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white font-sans">
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-100 font-sans">
               Tournament Competition Pack List
             </h1>
             <p className="text-xs text-zinc-400 mt-1">
@@ -159,13 +160,13 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
           <div className="flex items-center gap-2">
             <button
               onClick={resetAllPacked}
-              className="px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:text-white bg-[#161a22] border border-[#1e242c] rounded-lg transition-colors"
+              className="px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:text-zinc-100 bg-[#1a1a1f] border border-[#27272d] rounded-lg transition-colors"
             >
               Unpack All
             </button>
             <button
               onClick={markAllPacked}
-              className="px-3 py-1.5 text-xs font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/25 transition-colors"
+              className="px-3 py-1.5 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-lg transition-colors shadow-sm"
             >
               Mark All Packed
             </button>
@@ -174,11 +175,11 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
       </div>
 
       {/* Readiness Overview Banner */}
-      <div className="p-5 rounded-xl bg-[#12161f] border border-[#1e242c]">
+      <SpotlightCard className="p-5 rounded-xl bg-[#111114] border border-[#27272d] animate-card-enter">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-white">PIT BOX READINESS SCORE</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-100">PIT BOX READINESS SCORE</span>
               <span className="text-xs font-mono tabular-nums text-zinc-400">
                 · {totalPackedUnits} of {totalTargetUnits} units boxed ({readinessPercent}%)
               </span>
@@ -187,10 +188,16 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
               {fullyPackedItemsCount} of {packList.length} sub-assemblies verified in competition flight cases
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3.5">
+            <AnimatedRingGauge
+              percent={readinessPercent}
+              size={48}
+              strokeWidth={4.5}
+              strokeColor={readinessPercent === 100 ? '#f4f4f5' : '#c52329'}
+            />
             <div className="text-right">
-              <div className={`text-2xl font-bold font-mono tabular-nums ${readinessPercent === 100 ? 'text-emerald-400' : 'text-white'}`}>
-                {readinessPercent}%
+              <div className={`text-2xl font-bold font-mono tabular-nums ${readinessPercent === 100 ? 'text-white' : 'text-zinc-100'}`}>
+                <AnimatedNumber value={readinessPercent} suffix="%" />
               </div>
               <div className="text-[10px] font-mono uppercase text-zinc-500">
                 {readinessPercent === 100 ? 'TOURNAMENT READY' : 'PACKING IN PROGRESS'}
@@ -200,26 +207,28 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
         </div>
 
         {/* Crisp Industrial Progress Track */}
-        <div className="mt-4 w-full bg-[#1e242e] rounded-full h-2 overflow-hidden">
+        <div className="mt-4 w-full bg-[#1a1a1f] rounded-full h-2.5 overflow-hidden relative">
           <div
-            className={`h-full rounded-full transition-all duration-300 ${
-              readinessPercent === 100 ? 'bg-emerald-500' : 'bg-amber-500'
+            className={`h-full rounded-full progress-fill relative overflow-hidden ${
+              readinessPercent === 100 ? 'bg-zinc-100' : 'bg-red-600'
             }`}
             style={{ width: `${readinessPercent}%` }}
-          />
+          >
+            <div className="absolute inset-0 shimmer-active" />
+          </div>
         </div>
-      </div>
+      </SpotlightCard>
 
       {/* Filter Tabs */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 p-1 bg-[#12161f] border border-[#1e242c] rounded-lg text-xs font-mono">
+        <div className="flex items-center gap-1 p-1 bg-[#111114] border border-[#27272d] rounded-lg text-xs font-mono">
           <button
             onClick={() => {
               playClick();
               setFilterState('all');
             }}
             className={`px-3 py-1 rounded-md transition-colors btn-tactile ${
-              filterState === 'all' ? 'bg-[#222834] text-white font-bold' : 'text-zinc-400 hover:text-white'
+              filterState === 'all' ? 'bg-[#1a1a1f] text-zinc-100 font-bold' : 'text-zinc-400 hover:text-zinc-100'
             }`}
           >
             ALL [{packList.length}]
@@ -232,7 +241,7 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
             className={`px-3 py-1 rounded-md transition-colors btn-tactile ${
               filterState === 'unpacked'
                 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 font-bold'
-                : 'text-zinc-400 hover:text-white'
+                : 'text-zinc-400 hover:text-zinc-100'
             }`}
           >
             NEEDS PACKING [{packList.filter((i) => !i.isPacked).length}]
@@ -244,8 +253,8 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
             }}
             className={`px-3 py-1 rounded-md transition-colors btn-tactile ${
               filterState === 'packed'
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold'
-                : 'text-zinc-400 hover:text-white'
+                ? 'bg-zinc-200/15 text-zinc-100 border border-zinc-400/40 font-bold'
+                : 'text-zinc-400 hover:text-zinc-100'
             }`}
           >
             PACKED [{packList.filter((i) => i.isPacked).length}]
@@ -255,17 +264,18 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
 
       {/* Pack List Cards */}
       <div className="space-y-3">
-        {filteredList.map((item) => {
+        {filteredList.map((item, idx) => {
           const availableStock = availableStockByCategory[item.category] || 0;
           const isStockShortage = availableStock < item.targetCount;
 
           return (
             <div
               key={item.id}
-              className={`p-4 rounded-xl border transition-colors ${
+              style={{ '--row-idx': idx } as React.CSSProperties}
+              className={`p-4 rounded-xl border transition-all animate-row-enter card-hover-lift ${
                 item.isPacked
-                  ? 'bg-[#12161f]/60 border-[#1e242c]'
-                  : 'bg-[#12161f] border-[#1e242c] hover:border-zinc-700'
+                  ? 'bg-[#111114]/60 border-[#27272d]'
+                  : 'bg-[#111114] border-[#27272d] hover:border-zinc-700'
               }`}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -273,10 +283,10 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
                 <div className="flex items-start gap-3">
                   <button
                     onClick={() => togglePacked(item.id)}
-                    className="mt-0.5 text-zinc-400 hover:text-white transition-colors"
+                    className="mt-0.5 text-zinc-400 hover:text-zinc-100 transition-transform active:scale-90"
                   >
                     {item.isPacked ? (
-                      <CheckSquare className="w-5 h-5 text-emerald-400" />
+                      <CheckSquare className="w-5 h-5 text-zinc-100 animate-pop" />
                     ) : (
                       <Square className="w-5 h-5 text-zinc-500 hover:text-zinc-300" />
                     )}
@@ -286,7 +296,7 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
                     <div className="flex items-center gap-2">
                       <span
                         className={`text-sm font-bold ${
-                          item.isPacked ? 'text-zinc-500 line-through' : 'text-white'
+                          item.isPacked ? 'text-zinc-500 line-through' : 'text-zinc-100'
                         }`}
                       >
                         {item.name}
@@ -324,21 +334,21 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
                   </div>
 
                   {/* Quantity Counter */}
-                  <div className="flex items-center gap-2 bg-[#0b0d11] p-1 rounded-lg border border-[#1e242c] font-mono">
+                  <div className="flex items-center gap-2 bg-[#09090b] p-1 rounded-lg border border-[#27272d] font-mono">
                     <button
                       onClick={() => updatePackedCount(item.id, -1)}
                       disabled={item.packedCount <= 0}
-                      className="w-6 h-6 flex items-center justify-center text-xs font-bold text-zinc-300 hover:text-white disabled:opacity-30 rounded hover:bg-[#1f2633]"
+                      className="w-6 h-6 flex items-center justify-center text-xs font-bold text-zinc-300 hover:text-zinc-100 disabled:opacity-30 rounded hover:bg-[#1a1a1f]"
                     >
                       -
                     </button>
-                    <span className="text-xs font-mono font-bold text-white w-14 text-center tabular-nums">
+                    <span className="text-xs font-mono font-bold text-zinc-100 w-14 text-center tabular-nums">
                       {item.packedCount} / {item.targetCount}
                     </span>
                     <button
                       onClick={() => updatePackedCount(item.id, 1)}
                       disabled={item.packedCount >= item.targetCount}
-                      className="w-6 h-6 flex items-center justify-center text-xs font-bold text-zinc-300 hover:text-white disabled:opacity-30 rounded hover:bg-[#1f2633]"
+                      className="w-6 h-6 flex items-center justify-center text-xs font-bold text-zinc-300 hover:text-zinc-100 disabled:opacity-30 rounded hover:bg-[#1a1a1f]"
                     >
                       +
                     </button>
@@ -349,7 +359,7 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
                     onClick={() => togglePacked(item.id)}
                     className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
                       item.isPacked
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25'
+                        ? 'bg-zinc-200/15 text-zinc-100 border border-zinc-400/30 hover:bg-zinc-200/25'
                         : 'bg-white hover:bg-zinc-100 text-zinc-950 shadow-sm'
                     }`}
                   >

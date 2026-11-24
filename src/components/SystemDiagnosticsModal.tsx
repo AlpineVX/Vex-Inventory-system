@@ -140,16 +140,16 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#12161f] border border-[#232b38] rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
+      <div className="bg-[#111114] border border-[#27272d] rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[92vh] animate-modal-enter">
         {/* Header */}
-        <div className="px-5 py-4 bg-[#0e1218] border-b border-[#1e242c] flex items-center justify-between">
+        <div className="px-5 py-4 bg-[#09090b] border-b border-[#27272d] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+            <div className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
               <Activity className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white tracking-wide">
+              <h2 className="text-sm font-bold text-zinc-100 tracking-wide">
                 System Architecture &amp; Telemetry
               </h2>
               <p className="text-[11px] text-zinc-400 font-mono">
@@ -162,7 +162,7 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
               playClick();
               onClose();
             }}
-            className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-[#1a202c] transition-colors"
+            className="text-zinc-400 hover:text-zinc-100 p-1 rounded-lg hover:bg-[#1a1a1f] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -172,38 +172,38 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
         <div className="p-5 space-y-4 overflow-y-auto font-sans">
           {/* Top Metric Strip */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="p-3 rounded-xl bg-[#0b0d11] border border-[#1e242c]">
+            <div className="p-3 rounded-xl bg-[#09090b] border border-[#27272d]">
               <div className="flex items-center justify-between text-zinc-500 text-[10px] font-mono uppercase">
                 <span>Schema Ver</span>
-                <Database className="w-3.5 h-3.5 text-amber-500" />
+                <Database className="w-3.5 h-3.5 text-red-400" />
               </div>
-              <div className="text-lg font-bold font-mono text-white mt-1">v7.0_PROD</div>
+              <div className="text-lg font-bold font-mono text-zinc-100 mt-1">v7.0_PROD</div>
               <div className="text-[10px] text-zinc-500 font-mono">VEX V5 Unified</div>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0b0d11] border border-[#1e242c]">
+            <div className="p-3 rounded-xl bg-[#09090b] border border-[#27272d]">
               <div className="flex items-center justify-between text-zinc-500 text-[10px] font-mono uppercase">
                 <span>State Integrity</span>
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                <ShieldCheck className="w-3.5 h-3.5 text-zinc-200" />
               </div>
-              <div className="text-xs font-mono font-bold text-emerald-400 mt-2 truncate" title={checksum}>
+              <div className="text-xs font-mono font-bold text-zinc-100 mt-2 truncate" title={checksum}>
                 {checksum}
               </div>
               <div className="text-[10px] text-zinc-500 font-mono">SHA-256 Validated</div>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0b0d11] border border-[#1e242c]">
+            <div className="p-3 rounded-xl bg-[#09090b] border border-[#27272d]">
               <div className="flex items-center justify-between text-zinc-500 text-[10px] font-mono uppercase">
                 <span>Server RTT</span>
-                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <Zap className="w-3.5 h-3.5 text-red-400" />
               </div>
-              <div className="text-lg font-bold font-mono text-white mt-1">
+              <div className="text-lg font-bold font-mono text-zinc-100 mt-1">
                 {latencyMs !== null ? (latencyMs === -1 ? 'OFFLINE' : `${latencyMs}ms`) : '—'}
               </div>
               <button
                 onClick={testPing}
                 disabled={isPinging}
-                className="text-[10px] text-amber-400 hover:underline font-mono inline-flex items-center gap-1 mt-0.5"
+                className="text-[10px] text-red-400 hover:underline font-mono inline-flex items-center gap-1 mt-0.5"
               >
                 <RefreshCw className={`w-2.5 h-2.5 ${isPinging ? 'animate-spin' : ''}`} />
                 <span>{isPinging ? 'Pinging...' : 'Benchmark Ping'}</span>
@@ -212,33 +212,33 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
           </div>
 
           {/* LocalStorage Quota Allocation */}
-          <div className="p-4 rounded-xl bg-[#0b0d11] border border-[#1e242c] space-y-2.5">
+          <div className="p-4 rounded-xl bg-[#09090b] border border-[#27272d] space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <HardDrive className="w-4 h-4 text-zinc-400" />
-                <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                <span className="text-xs font-bold text-zinc-100 uppercase tracking-wider font-mono">
                   Client Cache Memory Buffer
                 </span>
               </div>
-              <span className="text-xs font-mono text-amber-400 font-bold">
+              <span className="text-xs font-mono text-red-400 font-bold">
                 {(storageUsage.totalBytes / 1024).toFixed(1)} KB / 5,120 KB ({storageUsage.percentOf5MB}%)
               </span>
             </div>
 
             {/* Progress bar */}
-            <div className="w-full h-2 bg-[#161a22] rounded-full overflow-hidden border border-[#21262d]">
+            <div className="w-full h-2 bg-[#1a1a1f] rounded-full overflow-hidden border border-[#27272d]">
               <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-amber-500 rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-red-700 to-red-500 rounded-full transition-all duration-500"
                 style={{ width: `${Math.max(2, storageUsage.percentOf5MB)}%` }}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] font-mono text-zinc-400">
-              <div className="flex justify-between border-b border-[#1e242c] pb-1">
+              <div className="flex justify-between border-b border-[#27272d] pb-1">
                 <span>Inventory Catalog ({items.length} items):</span>
                 <span className="text-zinc-200">{(storageUsage.itemsBytes / 1024).toFixed(1)} KB</span>
               </div>
-              <div className="flex justify-between border-b border-[#1e242c] pb-1">
+              <div className="flex justify-between border-b border-[#27272d] pb-1">
                 <span>Audit Logs ({logs.length} records):</span>
                 <span className="text-zinc-200">{(storageUsage.logsBytes / 1024).toFixed(1)} KB</span>
               </div>
@@ -246,42 +246,42 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
           </div>
 
           {/* Pipeline Details */}
-          <div className="p-4 rounded-xl bg-[#0b0d11] border border-[#1e242c] space-y-2 text-xs">
+          <div className="p-4 rounded-xl bg-[#09090b] border border-[#27272d] space-y-2 text-xs">
             <span className="text-zinc-400 text-[10px] font-mono uppercase tracking-wider font-bold">
               Integration Architecture
             </span>
             <div className="space-y-1.5 text-zinc-300 font-mono text-[11px]">
               <div className="flex items-center justify-between">
                 <span className="text-zinc-500">Transport:</span>
-                <span className="text-white">Server Proxy (/api/sync &amp; /api/action) + CORS Tunnel</span>
+                <span className="text-zinc-100">Server Proxy (/api/sync &amp; /api/action) + CORS Tunnel</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-zinc-500">Google Sheet Target:</span>
-                <span className="text-white truncate max-w-[280px]">
+                <span className="text-zinc-100 truncate max-w-[280px]">
                   {syncStatus.url ? 'Deployed Apps Script (/exec)' : 'Local High-Speed Cache Mode'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-zinc-500">Sound Synthesizer:</span>
-                <span className="text-white">Web Audio API (Hardware Frequency Synthesizer)</span>
+                <span className="text-zinc-100">Web Audio API (Hardware Frequency Synthesizer)</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-zinc-500">Print Engine:</span>
-                <span className="text-white">@media print Clean Competition Custody Manifest</span>
+                <span className="text-zinc-100">@media print Clean Competition Custody Manifest</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-zinc-500">Source Repository:</span>
-                <span className="text-emerald-400">VEX Robotics Team 654 · MIT License</span>
+                <span className="text-zinc-100">VEX Robotics Team 654 · MIT License</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 bg-[#0e1218] border-t border-[#1e242c] flex items-center justify-between">
+        <div className="px-5 py-3.5 bg-[#09090b] border-t border-[#27272d] flex items-center justify-between">
           <button
             onClick={handleExportDiagnostics}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-200 bg-[#161a22] hover:bg-[#21262d] border border-[#1e242c] rounded-lg transition-colors font-mono"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors font-mono"
           >
             <Download className="w-3.5 h-3.5 text-zinc-400" />
             <span>Export Diagnostics JSON</span>
@@ -291,7 +291,7 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
               playClick();
               onClose();
             }}
-            className="px-4 py-1.5 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-500 rounded-lg transition-colors font-mono"
+            className="px-4 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors font-mono"
           >
             Dismiss
           </button>

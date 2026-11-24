@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useLayoutEffect, useEffect } from 'react';
 import {
   RefreshCw,
   Settings,
@@ -59,6 +59,37 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'logs' as const, label: 'Audit Logs' },
   ];
 
+  const navRef = useRef<HTMLElement>(null);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [pillStyle, setPillStyle] = useState<{ left: number; width: number; ready: boolean }>({
+    left: 0,
+    width: 0,
+    ready: false,
+  });
+
+  const updatePill = () => {
+    const activeEl = tabRefs.current[activeTab];
+    const navEl = navRef.current;
+    if (!activeEl || !navEl) return;
+    setPillStyle({
+      left: activeEl.offsetLeft,
+      width: activeEl.offsetWidth,
+      ready: true,
+    });
+  };
+
+  useLayoutEffect(() => {
+    updatePill();
+  }, [activeTab]);
+
+  useEffect(() => {
+    const navEl = navRef.current;
+    if (!navEl || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => updatePill());
+    observer.observe(navEl);
+    return () => observer.disconnect();
+  }, [activeTab]);
+
   const handleTabClick = (tabId: ActiveTab) => {
     playClick();
     onTabChange(tabId);
@@ -70,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-[#0c0e12]/95 backdrop-blur-md border-b border-[#1c222b] no-print">
+    <header className="sticky top-0 z-30 bg-[#09090b]/95 backdrop-blur-md border-b border-[#27272d] no-print">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between gap-4 h-14">
           {/* Brand Wordmark & Club Emblem */}
@@ -83,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
               className="flex items-center gap-2.5 group"
             >
-              <div className="w-7 h-7 rounded-full bg-[#161a22] border border-zinc-800 flex items-center justify-center p-0.5 overflow-hidden shrink-0 group-hover:border-amber-500/50 transition-colors shadow-sm">
+              <div className="w-7 h-7 rounded-full bg-[#1a1a1f] border border-zinc-800 flex items-center justify-center p-0.5 overflow-hidden shrink-0 group-hover:border-red-500/70 group-hover:scale-105 group-hover:-rotate-6 transition-all duration-200 shadow-sm">
                 <img
                   src="/assets/aistudio/lt_logo_transparent.png"
                   alt="Lake Travis Robotics Logo"
@@ -91,28 +122,46 @@ export const Header: React.FC<HeaderProps> = ({
                 />
               </div>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-sm font-semibold tracking-tight text-white group-hover:text-amber-400 transition-colors">
+                <span className="text-sm font-semibold tracking-tight text-zinc-100 group-hover:text-red-400 transition-colors">
                   VEX Inventory
                 </span>
-                <span className="text-xs text-zinc-400 font-normal font-mono">
+                <span className="text-xs text-red-400 font-medium font-mono">
                   654
                 </span>
               </div>
             </a>
           </div>
 
-          {/* Centered Segmented Pill Navigation Tabs */}
-          <nav className="hidden md:flex items-center bg-[#141820] border border-[#212631] rounded-lg p-1 text-xs font-medium shadow-inner">
+          {/* Centered Segmented Navigation Tabs with Spring Sliding Pill */}
+          <nav
+            ref={navRef}
+            className="hidden md:flex relative items-center bg-[#111114] border border-[#27272d] rounded-lg p-1 text-xs font-medium shadow-inner"
+          >
+            {pillStyle.ready && (
+              <div
+                aria-hidden="true"
+                style={{
+                  transform: `translateX(${pillStyle.left - 4}px)`,
+                  width: `${pillStyle.width}px`,
+                }}
+                className="absolute top-1 bottom-1 left-1 rounded-md bg-[#1a1a1f] border border-red-500/40 shadow-sm pointer-events-none transition-[transform,width] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)] overflow-hidden"
+              >
+                <span className="absolute bottom-0 inset-x-2 h-[2px] rounded-full bg-red-600" />
+              </div>
+            )}
             {navTabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
+                  ref={(el) => {
+                    tabRefs.current[tab.id] = el;
+                  }}
                   onClick={() => handleTabClick(tab.id)}
-                  className={`px-3.5 py-1.5 rounded-md transition-all whitespace-nowrap text-xs ${
+                  className={`relative z-10 px-3.5 py-1.5 rounded-md transition-colors duration-150 whitespace-nowrap text-xs ${
                     isActive
-                      ? 'bg-[#222834] text-white font-medium shadow-sm'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#1a1f29]'
+                      ? 'text-zinc-100 font-semibold'
+                      : 'text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
                   {tab.label}
@@ -132,18 +181,18 @@ export const Header: React.FC<HeaderProps> = ({
               disabled={syncStatus.isSyncing}
               title={syncStatus.url ? `Sync with Google Sheet (${syncStatus.url})` : 'Sync local data'}
               aria-label="Sync with Google Sheet"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-zinc-300 hover:text-white bg-[#141820] hover:bg-[#1c222c] border border-[#212631] rounded-lg transition-colors font-medium disabled:opacity-50 whitespace-nowrap shrink-0 btn-tactile"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-zinc-300 hover:text-zinc-100 bg-[#111114] hover:bg-[#1a1a1f] border border-[#27272d] rounded-lg transition-colors font-medium disabled:opacity-50 whitespace-nowrap shrink-0 btn-tactile"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncStatus.isSyncing ? 'animate-spin text-zinc-300' : 'text-zinc-400'}`} />
-              <span className={`w-1.5 h-1.5 rounded-full ${syncStatus.url ? 'bg-emerald-500' : 'bg-amber-400'} ${syncStatus.isSyncing ? 'animate-ping' : ''}`} />
-              <span className="text-xs font-mono">
+              <span className={`w-1.5 h-1.5 rounded-full ${syncStatus.url ? 'bg-red-500' : 'bg-amber-400'} ${syncStatus.isSyncing ? 'animate-ping' : ''}`} />
+              <span className="text-xs font-medium">
                 {syncStatus.isSyncing ? 'Syncing...' : syncStatus.url ? 'Live' : 'Local'}
               </span>
             </button>
 
             {/* Admin Status / Quick Auth Toggle */}
             {adminSettings.isUnlocked ? (
-              <div className="flex items-center gap-1.5 bg-[#141820] border border-amber-500/50 px-3 py-1.5 rounded-lg text-xs text-amber-400 font-medium font-mono shadow-sm">
+              <div className="flex items-center gap-1.5 bg-[#111114] border border-amber-500/50 px-3 py-1.5 rounded-lg text-xs text-amber-400 font-medium shadow-sm">
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
                 <span>Admin</span>
                 <button
@@ -166,7 +215,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }}
                 title="Admin Authentication (Coaches / Leads)"
                 aria-label="Admin Authentication"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-zinc-300 hover:text-white bg-[#141820] hover:bg-[#1c222c] border border-[#212631] rounded-lg transition-colors font-medium btn-tactile font-mono"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-zinc-300 hover:text-zinc-100 bg-[#111114] hover:bg-[#1a1a1f] border border-[#27272d] rounded-lg transition-colors font-medium btn-tactile"
               >
                 <Lock className="w-3.5 h-3.5 text-zinc-400" />
                 <span>Admin</span>
@@ -174,7 +223,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
 
             {/* Consolidated Utility Tools: Sound FX, Shortcuts, Diagnostics, Print, Assets, Mobile, Settings */}
-            <div className="flex items-center bg-[#141820] border border-[#212631] rounded-lg p-0.5 text-zinc-400 shadow-inner">
+            <div className="flex items-center bg-[#111114] border border-[#27272d] rounded-lg p-0.5 text-zinc-400 shadow-inner">
               {/* Sound FX Toggle */}
               {onToggleSound && (
                 <button
@@ -182,7 +231,7 @@ export const Header: React.FC<HeaderProps> = ({
                   title={soundEnabled ? 'Tactile Web Audio Feedback: ON (Click to mute)' : 'Tactile Web Audio Feedback: MUTED (Click to unmute)'}
                   aria-label="Toggle Sound Effects"
                   className={`p-1.5 rounded-md transition-colors ${
-                    soundEnabled ? 'text-amber-400 hover:text-amber-300' : 'text-zinc-500 hover:text-zinc-300'
+                    soundEnabled ? 'text-red-400 hover:text-red-300' : 'text-zinc-500 hover:text-zinc-300'
                   }`}
                 >
                   {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
@@ -198,7 +247,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   title="Keyboard Shortcuts Cheatsheet (?)"
                   aria-label="Keyboard Shortcuts"
-                  className="p-1.5 hover:text-zinc-200 hover:bg-[#202530] rounded-md transition-colors"
+                  className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors"
                 >
                   <Keyboard className="w-3.5 h-3.5" />
                 </button>
@@ -213,7 +262,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   title="System Telemetry & Architecture Diagnostics"
                   aria-label="System Diagnostics"
-                  className="p-1.5 hover:text-zinc-200 hover:bg-[#202530] rounded-md transition-colors"
+                  className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors"
                 >
                   <Activity className="w-3.5 h-3.5" />
                 </button>
@@ -224,7 +273,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={handlePrint}
                 title="Print Official Competition Custody Manifest (Ctrl+P)"
                 aria-label="Print Manifest"
-                className="p-1.5 hover:text-zinc-200 hover:bg-[#202530] rounded-md transition-colors"
+                className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors"
               >
                 <Printer className="w-3.5 h-3.5" />
               </button>
@@ -238,7 +287,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   title="Download Club Logos & Custom QR Badges"
                   aria-label="Download Club Logos and QR Badges"
-                  className="p-1.5 hover:text-zinc-200 hover:bg-[#202530] rounded-md transition-colors"
+                  className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" />
                 </button>
@@ -253,7 +302,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   title="Preview / Switch to Phone View"
                   aria-label="Switch to Phone View"
-                  className="p-1.5 hover:text-zinc-200 hover:bg-[#202530] rounded-md transition-colors"
+                  className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors"
                 >
                   <Smartphone className="w-3.5 h-3.5" />
                 </button>
@@ -267,11 +316,11 @@ export const Header: React.FC<HeaderProps> = ({
                 }}
                 title={adminSettings.isUnlocked ? 'Google Sheet API & System Settings' : 'Settings (Admin Authentication Required)'}
                 aria-label="Google Sheet & System Settings"
-                className="p-1.5 hover:text-zinc-200 hover:bg-[#202530] rounded-md transition-colors relative"
+                className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors relative"
               >
                 <Settings className="w-3.5 h-3.5" />
                 {syncStatus.url ? (
-                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
                 ) : (
                   <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-amber-400 rounded-full" />
                 )}
@@ -284,7 +333,7 @@ export const Header: React.FC<HeaderProps> = ({
                 playBeep();
                 onOpenCheckout();
               }}
-              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-zinc-950 bg-white hover:bg-zinc-100 rounded-lg transition-all shadow-sm whitespace-nowrap shrink-0 active:scale-[0.97] btn-tactile"
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm whitespace-nowrap shrink-0 btn-crimson-glow"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Check In / Out</span>
@@ -293,13 +342,13 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile Navigation Bar */}
-        <div className="flex md:hidden items-center justify-between border-t border-[#1c222b] py-1.5 overflow-x-auto gap-1">
+        <div className="flex md:hidden items-center justify-between border-t border-[#27272d] py-1.5 overflow-x-auto gap-1">
           {navTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => handleTabClick(tab.id)}
               className={`px-2.5 py-1 text-xs rounded-md whitespace-nowrap transition-colors ${
-                activeTab === tab.id ? 'bg-[#222834] text-white font-medium' : 'text-zinc-400'
+                activeTab === tab.id ? 'bg-[#1a1a1f] text-zinc-100 font-semibold border border-red-500/35' : 'text-zinc-400 border border-transparent'
               }`}
             >
               {tab.label}

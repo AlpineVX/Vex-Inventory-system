@@ -55,19 +55,19 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in font-sans">
-      <div className="bg-[#12161f] border border-[#1e242c] rounded-xl shadow-2xl max-w-sm w-full overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter font-sans">
+      <div className="bg-[#111114] border border-[#27272d] rounded-xl shadow-2xl max-w-sm w-full overflow-hidden animate-modal-enter">
         {/* Header */}
-        <div className="px-5 py-3.5 bg-[#0e1218] border-b border-[#1e242c] flex items-center justify-between">
+        <div className="px-5 py-3.5 bg-[#09090b] border-b border-[#27272d] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="font-mono text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase">
               SECURITY LOCK
             </span>
-            <h2 className="text-sm font-bold text-white">Admin Authentication</h2>
+            <h2 className="text-sm font-bold text-zinc-100">Admin Authentication</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-zinc-400 hover:text-white p-1 rounded-md transition-colors"
+            className="text-zinc-400 hover:text-zinc-100 p-1 rounded-md transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -79,7 +79,7 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({
             Admin access is required to modify spreadsheet API connections, reset database records, or manage system settings.
           </p>
 
-          <div className="grid grid-cols-2 gap-1 p-1 bg-[#0b0d11] rounded-lg border border-[#1e242c] text-xs font-mono">
+          <div className="grid grid-cols-2 gap-1 p-1 bg-[#09090b] rounded-lg border border-[#27272d] text-xs font-mono">
             <button
               type="button"
               onClick={() => {
@@ -88,8 +88,8 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({
               }}
               className={`flex items-center justify-center gap-1.5 py-1.5 rounded-md font-bold transition-colors ${
                 method === 'pin'
-                  ? 'bg-[#222834] text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
+                  ? 'bg-[#1a1a1f] text-zinc-100 shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-100'
               }`}
             >
               <KeyRound className="w-3.5 h-3.5" />
@@ -103,8 +103,8 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({
               }}
               className={`flex items-center justify-center gap-1.5 py-1.5 rounded-md font-bold transition-colors ${
                 method === 'email'
-                  ? 'bg-[#222834] text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
+                  ? 'bg-[#1a1a1f] text-zinc-100 shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-100'
               }`}
             >
               <Mail className="w-3.5 h-3.5" />
@@ -126,7 +126,7 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
                 placeholder="Enter security PIN"
-                className="w-full px-3 py-2 text-center text-sm tracking-widest font-mono bg-[#0b0d11] border border-[#1e242c] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                className="w-full px-3 py-2 text-center text-sm tracking-widest font-mono bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500"
               />
               <span className="block text-[11px] text-zinc-500 mt-1 text-center font-mono">
                 Security PIN set by team mentor or lead
@@ -143,7 +143,7 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
                 placeholder="coach@school.edu or admin email"
-                className="w-full px-3 py-2 text-xs font-mono bg-[#0b0d11] border border-[#1e242c] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                className="w-full px-3 py-2 text-xs font-mono bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500"
               />
               <span className="block text-[11px] text-zinc-500 mt-1 font-mono">
                 Must match an authorized coach/lead email
@@ -162,13 +162,13 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 text-xs text-zinc-300 hover:text-white bg-[#161a22] border border-[#1e242c] rounded-lg transition-colors"
+              className="px-3.5 py-1.5 text-xs text-zinc-300 hover:text-zinc-100 bg-[#1a1a1f] border border-[#27272d] rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 text-xs font-semibold text-white bg-[#ea580c] hover:bg-orange-600 rounded-lg transition-colors shadow-sm"
+              className="px-4 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm"
             >
               Unlock Admin
             </button>

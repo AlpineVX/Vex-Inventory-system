@@ -317,15 +317,15 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-zinc-900 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[94vh] pb-[env(safe-area-inset-bottom,0px)]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
+      <div className="bg-zinc-900 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[94vh] pb-[env(safe-area-inset-bottom,0px)] animate-modal-enter">
         {/* Mobile grab handle */}
         <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
 
         {/* Modal Header */}
         <div className="px-5 py-3 border-b border-zinc-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm sm:text-base font-bold text-white">
+            <h2 className="text-sm sm:text-base font-bold text-zinc-100">
               {action === 'Check Out' ? 'Hardware Check Out' : 'Hardware Check In'}
             </h2>
             <span className="text-xs text-zinc-400">· VEX Robotics Control</span>
@@ -341,18 +341,26 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
           </button>
         </div>
 
-        {/* Action Toggle Strip */}
+        {/* Action Toggle Strip with Sliding Pill */}
         <div className="p-4 sm:p-5 pb-0 shrink-0">
-          <div className="grid grid-cols-2 gap-1.5 p-1 bg-zinc-950 rounded-xl border border-zinc-800">
+          <div className="relative grid grid-cols-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800">
+            <div
+              aria-hidden="true"
+              className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-lg shadow-sm pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)] ${
+                action === 'Check Out'
+                  ? 'translate-x-0 bg-red-600'
+                  : 'translate-x-full bg-zinc-100'
+              }`}
+            />
             <button
               type="button"
               onClick={() => {
                 playClick();
                 setAction('Check Out');
               }}
-              className={`flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-md transition-all ${
+              className={`relative z-10 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-md transition-colors duration-200 ${
                 action === 'Check Out'
-                  ? 'bg-amber-600 text-white shadow-sm'
+                  ? 'text-white'
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
@@ -365,9 +373,9 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                 playClick();
                 setAction('Check In');
               }}
-              className={`flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-md transition-all ${
+              className={`relative z-10 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-md transition-colors duration-200 ${
                 action === 'Check In'
-                  ? 'bg-emerald-600 text-white shadow-sm'
+                  ? 'text-zinc-950'
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
@@ -394,7 +402,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                   }}
                   className={`px-2 py-0.5 rounded transition-colors ${
                     selectionMode === 'assemble'
-                      ? 'bg-zinc-800 text-white font-medium'
+                      ? 'bg-zinc-800 text-zinc-100 font-medium'
                       : 'text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
@@ -408,7 +416,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                   }}
                   className={`px-2 py-0.5 rounded transition-colors ${
                     selectionMode === 'search'
-                      ? 'bg-zinc-800 text-white font-medium'
+                      ? 'bg-zinc-800 text-zinc-100 font-medium'
                       : 'text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
@@ -442,7 +450,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                           className={`px-2 py-1.5 text-xs rounded-lg border text-left transition-all btn-tactile ${
                             isSelected
                               ? 'bg-zinc-100 text-zinc-950 border-zinc-200 font-bold shadow-sm'
-                              : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                              : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-zinc-100'
                           }`}
                         >
                           <div className="truncate">{cat}</div>
@@ -484,7 +492,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                         setAssembledPartNum(val);
                       }}
                       placeholder="e.g. 1"
-                      className="flex-1 bg-transparent px-3 py-2 text-sm font-mono font-bold text-white placeholder-zinc-600 focus:outline-none"
+                      className="flex-1 bg-transparent px-3 py-2 text-sm font-mono font-bold text-zinc-100 placeholder-zinc-600 focus:outline-none"
                     />
 
                     {/* Integrated Increment / Decrement Stepper */}
@@ -497,7 +505,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                           const currentNum = match ? parseInt(match[0], 10) : 1;
                           setAssembledPartNum(String(Math.max(1, currentNum - 1)));
                         }}
-                        className="px-3 py-2.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors font-mono font-semibold"
+                        className="px-3 py-2.5 text-xs text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors font-mono font-semibold"
                         title="Previous part number"
                       >
                         -1
@@ -511,7 +519,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                           const currentNum = match ? parseInt(match[0], 10) : 0;
                           setAssembledPartNum(String(currentNum + 1));
                         }}
-                        className="px-3 py-2.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors font-mono font-semibold"
+                        className="px-3 py-2.5 text-xs text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors font-mono font-semibold"
                         title="Next part number"
                       >
                         +1
@@ -550,13 +558,13 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                               isCurrent
                                 ? 'bg-zinc-100 text-zinc-950 border-zinc-200 font-bold shadow-sm'
                                 : isAvailable
-                                ? 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                                ? 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-zinc-100'
                                 : 'bg-zinc-900/60 text-amber-300 border-amber-900/50 hover:border-amber-700'
                             }`}
                           >
                             <span
                               className={`w-1.5 h-1.5 rounded-full ${
-                                isAvailable ? 'bg-emerald-400' : 'bg-amber-400'
+                                isAvailable ? 'bg-zinc-200' : 'bg-amber-400'
                               }`}
                             />
                             <span>{numStr}</span>
@@ -578,7 +586,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                         <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                           Resolved Hardware ID
                         </div>
-                        <div className="text-sm font-bold font-mono text-white flex items-center gap-2 mt-0.5">
+                        <div className="text-sm font-bold font-mono text-zinc-100 flex items-center gap-2 mt-0.5">
                           <span className="text-zinc-100">{effectiveItemId}</span>
                           {currentMatchedItem ? (
                             <span className="text-xs font-sans text-zinc-300 font-normal truncate max-w-[200px]">
@@ -600,14 +608,14 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                             <span
                               className={`w-2 h-2 rounded-full ${
                                 currentMatchedItem.status === 'Available'
-                                  ? 'bg-emerald-400'
+                                  ? 'bg-zinc-200'
                                   : 'bg-amber-400'
                               }`}
                             />
                             <span
                               className={`text-xs font-semibold ${
                                 currentMatchedItem.status === 'Available'
-                                  ? 'text-emerald-400'
+                                  ? 'text-zinc-100'
                                   : 'text-amber-400'
                               }`}
                             >
@@ -687,7 +695,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                       <div className="text-right">
                         <span
                           className={`text-[11px] font-sans ${
-                            item.status === 'Available' ? 'text-emerald-400' : 'text-amber-400'
+                            item.status === 'Available' ? 'text-zinc-200' : 'text-amber-400'
                           }`}
                         >
                           {item.status}
@@ -731,7 +739,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                     className={`py-1.5 text-xs font-mono font-semibold rounded-lg border transition-all btn-tactile ${
                       isSelected
                         ? 'bg-zinc-100 text-zinc-950 border-white shadow-sm'
-                        : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                        : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-zinc-100'
                     }`}
                   >
                     {t}
@@ -747,7 +755,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                 className={`py-1.5 text-xs font-mono font-semibold rounded-lg border transition-all btn-tactile ${
                   isCustomTeam
                     ? 'bg-zinc-100 text-zinc-950 border-white shadow-sm'
-                    : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                    : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-zinc-100'
                 }`}
               >
                 Other...
@@ -838,8 +846,8 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
           {/* Modal Footer */}
           <div className="pt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-zinc-800">
             <div className="text-[11px] text-zinc-400 font-mono text-center sm:text-left">
-              Selected: <span className="text-white font-semibold">{effectiveItemId}</span> &rarr;{' '}
-              <span className="text-white font-semibold">
+              Selected: <span className="text-zinc-100 font-semibold">{effectiveItemId}</span> &rarr;{' '}
+              <span className="text-zinc-100 font-semibold">
                 Team {isCustomTeam ? customTeam || 'Custom' : team}
               </span>
             </div>
@@ -855,10 +863,10 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`flex-[2] sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-white rounded-xl shadow-md transition-all disabled:opacity-50 min-h-[44px] active:scale-[0.98] ${
+                className={`flex-[2] sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold rounded-xl shadow-md transition-all disabled:opacity-50 min-h-[44px] active:scale-[0.98] ${
                   action === 'Check Out'
-                    ? 'bg-amber-600 hover:bg-amber-500'
-                    : 'bg-emerald-600 hover:bg-emerald-500'
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-zinc-100 hover:bg-white text-zinc-950'
                 }`}
               >
                 {isSubmitting ? (

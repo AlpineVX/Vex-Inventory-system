@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
 import {
   ArrowUpRight,
   ArrowRight,
@@ -32,6 +32,7 @@ import {
 } from '../types';
 import { playClick, playBeep, playSuccess } from '../services/soundFx';
 import { getVexHardwareSpec, VEX_HARDWARE_SPECS } from '../data/vexSpecs';
+import { SpotlightCard, AnimatedNumber, AnimatedRingGauge } from './MotionPrimitives';
 
 interface CommandCenterProps {
   items: InventoryItem[];
@@ -61,8 +62,46 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
   const [categoryFilter, setCategoryFilter] = useState<'All' | 'Available' | 'Brain' | 'Radio' | 'Sensors' | 'Solenoids'>('All');
   const [activeCabinetFilter, setActiveCabinetFilter] = useState<string | null>(null);
 
+  // Sliding pill state for Quick Filter Tabs
+  const filterNavRef = useRef<HTMLDivElement>(null);
+  const filterBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [filterPill, setFilterPill] = useState<{ left: number; width: number; ready: boolean }>({
+    left: 0,
+    width: 0,
+    ready: false,
+  });
+
+  const updateFilterPill = () => {
+    const activeBtn = filterBtnRefs.current[categoryFilter];
+    const container = filterNavRef.current;
+    if (!activeBtn || !container) return;
+    setFilterPill({
+      left: activeBtn.offsetLeft,
+      width: activeBtn.offsetWidth,
+      ready: true,
+    });
+  };
+
+  useLayoutEffect(() => {
+    updateFilterPill();
+  }, [categoryFilter]);
+
+  useEffect(() => {
+    const container = filterNavRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => updateFilterPill());
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [categoryFilter]);
+
   // Drilldown modal states
   const [activeDrilldown, setActiveDrilldown] = useState<'none' | 'overdue' | 'maintenance' | 'readiness'>('none');
+  const [barsReady, setBarsReady] = useState(false);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setBarsReady(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   const totalCount = items.length;
   const availableCount = items.filter((i) => i.status === 'Available').length;
@@ -295,11 +334,11 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
       {/* 1. Header Strip: Command Center Title & Top Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2.5">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100 flex items-center gap-2.5">
             <span>VEX Robotics Inventory — Command Center</span>
           </h1>
-          <p className="text-sm text-zinc-400 mt-1 flex items-center gap-2 font-mono text-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 radar-dot shrink-0" />
+          <p className="text-sm text-zinc-400 mt-1 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-500 radar-dot shrink-0" />
             <span>Live telemetry — updates automatically as parts are scanned in and out across all 11 club teams</span>
           </p>
         </div>
@@ -309,7 +348,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               playClick();
               onNavigateTab('packlist');
             }}
-            className="px-3.5 py-2 text-xs font-medium text-zinc-200 bg-[#161a22] hover:bg-[#21262d] border border-zinc-700/80 rounded-lg transition-colors flex items-center gap-1.5 btn-tactile"
+            className="px-3.5 py-2 text-xs font-medium text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-zinc-700/80 rounded-lg transition-colors flex items-center gap-1.5 btn-tactile"
           >
             <Box className="w-3.5 h-3.5 text-zinc-400" />
             <span>Pack List</span>
@@ -320,7 +359,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               handleExportCSV();
             }}
             title="Download CSV snapshot of all 178 inventory items"
-            className="px-3.5 py-2 text-xs font-medium text-zinc-200 bg-[#161a22] hover:bg-[#21262d] border border-zinc-700/80 rounded-lg transition-colors flex items-center gap-1.5 btn-tactile"
+            className="px-3.5 py-2 text-xs font-medium text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-zinc-700/80 rounded-lg transition-colors flex items-center gap-1.5 btn-tactile"
           >
             <Download className="w-3.5 h-3.5 text-zinc-400" />
             <span className="hidden sm:inline">Export CSV</span>
@@ -330,7 +369,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               playBeep();
               onOpenCheckout(undefined, 'Check Out');
             }}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#ea580c] hover:bg-orange-600 rounded-lg transition-colors shadow-sm active:scale-[0.97] btn-tactile"
+            className="px-4 py-2 text-xs font-semibold text-zinc-100 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors shadow-sm active:scale-[0.97] btn-tactile"
           >
             Check Out
           </button>
@@ -339,7 +378,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               playBeep();
               onOpenCheckout(undefined, 'Check In');
             }}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#059669] hover:bg-emerald-600 rounded-lg transition-colors shadow-sm active:scale-[0.97] btn-tactile"
+            className="px-4 py-2 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-lg transition-colors shadow-sm active:scale-[0.97] btn-tactile"
           >
             Check In
           </button>
@@ -347,12 +386,12 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
       </div>
 
       {/* 2. Borrower Station Banner: Member Self-Service Kiosk */}
-      <div className="bg-[#12161f] border border-[#1e242c] rounded-xl p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+      <SpotlightCard className="bg-[#111114] border border-[#27272d] rounded-xl p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-5 animate-section-enter">
         <div className="max-w-xl">
           <div className="text-[11px] font-mono font-medium tracking-wider text-zinc-400 uppercase">
             BORROWER STATION · Member Self-Service Kiosk
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-white mt-1">
+          <h2 className="text-base sm:text-lg font-bold text-zinc-100 mt-1">
             Checking Out or Returning Hardware?
           </h2>
           <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
@@ -364,13 +403,13 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         </div>
 
         {/* Interactive Cabinet Locations Inset Box */}
-        <div className="bg-[#0b0d11] border border-zinc-800/80 rounded-lg p-3 text-xs font-mono text-zinc-300 space-y-1.5 shrink-0">
+        <div className="bg-[#09090b] border border-zinc-800/80 rounded-lg p-3 text-xs font-mono text-zinc-300 space-y-1.5 shrink-0">
           <div className="flex items-center justify-between gap-3 font-semibold text-zinc-200">
             <span>Cabinet Locations:</span>
             {activeCabinetFilter && (
               <button
                 onClick={() => setActiveCabinetFilter(null)}
-                className="text-[10px] text-amber-400 hover:underline font-normal"
+                className="text-[10px] text-red-400 hover:underline font-normal"
               >
                 Clear filter
               </button>
@@ -378,40 +417,40 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           </div>
           <button
             onClick={() => setActiveCabinetFilter(activeCabinetFilter === 'Cabinet 1' ? null : 'Cabinet 1')}
-            className={`w-full text-left px-2 py-1 rounded transition-colors flex items-center justify-between gap-2 text-xs ${
+            className={`w-full text-left px-2 py-1 rounded transition-all flex items-center justify-between gap-2 text-xs btn-tactile ${
               activeCabinetFilter === 'Cabinet 1'
-                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                : 'hover:bg-zinc-800/50 text-zinc-400'
+                ? 'bg-red-500/15 text-red-300 border border-red-500/30'
+                : 'hover:bg-zinc-800/50 text-zinc-400 border border-transparent'
             }`}
           >
             <span>· Cabinet 1: <strong className="text-zinc-300 font-normal">Brain, Radio</strong></span>
-            <span className="text-[10px] font-bold text-emerald-400 font-mono">{cabinet1Available} ready</span>
+            <span className="text-[10px] font-bold text-zinc-200 font-mono">{cabinet1Available} ready</span>
           </button>
           <button
             onClick={() =>
               setActiveCabinetFilter(activeCabinetFilter === 'Pneumatics Cabinet' ? null : 'Pneumatics Cabinet')
             }
-            className={`w-full text-left px-2 py-1 rounded transition-colors flex items-center justify-between gap-2 text-xs ${
+            className={`w-full text-left px-2 py-1 rounded transition-all flex items-center justify-between gap-2 text-xs btn-tactile ${
               activeCabinetFilter === 'Pneumatics Cabinet'
-                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                : 'hover:bg-zinc-800/50 text-zinc-400'
+                ? 'bg-red-500/15 text-red-300 border border-red-500/30'
+                : 'hover:bg-zinc-800/50 text-zinc-400 border border-transparent'
             }`}
           >
             <span>· Pneumatics: <strong className="text-zinc-300 font-normal">Solenoids</strong></span>
-            <span className="text-[10px] font-bold text-emerald-400 font-mono">{pneumaticsAvailable} ready</span>
+            <span className="text-[10px] font-bold text-zinc-200 font-mono">{pneumaticsAvailable} ready</span>
           </button>
           <button
             onClick={() =>
               setActiveCabinetFilter(activeCabinetFilter === 'Sensor Cabinet' ? null : 'Sensor Cabinet')
             }
-            className={`w-full text-left px-2 py-1 rounded transition-colors flex items-center justify-between gap-2 text-xs ${
+            className={`w-full text-left px-2 py-1 rounded transition-all flex items-center justify-between gap-2 text-xs btn-tactile ${
               activeCabinetFilter === 'Sensor Cabinet'
-                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                : 'hover:bg-zinc-800/50 text-zinc-400'
+                ? 'bg-red-500/15 text-red-300 border border-red-500/30'
+                : 'hover:bg-zinc-800/50 text-zinc-400 border border-transparent'
             }`}
           >
             <span>· Sensor Cabinet: <strong className="text-zinc-300 font-normal">All Sensors</strong></span>
-            <span className="text-[10px] font-bold text-emerald-400 font-mono">{sensorsCabinetAvailable} ready</span>
+            <span className="text-[10px] font-bold text-zinc-200 font-mono">{sensorsCabinetAvailable} ready</span>
           </button>
         </div>
 
@@ -419,25 +458,25 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
           <button
             onClick={() => onOpenCheckout(undefined, 'Check Out')}
-            className="px-4 py-2.5 text-xs sm:text-sm font-semibold text-white bg-[#ea580c] hover:bg-orange-600 rounded-lg transition-colors shadow-sm whitespace-nowrap text-center active:scale-[0.98]"
+            className="px-4 py-2.5 text-xs sm:text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm whitespace-nowrap text-center btn-crimson-glow"
           >
             + Check Out Part
           </button>
           <button
             onClick={() => onOpenCheckout(undefined, 'Check In')}
-            className="px-4 py-2.5 text-xs sm:text-sm font-semibold text-white bg-[#059669] hover:bg-emerald-600 rounded-lg transition-colors shadow-sm whitespace-nowrap text-center active:scale-[0.98]"
+            className="px-4 py-2.5 text-xs sm:text-sm font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-lg shadow-sm whitespace-nowrap text-center btn-tactile"
           >
             ← Check In / Return
           </button>
         </div>
-      </div>
+      </SpotlightCard>
 
       {/* 2B. USEFUL TOOL: Instant Part Availability Finder & 1-Click Fast Borrow */}
-      <div className="bg-[#12161f] border border-[#1e242c] rounded-xl p-4 sm:p-5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#1e242c]">
+      <SpotlightCard className="bg-[#111114] border border-[#27272d] rounded-xl p-4 sm:p-5 animate-section-enter stagger-1">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#27272d]">
           <div className="flex items-center gap-2">
-            <Search className="w-4 h-4 text-amber-400 shrink-0" />
-            <h3 className="text-xs font-bold tracking-wider text-white uppercase">
+            <Search className="w-4 h-4 text-red-400 shrink-0" />
+            <h3 className="text-xs font-bold tracking-wider text-zinc-100 uppercase">
               INSTANT PART AVAILABILITY &amp; LOCATION FINDER
             </h3>
             <span className="text-[11px] text-zinc-500 hidden sm:inline">
@@ -445,16 +484,35 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
             </span>
           </div>
 
-          {/* Quick Filter Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 text-xs">
+          {/* Quick Filter Tabs with Spring Sliding Pill */}
+          <div
+            ref={filterNavRef}
+            className="relative flex items-center gap-1 overflow-x-auto p-1 bg-[#09090b] border border-[#27272d] rounded-lg text-xs shrink-0"
+          >
+            {filterPill.ready && (
+              <div
+                aria-hidden="true"
+                style={{
+                  transform: `translateX(${filterPill.left - 4}px)`,
+                  width: `${filterPill.width}px`,
+                }}
+                className="absolute top-1 bottom-1 left-1 rounded-md bg-red-600 shadow-sm pointer-events-none transition-[transform,width] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)]"
+              />
+            )}
             {(['All', 'Available', 'Brain', 'Radio', 'Sensors', 'Solenoids'] as const).map((filter) => (
               <button
                 key={filter}
-                onClick={() => setCategoryFilter(filter)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+                ref={(el) => {
+                  filterBtnRefs.current[filter] = el;
+                }}
+                onClick={() => {
+                  playClick();
+                  setCategoryFilter(filter);
+                }}
+                className={`relative z-10 px-2.5 py-1 rounded-md text-xs font-medium transition-colors duration-150 whitespace-nowrap ${
                   categoryFilter === filter
-                    ? 'bg-amber-500 text-black font-semibold'
-                    : 'text-zinc-400 hover:text-white bg-[#181d27]'
+                    ? 'text-white font-semibold'
+                    : 'text-zinc-400 hover:text-zinc-100'
                 }`}
               >
                 {filter === 'Available' ? 'Available Only' : filter}
@@ -468,106 +526,116 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <input
             type="text"
+            data-global-search="true"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by part name or ID (e.g. Brain, Inertial, VEXSOL-3, 654V, Cabinet 1)..."
-            className="w-full pl-10 pr-24 py-2.5 bg-[#0b0d11] border border-[#1e242c] focus:border-amber-500 rounded-lg text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none transition-colors"
+            className="w-full pl-10 pr-24 py-2.5 bg-[#09090b] border border-[#27272d] focus:border-red-500 rounded-lg text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none transition-colors"
           />
-          {searchQuery && (
+          {searchQuery ? (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-white flex items-center gap-1"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-zinc-100 flex items-center gap-1"
             >
               <X className="w-3.5 h-3.5" />
               <span>Clear</span>
             </button>
+          ) : (
+            <div className="hidden sm:flex items-center gap-1 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono text-zinc-400 bg-[#1a1a1f] border border-[#27272d] rounded">
+                /
+              </kbd>
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono text-zinc-400 bg-[#1a1a1f] border border-[#27272d] rounded">
+                ⌘K
+              </kbd>
+            </div>
           )}
         </div>
 
         {/* 1-Click Fast Borrow Shortcuts (When no active search query) */}
         {!searchQuery && !activeCabinetFilter && categoryFilter === 'All' && (
-          <div className="mt-3.5 pt-3 border-t border-[#1a2029]">
+          <div className="mt-3.5 pt-3 border-t border-[#1a1a1f] animate-fade-in-up">
             <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <Sparkles className="w-3.5 h-3.5 text-red-400" />
               <span>1-Click Fast Kiosk Borrow (Opens Checkout Pre-Filled)</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               <button
                 onClick={() => firstAvailableBrain && onOpenCheckout(firstAvailableBrain, 'Check Out')}
                 disabled={!firstAvailableBrain}
-                className="p-2 bg-[#0b0d11] hover:bg-[#181d27] border border-[#1e242c] hover:border-zinc-700 rounded-lg text-left transition-colors group disabled:opacity-50"
+                className="p-2.5 bg-[#09090b] hover:bg-[#1a1a1f] border border-[#27272d] rounded-lg text-left group disabled:opacity-50 card-hover-lift animate-card-enter stagger-1"
               >
-                <div className="text-[10px] text-zinc-500 uppercase font-mono">Brain</div>
-                <div className="text-xs font-semibold text-white group-hover:text-amber-400 truncate">
+                <div className="text-[10px] text-zinc-400 uppercase font-mono">Brain</div>
+                <div className="text-xs font-semibold text-zinc-100 group-hover:text-red-400 truncate mt-0.5 transition-colors">
                   {firstAvailableBrain ? firstAvailableBrain.itemId : 'None Available'}
                 </div>
-                <div className="text-[10px] text-emerald-400 font-mono mt-0.5">
-                  {brainAvailable} in Cabinet 1
+                <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                  <span className="text-zinc-200">{brainAvailable}</span> in Cabinet 1
                 </div>
               </button>
 
               <button
                 onClick={() => firstAvailableRadio && onOpenCheckout(firstAvailableRadio, 'Check Out')}
                 disabled={!firstAvailableRadio}
-                className="p-2 bg-[#0b0d11] hover:bg-[#181d27] border border-[#1e242c] hover:border-zinc-700 rounded-lg text-left transition-colors group disabled:opacity-50"
+                className="p-2.5 bg-[#09090b] hover:bg-[#1a1a1f] border border-[#27272d] rounded-lg text-left group disabled:opacity-50 card-hover-lift animate-card-enter stagger-2"
               >
-                <div className="text-[10px] text-zinc-500 uppercase font-mono">Radio</div>
-                <div className="text-xs font-semibold text-white group-hover:text-amber-400 truncate">
+                <div className="text-[10px] text-zinc-400 uppercase font-mono">Radio</div>
+                <div className="text-xs font-semibold text-zinc-100 group-hover:text-red-400 truncate mt-0.5 transition-colors">
                   {firstAvailableRadio ? firstAvailableRadio.itemId : 'None Available'}
                 </div>
-                <div className="text-[10px] text-emerald-400 font-mono mt-0.5">
-                  {radioAvailable} in Cabinet 1
+                <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                  <span className="text-zinc-200">{radioAvailable}</span> in Cabinet 1
                 </div>
               </button>
 
               <button
                 onClick={() => firstAvailableSolenoid && onOpenCheckout(firstAvailableSolenoid, 'Check Out')}
                 disabled={!firstAvailableSolenoid}
-                className="p-2 bg-[#0b0d11] hover:bg-[#181d27] border border-[#1e242c] hover:border-zinc-700 rounded-lg text-left transition-colors group disabled:opacity-50"
+                className="p-2.5 bg-[#09090b] hover:bg-[#1a1a1f] border border-[#27272d] rounded-lg text-left group disabled:opacity-50 card-hover-lift animate-card-enter stagger-3"
               >
-                <div className="text-[10px] text-zinc-500 uppercase font-mono">Solenoid</div>
-                <div className="text-xs font-semibold text-white group-hover:text-amber-400 truncate">
+                <div className="text-[10px] text-zinc-400 uppercase font-mono">Solenoid</div>
+                <div className="text-xs font-semibold text-zinc-100 group-hover:text-red-400 truncate mt-0.5 transition-colors">
                   {firstAvailableSolenoid ? firstAvailableSolenoid.itemId : 'None Available'}
                 </div>
-                <div className="text-[10px] text-emerald-400 font-mono mt-0.5">
-                  {solenoidAvailable} in Pneumatics
+                <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                  <span className="text-zinc-200">{solenoidAvailable}</span> in Pneumatics
                 </div>
               </button>
 
               <button
                 onClick={() => firstAvailableInertial && onOpenCheckout(firstAvailableInertial, 'Check Out')}
                 disabled={!firstAvailableInertial}
-                className="p-2 bg-[#0b0d11] hover:bg-[#181d27] border border-[#1e242c] hover:border-zinc-700 rounded-lg text-left transition-colors group disabled:opacity-50"
+                className="p-2.5 bg-[#09090b] hover:bg-[#1a1a1f] border border-[#27272d] rounded-lg text-left group disabled:opacity-50 card-hover-lift animate-card-enter stagger-4"
               >
-                <div className="text-[10px] text-zinc-500 uppercase font-mono">Inertial Sensor</div>
-                <div className="text-xs font-semibold text-white group-hover:text-amber-400 truncate">
+                <div className="text-[10px] text-zinc-400 uppercase font-mono">Inertial Sensor</div>
+                <div className="text-xs font-semibold text-zinc-100 group-hover:text-red-400 truncate mt-0.5 transition-colors">
                   {firstAvailableInertial ? firstAvailableInertial.itemId : 'None Available'}
                 </div>
-                <div className="text-[10px] text-emerald-400 font-mono mt-0.5">Sensor Cabinet</div>
+                <div className="text-[10px] text-zinc-400 font-mono mt-0.5">Sensor Cabinet</div>
               </button>
 
               <button
                 onClick={() => firstAvailableDistance && onOpenCheckout(firstAvailableDistance, 'Check Out')}
                 disabled={!firstAvailableDistance}
-                className="p-2 bg-[#0b0d11] hover:bg-[#181d27] border border-[#1e242c] hover:border-zinc-700 rounded-lg text-left transition-colors group disabled:opacity-50"
+                className="p-2.5 bg-[#09090b] hover:bg-[#1a1a1f] border border-[#27272d] rounded-lg text-left group disabled:opacity-50 card-hover-lift animate-card-enter stagger-5"
               >
-                <div className="text-[10px] text-zinc-500 uppercase font-mono">Distance Sensor</div>
-                <div className="text-xs font-semibold text-white group-hover:text-amber-400 truncate">
+                <div className="text-[10px] text-zinc-400 uppercase font-mono">Distance Sensor</div>
+                <div className="text-xs font-semibold text-zinc-100 group-hover:text-red-400 truncate mt-0.5 transition-colors">
                   {firstAvailableDistance ? firstAvailableDistance.itemId : 'None Available'}
                 </div>
-                <div className="text-[10px] text-emerald-400 font-mono mt-0.5">Sensor Cabinet</div>
+                <div className="text-[10px] text-zinc-400 font-mono mt-0.5">Sensor Cabinet</div>
               </button>
 
               <button
                 onClick={() => firstAvailableOptical && onOpenCheckout(firstAvailableOptical, 'Check Out')}
                 disabled={!firstAvailableOptical}
-                className="p-2 bg-[#0b0d11] hover:bg-[#181d27] border border-[#1e242c] hover:border-zinc-700 rounded-lg text-left transition-colors group disabled:opacity-50"
+                className="p-2.5 bg-[#09090b] hover:bg-[#1a1a1f] border border-[#27272d] rounded-lg text-left group disabled:opacity-50 card-hover-lift animate-card-enter stagger-6"
               >
-                <div className="text-[10px] text-zinc-500 uppercase font-mono">Optical Sensor</div>
-                <div className="text-xs font-semibold text-white group-hover:text-amber-400 truncate">
+                <div className="text-[10px] text-zinc-400 uppercase font-mono">Optical Sensor</div>
+                <div className="text-xs font-semibold text-zinc-100 group-hover:text-red-400 truncate mt-0.5 transition-colors">
                   {firstAvailableOptical ? firstAvailableOptical.itemId : 'None Available'}
                 </div>
-                <div className="text-[10px] text-emerald-400 font-mono mt-0.5">Sensor Cabinet</div>
+                <div className="text-[10px] text-zinc-400 font-mono mt-0.5">Sensor Cabinet</div>
               </button>
             </div>
           </div>
@@ -575,7 +643,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
 
         {/* Live Search Results */}
         {(searchQuery || activeCabinetFilter || categoryFilter !== 'All') && (
-          <div className="mt-3.5 pt-3 border-t border-[#1a2029]">
+          <div className="mt-3.5 pt-3 border-t border-[#1a1a1f] animate-fade-in-up">
             <div className="flex items-center justify-between text-xs text-zinc-400 mb-2.5">
               <span>
                 Matching Hardware ({searchResults.length}{' '}
@@ -585,7 +653,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 onClick={() => {
                   onNavigateToCategory('All');
                 }}
-                className="text-amber-400 hover:underline flex items-center gap-1"
+                className="text-red-400 hover:underline flex items-center gap-1"
               >
                 <span>View full list in Inventory</span>
                 <ArrowRight className="w-3 h-3" />
@@ -593,12 +661,12 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
             </div>
 
             {searchResults.length === 0 ? (
-              <div className="py-6 text-center text-xs text-zinc-500 bg-[#0b0d11] rounded-lg border border-[#1c222b]">
+              <div className="py-6 text-center text-xs text-zinc-500 bg-[#09090b] rounded-lg border border-[#27272d]">
                 No components found matching &ldquo;{searchQuery}&rdquo;. Check spelling or clear filters.
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                {searchResults.map((item) => {
+                {searchResults.map((item, idx) => {
                   const cat = getItemCat(item);
                   const loc = item.location || getCategoryDefaultLocation(cat);
                   const isAvail = item.status === 'Available';
@@ -606,15 +674,16 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                   return (
                     <div
                       key={item.itemId}
-                      className="p-3 bg-[#0b0d11] border border-[#1c222b] hover:border-zinc-700 rounded-lg flex flex-col justify-between transition-colors"
+                      style={{ '--row-idx': idx } as React.CSSProperties}
+                      className="p-3 bg-[#09090b] border border-[#27272d] rounded-lg flex flex-col justify-between card-hover-lift animate-row-enter"
                     >
                       <div>
                         <div className="flex items-center justify-between gap-1 mb-1">
-                          <span className="font-mono text-xs font-bold text-white">{item.itemId}</span>
+                          <span className="font-mono text-xs font-bold text-zinc-100">{item.itemId}</span>
                           <span
                             className={`text-[10px] font-semibold px-1.5 py-0.5 rounded font-mono ${
                               isAvail
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                ? 'bg-zinc-200/10 text-zinc-200 border border-zinc-400/25'
                                 : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                             }`}
                           >
@@ -628,18 +697,18 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                         </div>
                       </div>
 
-                      <div className="mt-3 pt-2 border-t border-zinc-900 flex items-center gap-2">
+                      <div className="mt-3 pt-2 border-t border-[#1a1a1f] flex items-center gap-2">
                         {isAvail ? (
                           <button
                             onClick={() => onOpenCheckout(item, 'Check Out')}
-                            className="w-full py-1 text-[11px] font-semibold text-white bg-[#ea580c] hover:bg-orange-600 rounded transition-colors text-center"
+                            className="w-full py-1 text-[11px] font-semibold text-zinc-100 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded transition-colors text-center btn-tactile"
                           >
                             + Check Out
                           </button>
                         ) : (
                           <button
                             onClick={() => onOpenCheckout(item, 'Check In')}
-                            className="w-full py-1 text-[11px] font-semibold text-white bg-[#059669] hover:bg-emerald-600 rounded transition-colors text-center"
+                            className="w-full py-1 text-[11px] font-semibold text-zinc-100 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded transition-colors text-center btn-tactile"
                           >
                             ← Return
                           </button>
@@ -652,150 +721,162 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
             )}
           </div>
         )}
-      </div>
+      </SpotlightCard>
 
       {/* 3. Eight Metric Cards (2 rows of 4 cards) - Interactive with Drilldown click */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Row 1 */}
-        <div
+        <SpotlightCard
           onClick={() => {
             playClick();
             onNavigateTab('inventory');
           }}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
+          className="bg-[#111114] border border-[#27272d] rounded-xl p-5 cursor-pointer group card-hover-lift shadow-sm animate-card-enter stagger-1"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>TOTAL ITEMS</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 transition-colors" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-red-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
           </div>
-          <div className="text-3xl font-bold font-mono tabular-nums text-white mt-2">
-            {totalCount}
+          <div className="text-3xl font-bold font-mono tabular-nums text-zinc-100 mt-2">
+            <AnimatedNumber value={totalCount} />
           </div>
-          <div className="text-xs text-zinc-500 mt-1">Cataloged in database</div>
-        </div>
+          <div className="text-xs text-zinc-400 mt-1">Cataloged in database</div>
+        </SpotlightCard>
 
-        <div
+        <SpotlightCard
           onClick={() => {
             playClick();
             setCategoryFilter('Available');
-            const searchEl = document.querySelector('input[type="text"]');
-            if (searchEl) (searchEl as HTMLInputElement).focus();
+            const searchEl = document.querySelector<HTMLInputElement>('input[data-global-search="true"], input[type="text"]');
+            if (searchEl) searchEl.focus();
           }}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
+          spotlightColor="rgba(244, 244, 245, 0.08)"
+          className="bg-[#111114] border border-[#27272d] rounded-xl p-5 cursor-pointer group card-hover-lift shadow-sm animate-card-enter stagger-2"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>AVAILABLE NOW</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-emerald-400 transition-colors" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
           </div>
-          <div className="text-3xl font-bold font-mono tabular-nums text-emerald-400 mt-2">
-            {availableCount}
+          <div className="text-3xl font-bold font-mono tabular-nums text-zinc-100 mt-2">
+            <AnimatedNumber value={availableCount} />
           </div>
-          <div className="text-xs text-zinc-500 mt-1">Ready in storage</div>
-        </div>
+          <div className="text-xs text-zinc-300 font-medium mt-1">Ready in storage</div>
+        </SpotlightCard>
 
-        <div
+        <SpotlightCard
           onClick={() => {
             playClick();
             setActiveDrilldown('overdue');
           }}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
+          spotlightColor="rgba(245, 158, 11, 0.1)"
+          className="bg-[#111114] border border-[#27272d] rounded-xl p-5 cursor-pointer group card-hover-lift shadow-sm animate-card-enter stagger-3"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>CHECKED OUT NOW</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 transition-colors" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
           </div>
-          <div className="text-3xl font-bold font-mono tabular-nums text-amber-400 mt-2">
-            {checkedOutCount}
+          <div className="text-3xl font-bold font-mono tabular-nums text-zinc-100 mt-2">
+            <AnimatedNumber value={checkedOutCount} />
           </div>
-          <div className="text-xs text-zinc-500 mt-1">Click to view borrowers</div>
-        </div>
+          <div className="text-xs text-amber-400 font-medium mt-1">Click to view borrowers</div>
+        </SpotlightCard>
 
-        <div className="bg-[#12161f] border border-[#1e242c] rounded-xl p-5 card-hover-lift shadow-sm">
-          <div className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
-            UTILIZATION
+        <SpotlightCard className="bg-[#111114] border border-[#27272d] rounded-xl p-5 card-hover-lift shadow-sm animate-card-enter stagger-4 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+              UTILIZATION
+            </div>
+            <div className="text-3xl font-bold font-mono tabular-nums text-zinc-100 mt-2">
+              <AnimatedNumber value={Number(utilizationRate)} suffix="%" />
+            </div>
+            <div className="text-xs text-zinc-400 mt-1">Fleet deployment</div>
           </div>
-          <div className="text-3xl font-bold font-mono tabular-nums text-white mt-2">
-            {utilizationRate}%
-          </div>
-          <div className="text-xs text-zinc-500 mt-1">Fleet deployment</div>
-        </div>
+          <AnimatedRingGauge
+            percent={Number(utilizationRate)}
+            size={48}
+            strokeWidth={4.5}
+            strokeColor="#c52329"
+          />
+        </SpotlightCard>
 
         {/* Row 2 */}
-        <div
+        <SpotlightCard
           onClick={() => {
             playClick();
             setActiveDrilldown('overdue');
           }}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
+          spotlightColor="rgba(245, 158, 11, 0.1)"
+          className="bg-[#111114] border border-[#27272d] rounded-xl p-5 cursor-pointer group card-hover-lift shadow-sm animate-card-enter stagger-5"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>OVERDUE ITEMS</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 transition-colors" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
           </div>
-          <div className="text-3xl font-bold font-mono tabular-nums text-white mt-2">
-            {overdueItems100d.length}
+          <div className="text-3xl font-bold font-mono tabular-nums text-zinc-100 mt-2">
+            <AnimatedNumber value={overdueItems100d.length} />
           </div>
           <div
             className={`text-xs font-medium mt-1 ${
-              overdueItems100d.length === 0 ? 'text-emerald-400' : 'text-amber-400'
+              overdueItems100d.length === 0 ? 'text-zinc-300' : 'text-amber-400'
             }`}
           >
             {overdueItems100d.length === 0 ? 'Nothing overdue (≥100d)' : `${overdueItems100d.length} overdue parts`}
           </div>
-        </div>
+        </SpotlightCard>
 
-        <div
+        <SpotlightCard
           onClick={() => {
             playClick();
             onNavigateTab('logs');
           }}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
+          className="bg-[#111114] border border-[#27272d] rounded-xl p-5 cursor-pointer group card-hover-lift shadow-sm animate-card-enter stagger-6"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>TOTAL LOG ENTRIES</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-white transition-colors" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
           </div>
-          <div className="text-3xl font-bold font-mono tabular-nums text-white mt-2">
-            {logs.length}
+          <div className="text-3xl font-bold font-mono tabular-nums text-zinc-100 mt-2">
+            <AnimatedNumber value={logs.length} />
           </div>
-          <div className="text-xs text-zinc-500 mt-1">Audit transactions</div>
-        </div>
+          <div className="text-xs text-zinc-400 mt-1">Audit transactions</div>
+        </SpotlightCard>
 
-        <div
+        <SpotlightCard
           onClick={() => {
             playClick();
             setActiveDrilldown('readiness');
           }}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
+          className="bg-[#111114] border border-[#27272d] rounded-xl p-5 cursor-pointer group card-hover-lift shadow-sm animate-card-enter stagger-7"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>ACTIVE BORROWERS</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-white transition-colors" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
           </div>
-          <div className="text-3xl font-bold font-mono tabular-nums text-white mt-2">
-            {activeBorrowersCount}
+          <div className="text-3xl font-bold font-mono tabular-nums text-zinc-100 mt-2">
+            <AnimatedNumber value={activeBorrowersCount} />
           </div>
-          <div className="text-xs text-zinc-500 mt-1">{CLUB_TEAMS.length} teams in club</div>
-        </div>
+          <div className="text-xs text-zinc-400 mt-1">{CLUB_TEAMS.length} teams in club</div>
+        </SpotlightCard>
 
-        <div
+        <SpotlightCard
           onClick={() => {
             playClick();
             setActiveDrilldown('maintenance');
           }}
-          className="bg-[#12161f] border border-[#1e242c] hover:border-zinc-600 rounded-xl p-5 cursor-pointer transition-all group card-hover-lift shadow-sm"
+          spotlightColor="rgba(245, 158, 11, 0.1)"
+          className="bg-[#111114] border border-[#27272d] rounded-xl p-5 cursor-pointer group card-hover-lift shadow-sm animate-card-enter stagger-8"
         >
           <div className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-400 uppercase">
             <span>MAINTENANCE REPORTS</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 transition-colors" />
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
           </div>
-          <div className="text-3xl font-bold font-mono tabular-nums text-amber-400 mt-2">
-            {maintenanceLogs.length}
+          <div className="text-3xl font-bold font-mono tabular-nums text-zinc-100 mt-2">
+            <AnimatedNumber value={maintenanceLogs.length} />
           </div>
           <div className="text-xs font-medium text-amber-400 mt-1">
             {maintenanceLogs.length} flagged report(s)
           </div>
-        </div>
+        </SpotlightCard>
       </div>
 
       {/* 4. Bottom Section: Category Table & Live Feed (Left) vs Active Checkouts & Team Matrix (Right) */}
@@ -803,10 +884,10 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         {/* Left Column (8 cols): Inventory Summary Table + Recent Live Activity */}
         <div className="lg:col-span-8 space-y-5">
           {/* Inventory Summary by Category */}
-          <div className="bg-[#12161f] border border-[#1e242c] rounded-xl p-5">
-            <div className="flex items-center justify-between pb-4 border-b border-[#1e242c]">
+          <SpotlightCard className="bg-[#111114] border border-[#27272d] rounded-xl p-5 animate-section-enter stagger-2">
+            <div className="flex items-center justify-between pb-4 border-b border-[#27272d]">
               <div>
-                <h2 className="text-xs font-bold tracking-wider text-white uppercase">
+                <h2 className="text-xs font-bold tracking-wider text-zinc-100 uppercase">
                   INVENTORY SUMMARY BY CATEGORY
                 </h2>
                 <p className="text-xs text-zinc-400 mt-0.5">
@@ -815,17 +896,17 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               </div>
               <button
                 onClick={() => onNavigateToCategory('All')}
-                className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 font-medium transition-colors"
+                className="text-xs text-zinc-400 hover:text-zinc-100 flex items-center gap-1 font-medium transition-colors group"
               >
                 <span>Browse all</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
 
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-[#1e242c] text-zinc-400 text-xs font-medium">
+                  <tr className="border-b border-[#27272d] text-zinc-400 text-xs font-medium">
                     <th className="pb-3 px-3 font-semibold">Category</th>
                     <th className="pb-3 px-3 font-semibold text-right">Total</th>
                     <th className="pb-3 px-3 font-semibold text-right">Available</th>
@@ -834,24 +915,25 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                     <th className="pb-3 px-3 font-semibold w-36">Visual Stock</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#1a2029]">
-                  {summaryRows.map((row) => {
+                <tbody className="divide-y divide-[#1a1a1f]">
+                  {summaryRows.map((row, idx) => {
                     const availPct = row.total > 0 ? (row.available / row.total) * 100 : 0;
                     const outPct = row.total > 0 ? (row.checkedOut / row.total) * 100 : 0;
 
                     return (
                       <tr
                         key={row.name}
+                        style={{ '--row-idx': idx } as React.CSSProperties}
                         onClick={() => onNavigateToCategory(row.targetCategory)}
-                        className="hover:bg-[#181d27] cursor-pointer transition-colors group"
+                        className="hover:bg-[#1a1a1f] cursor-pointer transition-colors group animate-row-enter"
                       >
-                        <td className="py-3 px-3 font-medium text-white group-hover:text-amber-400 transition-colors">
+                        <td className="py-3 px-3 font-medium text-zinc-100 group-hover:text-red-400 transition-colors">
                           {row.name}
                         </td>
                         <td className="py-3 px-3 text-right font-mono tabular-nums text-zinc-300">
                           {row.total}
                         </td>
-                        <td className="py-3 px-3 text-right font-mono tabular-nums text-emerald-400 font-semibold">
+                        <td className="py-3 px-3 text-right font-mono tabular-nums text-zinc-200 font-semibold">
                           {row.available}
                         </td>
                         <td className="py-3 px-3 text-right font-mono tabular-nums text-amber-400 font-semibold">
@@ -861,14 +943,14 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                           {row.percentAvail}%
                         </td>
                         <td className="py-3 px-3">
-                          <div className="w-28 h-2 bg-[#222834] rounded-full overflow-hidden flex">
+                          <div className="w-28 h-2 bg-[#1a1a1f] rounded-full overflow-hidden flex">
                             <div
-                              style={{ width: `${availPct}%` }}
-                              className="h-full bg-emerald-500 rounded-l-full"
+                              style={{ width: barsReady ? `${availPct}%` : '0%' }}
+                              className="h-full bg-zinc-300 rounded-l-full progress-fill"
                             />
                             <div
-                              style={{ width: `${outPct}%` }}
-                              className="h-full bg-amber-500 rounded-r-full"
+                              style={{ width: barsReady ? `${outPct}%` : '0%' }}
+                              className="h-full bg-amber-500 rounded-r-full progress-fill"
                             />
                           </div>
                         </td>
@@ -877,29 +959,37 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                   })}
 
                   {/* Total Row */}
-                  <tr className="border-t-2 border-[#1e242c] font-bold bg-[#0e1218]/40">
-                    <td className="py-3 px-3 text-white font-bold">TOTAL</td>
-                    <td className="py-3 px-3 text-right font-mono tabular-nums text-white font-bold">
+                  <tr className="border-t-2 border-[#27272d] font-bold bg-[#09090b]/40">
+                    <td className="py-3 px-3 text-zinc-100 font-bold">TOTAL</td>
+                    <td className="py-3 px-3 text-right font-mono tabular-nums text-zinc-100 font-bold">
                       {totalCount}
                     </td>
-                    <td className="py-3 px-3 text-right font-mono tabular-nums text-emerald-400 font-bold">
+                    <td className="py-3 px-3 text-right font-mono tabular-nums text-zinc-200 font-bold">
                       {availableCount}
                     </td>
                     <td className="py-3 px-3 text-right font-mono tabular-nums text-amber-400 font-bold">
                       {checkedOutCount}
                     </td>
-                    <td className="py-3 px-3 text-right font-mono tabular-nums text-white font-bold">
+                    <td className="py-3 px-3 text-right font-mono tabular-nums text-zinc-100 font-bold">
                       {totalCount > 0 ? Math.round((availableCount / totalCount) * 100) : 0}%
                     </td>
                     <td className="py-3 px-3">
-                      <div className="w-28 h-2 bg-[#222834] rounded-full overflow-hidden flex">
+                      <div className="w-28 h-2 bg-[#1a1a1f] rounded-full overflow-hidden flex">
                         <div
-                          style={{ width: `${totalCount > 0 ? (availableCount / totalCount) * 100 : 0}%` }}
-                          className="h-full bg-emerald-500 rounded-l-full"
+                          style={{
+                            width: barsReady
+                              ? `${totalCount > 0 ? (availableCount / totalCount) * 100 : 0}%`
+                              : '0%',
+                          }}
+                          className="h-full bg-zinc-300 rounded-l-full progress-fill"
                         />
                         <div
-                          style={{ width: `${totalCount > 0 ? (checkedOutCount / totalCount) * 100 : 0}%` }}
-                          className="h-full bg-amber-500 rounded-r-full"
+                          style={{
+                            width: barsReady
+                              ? `${totalCount > 0 ? (checkedOutCount / totalCount) * 100 : 0}%`
+                              : '0%',
+                          }}
+                          className="h-full bg-amber-500 rounded-r-full progress-fill"
                         />
                       </div>
                     </td>
@@ -907,50 +997,51 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 </tbody>
               </table>
             </div>
-          </div>
+          </SpotlightCard>
 
           {/* Useful Addition: Recent Live Activity Feed */}
-          <div className="bg-[#12161f] border border-[#1e242c] rounded-xl p-5">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1e242c]">
+          <SpotlightCard className="bg-[#111114] border border-[#27272d] rounded-xl p-5 animate-section-enter stagger-3">
+            <div className="flex items-center justify-between pb-3 border-b border-[#27272d]">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-amber-400" />
-                <h3 className="text-xs font-bold tracking-wider text-white uppercase">
+                <Clock className="w-4 h-4 text-red-400" />
+                <h3 className="text-xs font-bold tracking-wider text-zinc-100 uppercase">
                   RECENT LAB TRANSACTIONS (LIVE STREAM)
                 </h3>
               </div>
               <button
                 onClick={() => onNavigateTab('logs')}
-                className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 transition-colors"
+                className="text-xs text-zinc-400 hover:text-zinc-100 flex items-center gap-1 transition-colors group"
               >
                 <span>All {logs.length} Audit Logs</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
 
-            <div className="mt-3 divide-y divide-[#1a2029]">
+            <div className="mt-3 divide-y divide-[#1a1a1f]">
               {recentLogs.length === 0 ? (
                 <div className="py-6 text-center text-xs text-zinc-500">No activity logged yet.</div>
               ) : (
-                recentLogs.map((log) => {
+                recentLogs.map((log, idx) => {
                   const isCheckOut = log.action === 'Check Out';
                   return (
                     <div
                       key={log.id}
-                      className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                      style={{ '--row-idx': idx } as React.CSSProperties}
+                      className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs animate-row-enter"
                     >
                       <div className="flex items-center gap-2.5">
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono tracking-wider ${
                             isCheckOut
                               ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                              : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              : 'bg-zinc-200/10 text-zinc-200 border border-zinc-400/25'
                           }`}
                         >
                           {log.action}
                         </span>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-white">{log.itemId}</span>
+                            <span className="font-mono font-bold text-zinc-100">{log.itemId}</span>
                             <span className="text-zinc-400 text-xs">
                               {isCheckOut ? 'borrowed by' : 'returned by'}{' '}
                               <strong className="text-amber-400 font-semibold">Team {log.team}</strong>
@@ -973,15 +1064,15 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 })
               )}
             </div>
-          </div>
+          </SpotlightCard>
         </div>
 
         {/* Right Column (4 cols): Who Has What — Active Checkouts by Team */}
         <div className="lg:col-span-4 space-y-5">
-          <div className="bg-[#12161f] border border-[#1e242c] rounded-xl p-5">
-            <div className="flex items-center justify-between pb-4 border-b border-[#1e242c]">
+          <SpotlightCard className="bg-[#111114] border border-[#27272d] rounded-xl p-5 animate-section-enter stagger-2">
+            <div className="flex items-center justify-between pb-4 border-b border-[#27272d]">
               <div>
-                <h2 className="text-xs font-bold tracking-wider text-white uppercase">
+                <h2 className="text-xs font-bold tracking-wider text-zinc-100 uppercase">
                   WHO HAS WHAT — ACTIVE CHECKOUTS BY TEAM
                 </h2>
                 <p className="text-xs text-zinc-400 mt-0.5">
@@ -990,10 +1081,10 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               </div>
               <button
                 onClick={() => onNavigateTab('teams')}
-                className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 font-medium transition-colors shrink-0 ml-2"
+                className="text-xs text-zinc-400 hover:text-zinc-100 flex items-center gap-1 font-medium transition-colors shrink-0 ml-2 group"
               >
                 <span>View All</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
 
@@ -1003,29 +1094,30 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                   All parts are currently returned to storage.
                 </div>
               ) : (
-                sortedTeams.slice(0, 5).map(([team, count]) => {
+                sortedTeams.slice(0, 5).map(([team, count], idx) => {
                   const pct = checkedOutCount > 0 ? Math.round((count / checkedOutCount) * 100) : 0;
                   return (
                     <div
                       key={team}
+                      style={{ '--row-idx': idx } as React.CSSProperties}
                       onClick={() => onNavigateToTeam(team)}
-                      className="bg-[#0b0d11] border border-[#1c222b] hover:border-zinc-700 rounded-lg p-3.5 transition-colors cursor-pointer group"
+                      className="bg-[#09090b] border border-[#27272d] rounded-lg p-3.5 cursor-pointer group card-hover-lift animate-row-enter"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-white text-sm group-hover:text-amber-400 transition-colors">
+                        <span className="font-bold text-zinc-100 text-sm group-hover:text-amber-400 transition-colors">
                           Team {team}
                         </span>
-                        <span className="font-mono text-xs font-semibold text-white flex items-center gap-1">
+                        <span className="font-mono text-xs font-semibold text-zinc-100 flex items-center gap-1">
                           {count} items{' '}
-                          <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white" />
+                          <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
                         </span>
                       </div>
 
                       {/* Progress Bar */}
-                      <div className="h-1.5 w-full bg-[#1e242e] rounded-full overflow-hidden mb-2">
+                      <div className="h-1.5 w-full bg-[#1a1a1f] rounded-full overflow-hidden mb-2">
                         <div
-                          style={{ width: `${Math.min(pct, 100)}%` }}
-                          className="h-full bg-amber-500 rounded-full"
+                          style={{ width: barsReady ? `${Math.min(pct, 100)}%` : '0%' }}
+                          className="h-full bg-amber-500 rounded-full progress-fill"
                         />
                       </div>
 
@@ -1038,20 +1130,20 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 })
               )}
             </div>
-          </div>
+          </SpotlightCard>
 
           {/* Useful Addition: Competition Hardware Readiness Matrix Shortcut */}
-          <div className="bg-[#12161f] border border-[#1e242c] rounded-xl p-5">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1e242c]">
+          <SpotlightCard className="bg-[#111114] border border-[#27272d] rounded-xl p-5 animate-section-enter stagger-3">
+            <div className="flex items-center justify-between pb-3 border-b border-[#27272d]">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-xs font-bold tracking-wider text-white uppercase">
+                <CheckCircle2 className="w-4 h-4 text-red-400" />
+                <h3 className="text-xs font-bold tracking-wider text-zinc-100 uppercase">
                   11-TEAM READINESS RADAR
                 </h3>
               </div>
               <button
                 onClick={() => setActiveDrilldown('readiness')}
-                className="text-xs text-amber-400 hover:underline font-medium"
+                className="text-xs text-red-400 hover:underline font-medium"
               >
                 Expand
               </button>
@@ -1062,17 +1154,18 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
             </p>
 
             <div className="grid grid-cols-3 gap-2">
-              {CLUB_TEAMS.map((team) => {
+              {CLUB_TEAMS.map((team, idx) => {
                 const count = teamMap[team] || 0;
                 const hasParts = count > 0;
                 return (
                   <button
                     key={team}
+                    style={{ '--row-idx': idx } as React.CSSProperties}
                     onClick={() => onNavigateToTeam(team)}
-                    className="p-2 bg-[#0b0d11] hover:bg-[#181d27] border border-[#1c222b] hover:border-zinc-700 rounded-lg text-left transition-colors"
+                    className="p-2 bg-[#09090b] hover:bg-[#1a1a1f] border border-[#27272d] rounded-lg text-left card-hover-lift animate-row-enter"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white">{team}</span>
+                      <span className="text-xs font-bold text-zinc-100">{team}</span>
                       {hasParts && (
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                       )}
@@ -1084,17 +1177,17 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 );
               })}
             </div>
-          </div>
+          </SpotlightCard>
         </div>
       </div>
 
       {/* 5. DRILLDOWN MODAL: Overdue / Long-Held Hardware */}
       {activeDrilldown === 'overdue' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#12161f] border border-[#1e242c] rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1e242c]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
+          <div className="bg-[#111114] border border-[#27272d] rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col animate-modal-enter">
+            <div className="flex items-center justify-between pb-3 border-b border-[#27272d]">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
                   <Clock className="w-4 h-4 text-amber-400" />
                   <span>Checked Out &amp; Long-Held Hardware ({checkedOutCount} items)</span>
                 </h3>
@@ -1104,7 +1197,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               </div>
               <button
                 onClick={() => setActiveDrilldown('none')}
-                className="text-zinc-400 hover:text-white p-1 rounded-md"
+                className="text-zinc-400 hover:text-zinc-100 p-1 rounded-md"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1121,11 +1214,11 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                   return (
                     <div
                       key={item.itemId}
-                      className="p-3 bg-[#0b0d11] border border-[#1c222b] rounded-lg flex items-center justify-between gap-3 text-xs"
+                      className="p-3 bg-[#09090b] border border-[#27272d] rounded-lg flex items-center justify-between gap-3 text-xs"
                     >
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-white">{item.itemId}</span>
+                          <span className="font-mono font-bold text-zinc-100">{item.itemId}</span>
                           <span className="text-zinc-300 font-medium">{item.itemName}</span>
                           {isVeryLong && (
                             <span className="px-1.5 py-0.5 bg-amber-500/15 text-amber-400 text-[10px] font-mono font-semibold rounded">
@@ -1134,7 +1227,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                           )}
                         </div>
                         <div className="text-[11px] text-zinc-400 mt-1">
-                          Held by <strong className="text-white">Team {item.currentUser}</strong>
+                          Held by <strong className="text-zinc-100">Team {item.currentUser}</strong>
                           {item.dateOut && ` · Since ${item.dateOut}`}
                         </div>
                       </div>
@@ -1144,7 +1237,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                           setActiveDrilldown('none');
                           onOpenCheckout(item, 'Check In');
                         }}
-                        className="px-3 py-1.5 text-xs font-semibold text-white bg-[#059669] hover:bg-emerald-600 rounded transition-colors shrink-0"
+                        className="px-3 py-1.5 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded transition-colors shrink-0"
                       >
                         ← Return Item
                       </button>
@@ -1153,10 +1246,10 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 })}
             </div>
 
-            <div className="pt-3 border-t border-[#1e242c] flex justify-end">
+            <div className="pt-3 border-t border-[#27272d] flex justify-end">
               <button
                 onClick={() => setActiveDrilldown('none')}
-                className="px-4 py-2 text-xs font-medium text-zinc-300 hover:text-white bg-[#181d27] rounded-lg transition-colors"
+                className="px-4 py-2 text-xs font-medium text-zinc-300 hover:text-zinc-100 bg-[#1a1a1f] rounded-lg transition-colors"
               >
                 Close
               </button>
@@ -1167,11 +1260,11 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
 
       {/* 6. DRILLDOWN MODAL: Flagged Maintenance / Defect Reports */}
       {activeDrilldown === 'maintenance' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#12161f] border border-[#1e242c] rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1e242c]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
+          <div className="bg-[#111114] border border-[#27272d] rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col animate-modal-enter">
+            <div className="flex items-center justify-between pb-3 border-b border-[#27272d]">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
                   <Wrench className="w-4 h-4 text-amber-400" />
                   <span>Flagged Maintenance &amp; Defect Reports ({maintenanceLogs.length})</span>
                 </h3>
@@ -1181,7 +1274,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               </div>
               <button
                 onClick={() => setActiveDrilldown('none')}
-                className="text-zinc-400 hover:text-white p-1 rounded-md"
+                className="text-zinc-400 hover:text-zinc-100 p-1 rounded-md"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1196,7 +1289,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 maintenanceLogs.map((log) => (
                   <div
                     key={log.id}
-                    className="p-3.5 bg-[#0b0d11] border border-amber-500/20 rounded-lg space-y-1 text-xs"
+                    className="p-3.5 bg-[#09090b] border border-amber-500/20 rounded-lg space-y-1 text-xs"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -1207,7 +1300,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                         {log.timestamp ? new Date(log.timestamp).toLocaleDateString() : ''}
                       </span>
                     </div>
-                    <div className="text-xs text-zinc-200 bg-[#161a22] p-2 rounded border border-zinc-800">
+                    <div className="text-xs text-zinc-200 bg-[#1a1a1f] p-2 rounded border border-zinc-800">
                       &ldquo;{log.notes}&rdquo;
                     </div>
                     <div className="text-[10px] text-zinc-500">
@@ -1218,11 +1311,11 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               )}
             </div>
 
-            <div className="pt-3 border-t border-[#1e242c] flex items-center justify-between">
+            <div className="pt-3 border-t border-[#27272d] flex items-center justify-between">
               <span className="text-xs text-zinc-500">Tip: Include repair notes during Check In</span>
               <button
                 onClick={() => setActiveDrilldown('none')}
-                className="px-4 py-2 text-xs font-medium text-zinc-300 hover:text-white bg-[#181d27] rounded-lg transition-colors"
+                className="px-4 py-2 text-xs font-medium text-zinc-300 hover:text-zinc-100 bg-[#1a1a1f] rounded-lg transition-colors"
               >
                 Close
               </button>
@@ -1233,12 +1326,12 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
 
       {/* 7. DRILLDOWN MODAL: 11-Team Readiness Radar */}
       {activeDrilldown === 'readiness' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#12161f] border border-[#1e242c] rounded-xl max-w-3xl w-full p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1e242c]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
+          <div className="bg-[#111114] border border-[#27272d] rounded-xl max-w-3xl w-full p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col animate-modal-enter">
+            <div className="flex items-center justify-between pb-3 border-b border-[#27272d]">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-red-400" />
                   <span>{CLUB_TEAMS.length}-Team Hardware Allocation Matrix</span>
                 </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
@@ -1247,7 +1340,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               </div>
               <button
                 onClick={() => setActiveDrilldown('none')}
-                className="text-zinc-400 hover:text-white p-1 rounded-md"
+                className="text-zinc-400 hover:text-zinc-100 p-1 rounded-md"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1265,10 +1358,10 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                   return (
                     <div
                       key={team}
-                      className="p-3.5 bg-[#0b0d11] border border-[#1c222b] rounded-lg text-xs space-y-2"
+                      className="p-3.5 bg-[#09090b] border border-[#27272d] rounded-lg text-xs space-y-2"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-white text-sm">Team {team}</span>
+                        <span className="font-bold text-zinc-100 text-sm">Team {team}</span>
                         <span className="font-mono text-xs text-amber-400 font-semibold">
                           {teamItems.length} total parts
                         </span>
@@ -1277,14 +1370,14 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                       <div className="grid grid-cols-4 gap-1.5 text-center font-mono text-[10px]">
                         <div
                           className={`p-1 rounded ${
-                            hasBrain ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
+                            hasBrain ? 'bg-zinc-200/15 text-zinc-100 border border-zinc-400/25' : 'bg-zinc-800 text-zinc-500'
                           }`}
                         >
                           Brain: {hasBrain ? 'YES' : '—'}
                         </div>
                         <div
                           className={`p-1 rounded ${
-                            hasRadio ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
+                            hasRadio ? 'bg-zinc-200/15 text-zinc-100 border border-zinc-400/25' : 'bg-zinc-800 text-zinc-500'
                           }`}
                         >
                           Radio: {hasRadio ? 'YES' : '—'}
@@ -1311,7 +1404,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                             setActiveDrilldown('none');
                             onNavigateToTeam(team);
                           }}
-                          className="text-[11px] text-zinc-400 hover:text-white flex items-center gap-1 transition-colors"
+                          className="text-[11px] text-zinc-400 hover:text-zinc-100 flex items-center gap-1 transition-colors"
                         >
                           <span>Manage hardware</span>
                           <ArrowRight className="w-3 h-3" />
@@ -1323,10 +1416,10 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               </div>
             </div>
 
-            <div className="pt-3 border-t border-[#1e242c] flex justify-end">
+            <div className="pt-3 border-t border-[#27272d] flex justify-end">
               <button
                 onClick={() => setActiveDrilldown('none')}
-                className="px-4 py-2 text-xs font-medium text-zinc-300 hover:text-white bg-[#181d27] rounded-lg transition-colors"
+                className="px-4 py-2 text-xs font-medium text-zinc-300 hover:text-zinc-100 bg-[#1a1a1f] rounded-lg transition-colors"
               >
                 Close
               </button>

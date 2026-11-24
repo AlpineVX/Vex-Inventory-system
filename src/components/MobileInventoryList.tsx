@@ -106,12 +106,12 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by Part ID, team, name..."
-          className="w-full bg-[#12161f] border border-[#1e242c] rounded-xl pl-9 pr-9 py-2 text-xs font-mono text-white placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+          className="w-full bg-[#111114] border border-[#27272d] rounded-xl pl-9 pr-9 py-2 text-xs font-mono text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-100 p-1"
           >
             <X className="w-4 h-4" />
           </button>
@@ -128,8 +128,8 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
               onClick={() => onSelectCategory(cat)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition-colors min-h-[32px] flex items-center justify-center border ${
                 isSelected
-                  ? 'bg-[#222834] text-white border-zinc-700 shadow-sm'
-                  : 'bg-[#12161f] text-zinc-400 hover:text-white border-[#1e242c]'
+                  ? 'bg-[#1a1a1f] text-zinc-100 border-zinc-700 shadow-sm'
+                  : 'bg-[#111114] text-zinc-400 hover:text-zinc-100 border-[#27272d]'
               }`}
             >
               {cat}
@@ -139,13 +139,13 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
       </div>
 
       {/* Status Segmented Control */}
-      <div className="grid grid-cols-3 gap-1 p-1 bg-[#0b0d11] border border-[#1e242c] rounded-xl text-xs font-mono">
+      <div className="grid grid-cols-3 gap-1 p-1 bg-[#09090b] border border-[#27272d] rounded-xl text-xs font-mono">
         <button
           onClick={() => setStatusFilter('All')}
           className={`py-1.5 text-xs font-semibold rounded-lg transition-colors min-h-[32px] flex items-center justify-center ${
             statusFilter === 'All'
-              ? 'bg-[#222834] text-white font-bold'
-              : 'text-zinc-400 hover:text-white'
+              ? 'bg-[#1a1a1f] text-zinc-100 font-bold'
+              : 'text-zinc-400 hover:text-zinc-100'
           }`}
         >
           ALL [{filteredItems.length}]
@@ -154,8 +154,8 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
           onClick={() => setStatusFilter('Available')}
           className={`py-1.5 text-xs font-semibold rounded-lg transition-colors min-h-[32px] flex items-center justify-center ${
             statusFilter === 'Available'
-              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-              : 'text-zinc-400 hover:text-white'
+              ? 'bg-zinc-200/15 text-zinc-100 border border-zinc-400/35'
+              : 'text-zinc-400 hover:text-zinc-100'
           }`}
         >
           READY [{availableCount}]
@@ -165,7 +165,7 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
           className={`py-1.5 text-xs font-semibold rounded-lg transition-colors min-h-[32px] flex items-center justify-center ${
             statusFilter === 'Checked Out'
               ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-              : 'text-zinc-400 hover:text-white'
+              : 'text-zinc-400 hover:text-zinc-100'
           }`}
         >
           OUT [{checkedOutCount}]
@@ -178,7 +178,7 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="text-zinc-400 hover:text-white underline"
+            className="text-zinc-400 hover:text-zinc-100 underline"
           >
             Clear Search
           </button>
@@ -188,9 +188,9 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
       {/* Cards List */}
       <div className="space-y-3">
         {filteredItems.length === 0 ? (
-          <div className="p-8 text-center bg-[#12161f] border border-[#1e242c] rounded-xl font-mono">
+          <div className="p-8 text-center bg-[#111114] border border-[#27272d] rounded-xl">
             <Tag className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
-            <p className="text-sm font-bold text-white">[NO_HARDWARE_FOUND]</p>
+            <p className="text-sm font-semibold text-zinc-100">No Hardware Found</p>
             <p className="text-xs text-zinc-400 mt-1">Try resetting filters or search terms</p>
           </div>
         ) : (
@@ -212,16 +212,16 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
             return (
               <div
                 key={item.itemId}
-                className={`bg-[#12161f] border rounded-xl p-3.5 transition-colors ${
+                className={`bg-[#111114] border rounded-xl p-3.5 transition-colors ${
                   isOverdue
                     ? 'border-red-500/50 bg-red-950/20'
-                    : 'border-[#1e242c]'
+                    : 'border-[#27272d]'
                 }`}
               >
                 {/* Header row: Item ID + Status */}
                 <div className="flex items-baseline justify-between gap-2 font-mono">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-xs font-bold text-white bg-[#1a202c] px-2 py-0.5 rounded border border-zinc-700">
+                    <span className="text-xs font-bold text-zinc-100 bg-[#1a1a1f] px-2 py-0.5 rounded border border-zinc-700">
                       {item.itemId}
                     </span>
                     <span className="text-[11px] text-zinc-400">
@@ -231,7 +231,7 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
 
                   <div className="flex items-center gap-1.5 text-xs font-semibold">
                     {isAvailable ? (
-                      <span className="text-emerald-400 font-bold bg-emerald-500/15 px-2 py-0.5 rounded border border-emerald-500/30 text-[10px]">
+                      <span className="text-zinc-100 font-bold bg-zinc-200/10 px-2 py-0.5 rounded border border-zinc-400/25 text-[10px]">
                         AVAILABLE
                       </span>
                     ) : (
@@ -244,7 +244,7 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
 
                 {/* Name & Location */}
                 <div className="mt-2">
-                  <h3 className="text-sm font-bold text-white leading-snug font-sans">
+                  <h3 className="text-sm font-bold text-zinc-100 leading-snug font-sans">
                     {item.itemName}
                   </h3>
                   <div className="flex items-center gap-2 mt-1 text-xs text-zinc-400 flex-wrap font-mono">
@@ -272,31 +272,31 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
 
                 {/* Expandable details drawer */}
                 {isExpanded && (
-                  <div className="mt-2.5 pt-2.5 border-t border-[#1e242c] text-xs text-zinc-300 space-y-1 font-mono">
+                  <div className="mt-2.5 pt-2.5 border-t border-[#27272d] text-xs text-zinc-300 space-y-1 font-mono">
                     {item.notes && (
-                      <div className="bg-[#0b0d11] p-2 rounded-lg border border-[#1e242c] text-zinc-300">
+                      <div className="bg-[#09090b] p-2 rounded-lg border border-[#27272d] text-zinc-300">
                         <span className="text-zinc-500 uppercase">Subsystem/Notes: </span>
                         <span>{item.notes}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
                       <span className="text-zinc-500">Checkouts Logged:</span>
-                      <span className="text-white font-bold">{item.timesCheckedOut || 0} times</span>
+                      <span className="text-zinc-100 font-bold">{item.timesCheckedOut || 0} times</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-500">Pit Cabinet Bay:</span>
-                      <span className="text-white font-bold">{item.location || 'Central Shelf'}</span>
+                      <span className="text-zinc-100 font-bold">{item.location || 'Central Shelf'}</span>
                     </div>
                   </div>
                 )}
 
                 {/* Bottom Action Bar */}
-                <div className="mt-2.5 pt-2 border-t border-[#1e242c] flex items-center justify-between gap-2">
+                <div className="mt-2.5 pt-2 border-t border-[#27272d] flex items-center justify-between gap-2">
                   <button
                     onClick={() => setExpandedItemId(isExpanded ? null : item.itemId)}
-                    className="py-1 px-2 text-zinc-400 hover:text-white text-xs font-mono flex items-center gap-1"
+                    className="py-1 px-2 text-zinc-400 hover:text-zinc-100 text-xs font-medium flex items-center gap-1"
                   >
-                    <span>{isExpanded ? '[-LESS]' : '[+DETAILS]'}</span>
+                    <span>{isExpanded ? 'Less' : 'Details'}</span>
                     {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                   </button>
 
@@ -304,17 +304,17 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
                     {isAvailable ? (
                       <button
                         onClick={() => onOpenCheckout(item, 'Check Out')}
-                        className="px-3.5 py-1.5 bg-[#ea580c] hover:bg-orange-600 text-white font-semibold text-xs rounded-lg flex items-center gap-1 transition-colors shadow-sm"
+                        className="px-3.5 py-1.5 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] text-zinc-100 font-medium text-xs rounded-lg flex items-center gap-1 transition-colors shadow-sm"
                       >
-                        <ArrowUpRight className="w-3.5 h-3.5" />
+                        <ArrowUpRight className="w-3.5 h-3.5 text-red-400" />
                         <span>Check Out</span>
                       </button>
                     ) : (
                       <button
                         onClick={() => onOpenCheckout(item, 'Check In')}
-                        className="px-3.5 py-1.5 bg-[#059669] hover:bg-emerald-600 text-white font-semibold text-xs rounded-lg flex items-center gap-1 transition-colors shadow-sm"
+                        className="px-3.5 py-1.5 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] text-zinc-100 font-medium text-xs rounded-lg flex items-center gap-1 transition-colors shadow-sm"
                       >
-                        <RotateCcw className="w-3.5 h-3.5" />
+                        <RotateCcw className="w-3.5 h-3.5 text-zinc-200" />
                         <span>Check In</span>
                       </button>
                     )}

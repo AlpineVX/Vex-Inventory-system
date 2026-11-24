@@ -150,6 +150,26 @@ export default function App() {
   // Global Keyboard Shortcuts Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl+K always focuses search even if inside another input
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        playClick();
+        const searchEl = document.querySelector<HTMLInputElement>(
+          'input[data-global-search="true"], input[type="text"]'
+        );
+        if (searchEl) {
+          searchEl.focus();
+          searchEl.select();
+        } else {
+          setActiveTab('inventory');
+          requestAnimationFrame(() => {
+            const invSearch = document.querySelector<HTMLInputElement>('input[type="text"]');
+            invSearch?.focus();
+          });
+        }
+        return;
+      }
+
       // Don't intercept when user is typing in form controls
       const activeTag = (document.activeElement?.tagName || '').toLowerCase();
       if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
@@ -157,6 +177,18 @@ export default function App() {
           (document.activeElement as HTMLElement)?.blur();
         }
         return;
+      }
+
+      if (e.key === '/' && !e.shiftKey) {
+        const searchEl = document.querySelector<HTMLInputElement>(
+          'input[data-global-search="true"], input[type="text"]'
+        );
+        if (searchEl) {
+          e.preventDefault();
+          playClick();
+          searchEl.focus();
+          return;
+        }
       }
 
       if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
@@ -629,7 +661,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0d10] text-zinc-100 flex flex-col font-sans selection:bg-amber-500/20 selection:text-amber-200">
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-red-500/25 selection:text-red-200">
       {/* Top Header: Specialized Mobile Header or Desktop Header */}
       {isMobile ? (
         <MobileTopHeader
@@ -668,50 +700,52 @@ export default function App() {
 
       {/* Main Container Viewport */}
       <main className={`flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 ${isMobile ? 'pb-24' : ''}`}>
-        {activeTab === 'dashboard' && (
-          <CommandCenter
-            items={items}
-            logs={logs}
-            isAdmin={adminSettings.isUnlocked}
-            onOpenAdminUnlock={handleOpenAdminUnlock}
-            onNavigateToCategory={handleNavigateToCategory}
-            onNavigateToTeam={handleNavigateToTeam}
-            onNavigateTab={setActiveTab}
-            onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
-          />
-        )}
+        <div key={activeTab} className="animate-tab-enter">
+          {activeTab === 'dashboard' && (
+            <CommandCenter
+              items={items}
+              logs={logs}
+              isAdmin={adminSettings.isUnlocked}
+              onOpenAdminUnlock={handleOpenAdminUnlock}
+              onNavigateToCategory={handleNavigateToCategory}
+              onNavigateToTeam={handleNavigateToTeam}
+              onNavigateTab={setActiveTab}
+              onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
+            />
+          )}
 
-        {activeTab === 'inventory' && (
-          <InventoryBrowser
-            items={items}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
-            onBatchAction={handleBatchInventoryAction}
-            isAdmin={adminSettings.isUnlocked}
-            onOpenAdminUnlock={handleOpenAdminUnlock}
-            isMobileMode={isMobile}
-          />
-        )}
+          {activeTab === 'inventory' && (
+            <InventoryBrowser
+              items={items}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
+              onBatchAction={handleBatchInventoryAction}
+              isAdmin={adminSettings.isUnlocked}
+              onOpenAdminUnlock={handleOpenAdminUnlock}
+              isMobileMode={isMobile}
+            />
+          )}
 
-        {activeTab === 'teams' && (
-          <TeamLookup
-            items={items}
-            selectedTeam={selectedTeam}
-            onSelectTeam={setSelectedTeam}
-            onOpenCheckout={(item, action, team) =>
-              handleOpenCheckoutModal(item, action || 'Check Out', team || selectedTeam)
-            }
-            onReturnItem={handleReturnItem}
-            onReturnAllForTeam={handleReturnAllForTeam}
-            isAdmin={adminSettings.isUnlocked}
-            onOpenAdminUnlock={handleOpenAdminUnlock}
-          />
-        )}
+          {activeTab === 'teams' && (
+            <TeamLookup
+              items={items}
+              selectedTeam={selectedTeam}
+              onSelectTeam={setSelectedTeam}
+              onOpenCheckout={(item, action, team) =>
+                handleOpenCheckoutModal(item, action || 'Check Out', team || selectedTeam)
+              }
+              onReturnItem={handleReturnItem}
+              onReturnAllForTeam={handleReturnAllForTeam}
+              isAdmin={adminSettings.isUnlocked}
+              onOpenAdminUnlock={handleOpenAdminUnlock}
+            />
+          )}
 
-        {activeTab === 'packlist' && <CompetitionPackList items={items} />}
+          {activeTab === 'packlist' && <CompetitionPackList items={items} />}
 
-        {activeTab === 'logs' && <ActivityLogs logs={logs} />}
+          {activeTab === 'logs' && <ActivityLogs logs={logs} />}
+        </div>
       </main>
 
       {/* Mobile Fixed Bottom Nav (Natural thumb zone) */}
@@ -729,7 +763,7 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className={`mt-auto border-t border-[#1c222b] bg-[#0c0e12] py-4 text-xs text-zinc-500 ${isMobile ? 'pb-24' : ''}`}>
+      <footer className={`mt-auto border-t border-[#27272d] bg-[#09090b] py-4 text-xs text-zinc-500 ${isMobile ? 'pb-24' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
             <span className="font-semibold text-zinc-300">VEX Robotics Inventory Control</span>
@@ -739,25 +773,25 @@ export default function App() {
             <span className="font-mono text-zinc-400">Club Teams ({CLUB_TEAMS.join(', ')})</span>
           </div>
           <div className="flex items-center gap-3 text-zinc-400 shrink-0 flex-wrap justify-center">
-            <span>Website made by <strong className="text-white font-semibold">Trishanth Yakkala</strong></span>
+            <span>Website made by <strong className="text-zinc-100 font-semibold">Trishanth Yakkala</strong></span>
             <span>·</span>
             <button
               onClick={() => setIsAssetsModalOpen(true)}
-              className="hover:text-white transition-colors underline"
+              className="hover:text-zinc-100 transition-colors underline"
             >
               Logos &amp; QR Badges
             </button>
             <span>·</span>
             <button
               onClick={handleToggleViewMode}
-              className="hover:text-amber-400 transition-colors"
+              className="hover:text-red-400 transition-colors"
             >
               {isMobile ? 'Switch to Desktop UI' : 'Switch to Phone UI'}
             </button>
             <span>·</span>
             <button
               onClick={handleOpenSettingsProtected}
-              className="hover:text-white transition-colors"
+              className="hover:text-zinc-100 transition-colors"
             >
               Spreadsheet API Settings
             </button>

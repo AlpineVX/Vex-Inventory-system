@@ -48,22 +48,22 @@ export const ClubAssetsModal: React.FC<ClubAssetsModalProps> = ({ isOpen, onClos
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in font-sans">
-      <div className="bg-[#12161f] border border-[#1e242c] rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter font-sans">
+      <div className="bg-[#111114] border border-[#27272d] rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-modal-enter">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 bg-[#0e1218] border-b border-[#1e242c]">
+        <div className="flex items-center justify-between p-4 bg-[#09090b] border-b border-[#27272d]">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase">
+            <span className="font-mono text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-full uppercase">
               Brand Assets
             </span>
             <div>
-              <h2 className="text-sm font-bold text-white font-sans">Club Brand Assets &amp; QR Badges</h2>
+              <h2 className="text-sm font-bold text-zinc-100 font-sans">Club Brand Assets &amp; QR Badges</h2>
               <p className="text-xs text-zinc-400 font-mono">Download high-res emblems &amp; custom QR badges</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-zinc-400 hover:text-white rounded-lg transition-colors"
+            className="p-1.5 text-zinc-400 hover:text-zinc-100 rounded-lg transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -75,29 +75,29 @@ export const ClubAssetsModal: React.FC<ClubAssetsModalProps> = ({ isOpen, onClos
             {assets.map((asset, idx) => (
               <div
                 key={idx}
-                className="bg-[#0b0d11] border border-[#1e242c] rounded-xl p-3 flex flex-col justify-between hover:border-zinc-700 transition-colors"
+                className="bg-[#09090b] border border-[#27272d] rounded-xl p-3 flex flex-col justify-between hover:border-zinc-700 transition-colors"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-[#161a22] text-zinc-300 border border-[#1e242c] rounded-full">
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-[#1a1a1f] text-zinc-300 border border-[#27272d] rounded-full">
                       {asset.tag.toUpperCase()}
                     </span>
                   </div>
-                  <div className="w-full h-28 bg-[#12161f] rounded-lg flex items-center justify-center p-2 mb-3 border border-[#1e242c]">
+                  <div className="w-full h-28 bg-[#111114] rounded-lg flex items-center justify-center p-2 mb-3 border border-[#27272d]">
                     <img
                       src={asset.src}
                       alt={asset.title}
                       className="max-h-full max-w-full object-contain"
                     />
                   </div>
-                  <h3 className="text-xs font-bold text-white">{asset.title}</h3>
+                  <h3 className="text-xs font-bold text-zinc-100">{asset.title}</h3>
                   <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-2">{asset.subtitle}</p>
                 </div>
 
                 <a
                   href={asset.src}
                   download={asset.downloadName}
-                  className="mt-3 flex items-center justify-center gap-1.5 w-full py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-bold rounded-lg transition-colors"
+                  className="mt-3 flex items-center justify-center gap-1.5 w-full py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-mono font-bold rounded-lg transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download PNG</span>
@@ -108,10 +108,10 @@ export const ClubAssetsModal: React.FC<ClubAssetsModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t border-[#1e242c] bg-[#0e1218] flex justify-end">
+        <div className="p-3 border-t border-[#27272d] bg-[#09090b] flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-[#1a202c] hover:bg-[#222834] border border-[#1e242c] text-zinc-200 text-xs font-semibold rounded-lg transition-colors"
+            className="px-4 py-1.5 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] text-zinc-200 text-xs font-semibold rounded-lg transition-colors"
           >
             Close
           </button>

@@ -81,9 +81,9 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
     <div className="space-y-6">
       {/* Top Header */}
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#1c222b]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#27272d]">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white font-sans">
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-100 font-sans">
               Activity &amp; Audit Logs
             </h1>
             <p className="text-xs text-zinc-400 mt-1">
@@ -93,7 +93,7 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={exportLogsCSV}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-zinc-200 bg-[#161a22] hover:bg-[#21262d] border border-[#1e242c] rounded-lg transition-colors font-mono"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors font-mono btn-tactile"
             >
               <Download className="w-3.5 h-3.5 text-zinc-400" />
               <span>Export CSV</span>
@@ -103,7 +103,7 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
       </div>
 
       {/* Filter Controls */}
-      <div className="p-3 rounded-xl bg-[#12161f] border border-[#1e242c] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      <div className="p-3 rounded-xl bg-[#111114] border border-[#27272d] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
@@ -111,24 +111,24 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by Part ID, team, notes, email..."
-            className="w-full pl-9 pr-4 py-1.5 text-xs bg-[#0b0d11] border border-[#1e242c] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-mono"
+            className="w-full pl-9 pr-4 py-1.5 text-xs bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-500 font-mono"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Action Filter */}
-          <div className="flex items-center bg-[#0b0d11] p-0.5 rounded-lg border border-[#1e242c] text-xs font-mono">
+          <div className="flex items-center bg-[#09090b] p-0.5 rounded-lg border border-[#27272d] text-xs font-mono">
             <button
               onClick={() => setActionFilter('All')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${
-                actionFilter === 'All' ? 'bg-[#222834] text-white font-bold' : 'text-zinc-400 hover:text-white'
+              className={`px-2.5 py-1 rounded-md transition-all btn-tactile ${
+                actionFilter === 'All' ? 'bg-[#1a1a1f] text-zinc-100 font-bold shadow-sm' : 'text-zinc-400 hover:text-zinc-100'
               }`}
             >
               ALL
             </button>
             <button
               onClick={() => setActionFilter('Check Out')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${
+              className={`px-2.5 py-1 rounded-md transition-all btn-tactile ${
                 actionFilter === 'Check Out' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 font-bold' : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -136,8 +136,8 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
             </button>
             <button
               onClick={() => setActionFilter('Check In')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${
-                actionFilter === 'Check In' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold' : 'text-zinc-400 hover:text-white'
+              className={`px-2.5 py-1 rounded-md transition-all btn-tactile ${
+                actionFilter === 'Check In' ? 'bg-zinc-200/15 text-zinc-100 border border-zinc-400/40 font-bold' : 'text-zinc-400 hover:text-white'
               }`}
             >
               CHECK IN
@@ -148,7 +148,7 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
           <select
             value={teamFilter}
             onChange={(e) => setTeamFilter(e.target.value)}
-            className="px-2.5 py-1.5 text-xs bg-[#0b0d11] border border-[#1e242c] rounded-lg text-zinc-300 font-mono focus:outline-none focus:border-amber-500"
+            className="px-2.5 py-1.5 text-xs bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-300 font-mono focus:outline-none focus:border-red-500"
           >
             <option value="All">All Teams</option>
             {uniqueTeams.map((team) => (
@@ -161,10 +161,10 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
       </div>
 
       {/* Logs Table */}
-      <div className="rounded-xl border border-[#1e242c] bg-[#12161f] overflow-hidden shadow-none">
+      <div className="rounded-xl border border-[#27272d] bg-[#111114] overflow-hidden shadow-none">
         <div className="overflow-x-auto max-h-[600px]">
           <table className="w-full text-left text-xs border-collapse">
-            <thead className="sticky top-0 bg-[#0e1218] border-b border-[#1e242c] text-zinc-400 select-none font-medium">
+            <thead className="sticky top-0 bg-[#09090b] border-b border-[#27272d] text-zinc-400 select-none font-medium">
               <tr>
                 <th className="py-3 px-4 font-semibold">TIMESTAMP</th>
                 <th className="py-3 px-4 font-semibold">ACTION</th>
@@ -175,7 +175,7 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
                 <th className="py-3 px-4 font-semibold">OPERATOR EMAIL</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1a2029] font-sans">
+            <tbody className="divide-y divide-[#1a1a1f] font-sans">
               {filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-zinc-400 font-mono">
@@ -183,14 +183,18 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log) => {
+                filteredLogs.map((log, idx) => {
                   const isCheckOut = log.action === 'Check Out';
                   const date = new Date(log.timestamp);
                   return (
-                    <tr key={log.id} className="hover:bg-[#181d27] transition-colors">
+                    <tr
+                      key={log.id}
+                      style={{ '--row-idx': idx } as React.CSSProperties}
+                      className="hover:bg-[#1a1a1f] transition-colors animate-row-enter"
+                    >
                       {/* Timestamp */}
                       <td className="py-2.5 px-4 text-zinc-400 font-mono tabular-nums whitespace-nowrap">
-                        <div className="font-semibold text-white">
+                        <div className="font-semibold text-zinc-100">
                           {isNaN(date.getTime()) ? log.timestamp || '—' : date.toLocaleDateString()}
                         </div>
                         <div className="text-[11px] text-zinc-500">
@@ -203,26 +207,26 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
                       {/* Action */}
                       <td className="py-2.5 px-4 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1 font-mono text-[10px] font-bold px-2 py-0.5 rounded border ${
+                          className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded border ${
                             isCheckOut
                               ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                              : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                              : 'bg-zinc-200/10 text-zinc-100 border-zinc-400/25'
                           }`}
                         >
                           {isCheckOut ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
-                          {isCheckOut ? '[OUT]' : '[IN]'} {log.action}
+                          {log.action}
                         </span>
                       </td>
 
                       {/* Item ID */}
-                      <td className="py-2.5 px-4 font-mono font-bold text-white whitespace-nowrap">
-                        <span className="bg-[#161a22] px-2 py-0.5 rounded border border-zinc-700">
+                      <td className="py-2.5 px-4 font-mono font-bold text-zinc-100 whitespace-nowrap">
+                        <span className="bg-[#1a1a1f] px-2 py-0.5 rounded border border-zinc-700">
                           {log.itemId}
                         </span>
                       </td>
 
                       {/* Component Name */}
-                      <td className="py-2.5 px-4 text-white font-medium">
+                      <td className="py-2.5 px-4 text-zinc-100 font-medium">
                         {log.itemName || log.category || 'VEX Hardware Item'}
                       </td>
 
