@@ -1,153 +1,149 @@
-# VEX Robotics Fleet & Inventory Command Center
-
 <div align="center">
 
+<img src="public/lake_travis_logo_transparent.png" alt="Lake Travis VEX Robotics Club 654 Emblem" width="112" />
+
+# VEX Robotics Inventory Control
+
+**Real-time fleet telemetry, hardware custody tracking, and competition pit logistics for VEX Robotics Club 654.**
+
 [![React 19](https://img.shields.io/badge/React-19.0-61dafb?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-6.0-646cff?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.0-38bdf8?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Web Audio API](https://img.shields.io/badge/Web_Audio-Procedural_FX-ea580c?style=for-the-badge&logo=waveform&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
-[![VEX Robotics](https://img.shields.io/badge/VEX_Robotics-V5_Ecosystem-dc2626?style=for-the-badge&logo=robot&logoColor=white)](https://www.vexrobotics.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-emerald?style=for-the-badge)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-8.3-646cff?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.3-38bdf8?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Express](https://img.shields.io/badge/Express-4.21-1f2937?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
+[![VEX V5](https://img.shields.io/badge/VEX_Robotics-V5_Ecosystem-ea580c?style=for-the-badge)](https://www.vexrobotics.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-059669?style=for-the-badge)](LICENSE)
 
-**An industrial, real-time fleet telemetrics and hardware custody command center engineered for multi-team VEX Robotics competition clubs (Teams 654A–654V).**
-
-[Live Application](https://vex-robotics-inventory.ai.studio/) • [System Architecture](#system-architecture) • [Hardware Specifications](#supported-vex-hardware-telemetry) • [Quick Start](#getting-started) • [Sheets Integration](#google-apps-script-enterprise-integration)
+[Overview](#overview) · [Capabilities](#key-capabilities) · [Architecture](#system-architecture) · [Hardware Specs](#supported-vex-hardware-telemetry) · [Quick Start](#getting-started) · [Sheets Sync](#google-sheets-logs-only-integration) · [API Reference](#api-reference)
 
 </div>
 
 ---
 
-## Executive Overview
+## Overview
 
-Developed over 200+ hours of competition pit operations and mechanical engineering requirements, **VEX Robotics Inventory Control** replaces ad-hoc spreadsheets, lost equipment, and tournament check-in friction with a sub-second, military-clean logistics platform.
+Engineered for high-tempo competition pit operations, **VEX Robotics Inventory Control** replaces manual spreadsheet edits, untracked sensor swaps, and tournament check-in bottlenecks with an industrial-grade, low-latency hardware custody command center.
 
-Designed specifically around the **VEX V5 ecosystem**, the system bridges physical pit cabinets (Brain, Radio, Optical, Distance, Inertial, Rotational, and Pneumatics) with real-time digital custody tracking, automated Google Sheets sync, procedural Web Audio ergonomics, and official tournament custody inspection sheets.
+Built around the **VEX V5 ecosystem** for Club 654 rosters (`654K`, `654J`, `654A`, `654B`, `654G`, `654T`, `654V`, `654Y`, `654X`, `654Z`, `654W`, and `RECF`), the platform pairs an obsidian/amber tactical UI with an Express proxy gateway and a non-destructive Google Sheets `LOGS`-only synchronization architecture.
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                   VEX ROBOTICS CLUB 654 COMMAND CENTER                           │
-│                                                                                  │
-│   TOTAL ITEMS       AVAILABLE STOCK    ACTIVE DEPLOYMENT   UTILIZATION           │
-│   178 Units         123 in Cabinets    55 on Robots        31% Fleet Rate        │
-│                                                                                  │
-│   OVERDUE ALERTS    AUDIT LOGS         ACTIVE BORROWERS    MAINTENANCE           │
-│   0 Flagged         207 Transactions   8 Teams Active      2 Flagged Units       │
-└──────────────────────────────────────────────────────────────────────────────────┘
++----------------------------------------------------------------------------------+
+|                    VEX ROBOTICS CLUB 654 - COMMAND CENTER                        |
+|                                                                                  |
+|   CABINET 1               PNEUMATICS CABINET        SENSOR CABINET               |
+|   V5 Brains (VEXB)        Solenoids (VEXSOL)        Optical (VEXS-O)             |
+|   V5 Radios (VEXR)                                  Distance (VEXS-DIST)         |
+|                                                     Inertial (VEXS-INER)         |
+|                                                     Rotational (VEXS-ROT)        |
++----------------------------------------------------------------------------------+
 ```
 
 ---
 
 ## Key Capabilities
 
-### Rapid-Fire Borrower Kiosk
-- **Self-Service Checkout & Return**: Single-click component selection (Type + Part Number stepper) eliminating typing fatigue in pit conditions.
-- **Strict Accountability Guardrails**: Enforces student borrower email capture (`@ltisdschools.net` or school domain) and club team routing (`654A`, `654B`, `654C`, `654D`, `654E`, `654H`, `654J`, `654M`, `654S`, `654T`, `654V`).
-- **Smart ID Normalization**: Automatically maps freehand input like `sol 1`, `4`, `DIST-4`, or `VEX-DIST-004` to standardized VEX catalog identifiers.
+### Rapid-Fire Borrower Kiosk & Smart ID Normalization
+- **Guided Component Assembly**: Interactive Type + Part Number stepper alongside catalog search (`CheckInOutModal`) reduces checkout and return friction on pit laptops and phones.
+- **Smart ID Normalization**: Automatically normalizes shorthand inputs such as `sol 1`, `4`, `DIST-4`, `VEX-DIST-004`, `brain #2`, or `opt3` into canonical IDs (`VEXSOL-1`, `VEXS-DIST-4`, `VEXB-2`, `VEXS-O-3`).
+- **Role-Aware Accountability**: Regular club members require a valid borrower email address (`@ltisdschools.net` or school email) on checkouts and check-ins. When **Admin Mode** is unlocked via PIN or authorized coach email, admins can check out, check in, 1-click return, and batch-process equipment without needing to enter an email.
 
-### Authentic VEX V5 Telemetry Registry
-- Built-in hardware specifications for all core VEX components:
-  - **V5 Robot Brain (`276-4810`)**: Dual Cortex-A9 @ 667 MHz, 21 Smart Ports, 8 3-Wire ports (`<R11>`).
-  - **V5 Robot Radio (`276-4831`)**: 2.4 GHz DSSS frequency hopping, VEXnet 3.0 / Bluetooth 4.2 (`<R11>`).
-  - **Optical Sensor (`276-4833`)**: Ambient lux, RGBC classification, gesture tracking @ 100 Hz (`<R13>`).
-  - **Distance Sensor (`276-4834`)**: Class 1 940nm VCSEL Time-of-Flight ToF rangefinder (`<R13>`).
-  - **Inertial Sensor (`276-4840`)**: 6-DOF IMU with onboard Kalman filter, 3-axis gyro & accelerometer (`<R13>`).
-  - **Rotational Sensor (`276-6010`)**: 4,096 tick/rev magnetic encoder for autonomous dead-wheel pods (`<R13>`).
-  - **Pneumatics Solenoids (`276-8140`)**: 5/2 SMC solenoid valves with 100 PSI working limit (`<R12>`).
+### Multi-View Pit Operations Suite
+- **Command Center**: Real-time KPI cards, cabinet availability filters, 1-click fast kiosk borrow shortcuts, overdue/maintenance/readiness drilldowns, and live recent transaction stream.
+- **Master Inventory Browser**: Instant search (`/` hotkey), category & team filtering, natural numeric sorting (`VEXS-DIST-2` before `VEXS-DIST-10`), bulk admin check-out/check-in, and CSV export.
+- **Team Hardware Lookup**: Per-team equipment breakdown across all club rosters (`654K`–`654W` + `RECF`) with 1-click admin returns and tournament batch return.
+- **Competition Pack List**: Persistent tournament flight-case checklist comparing target spare quotas against live available warehouse stock.
+- **Activity & Audit Logs**: Filterable, chronological chain-of-custody ledger with CSV export.
 
-### Procedural Web Audio Synthesis Engine
-- Zero external audio files or network requests. Synthesizes mechanical clicks, double-frequency notification chirps, and dual-tone harmonic chimes in real time using the browser's native **Web Audio API** (`AudioContext`).
-- Fully accessible with a one-click header mute toggle (`Key M`) and persistent `localStorage` synchronization.
+### Dedicated Mobile Kiosk & Desktop Layout Switcher
+- Automatically adapts to mobile viewports (`MobileTopHeader`, `MobileInventoryList`, `MobileBottomNav`) with thumb-zone navigation and touch-friendly hardware cards.
+- Includes a manual **Phone UI / Desktop UI** toggle in the header and footer for testing or tablet kiosk use.
 
-### System Architecture & Telemetry Inspector
-- Interactive diagnostics modal (`Key D` or Activity icon):
-  - **Real-time byte consumption**: Monitors UTF-16 storage utilization across `localStorage` buckets.
-  - **SHA-256 State Integrity Hash**: Cryptographically computes state consistency across client sessions.
-  - **Round-Trip Latency Benchmark**: Live HTTP ping diagnostics to the backend proxy.
-  - **Telemetry Export**: One-click JSON snapshot download for club leadership and mentor audits.
+### Procedural Web Audio Engine & Diagnostics
+- **Zero-Asset Web Audio Synthesizer**: Generates tactile mechanical clicks, scanner blips, toggle tones, and confirmation chimes via the native browser `AudioContext`, with instant mute persistence (`M` hotkey).
+- **System Diagnostics Inspector (`D` hotkey)**: Computes a live **SHA-256** inventory state integrity hash, tracks `localStorage` cache consumption, benchmarks `/api/health` round-trip latency, and exports JSON diagnostic bundles.
+- **Printable Custody Manifests (`P` / `Ctrl+P`)**: High-contrast `@media print` stylesheet turns dark-mode tables into clean black-and-white tournament inspection sheets.
+- **Club Brand & QR Badge Pipeline**: Built-in `create_qr_badges.mjs` generator (`sharp` + `qrcode`) and downloadable club emblems/QR badges inside the app.
 
-### Tournament Competition Custody Manifest
-- Clean print stylesheet (`@media print` / `Ctrl+P` / `Key P`) that converts the dark-mode dashboard into an official high-contrast, black-and-white physical equipment manifest ready for tournament check-in inspectors and pit tables.
+---
 
-### Power-User Keyboard Command System
+## Keyboard Command System
+
 | Key | Action | Description |
 |:---:|:---|:---|
-| `1` | **Command Center** | Jump directly to fleet overview KPIs and telemetry |
-| `2` | **Inventory Browser** | Browse catalog, search part IDs, and filter by cabinet |
-| `3` | **Team Allocations** | View equipment held across all 11 competition teams |
-| `4` | **Competition Pack List** | Check pit box spare quotas and tournament travel readiness |
-| `5` | **Audit Logs** | Trace chronological chain of custody and deployment notes |
-| `C` | **Check Out / In** | Launch self-service borrower station |
-| `D` | **Diagnostics** | Open system telemetry, storage bytes & SHA-256 verification |
-| `P` | **Print Manifest** | Generate referee-ready tournament custody printout |
-| `M` | **Toggle Audio** | Enable or mute procedural Web Audio sound feedback |
-| `?` | **Shortcuts** | Open keyboard hotkeys cheatsheet dialog |
-| `Esc` | **Dismiss** | Close active modals, drawers, or notifications |
+| `1` | **Dashboard** | Jump to Command Center KPIs and live activity |
+| `2` | **Inventory** | Open Master Inventory Catalog |
+| `3` | **Teams** | Open Team Hardware Lookup across club rosters |
+| `4` | **Pack List** | Open Tournament Competition Pack List |
+| `5` | **Audit Logs** | Open full hardware custody audit trail |
+| `/` | **Focus Search** | Focus the Inventory Browser search input |
+| `C` | **Check In / Out** | Open the Hardware Check Out / Check In modal |
+| `D` | **Diagnostics** | Open System Architecture & Telemetry Inspector |
+| `M` | **Toggle Audio** | Enable or mute procedural Web Audio feedback |
+| `P` | **Print Manifest** | Print high-contrast custody manifest (`Ctrl+P`) |
+| `?` | **Shortcuts** | Open keyboard shortcuts reference modal |
+| `Esc` | **Dismiss** | Close active dialogs or blur focused inputs |
 
 ---
 
 ## System Architecture
 
+```mermaid
+flowchart TB
+    subgraph Client["React 19 + TypeScript SPA (Vite + Tailwind CSS v4)"]
+        UI["Views: CommandCenter | InventoryBrowser | TeamLookup | PackList | ActivityLogs"]
+        Modal["Kiosk & Admin Modals: CheckInOutModal | AdminUnlockModal | SettingsModal | Diagnostics"]
+        Engine["Services: sheetApi.ts | soundFx.ts | normalizeItemId() | vexSpecs.ts"]
+        Cache["Browser LocalStorage Cache (Offline Fallback + State Persistence)"]
+        UI --> Modal --> Engine
+        Engine <--> Cache
+    end
+
+    subgraph Server["Express Gateway (server.ts, Port 3000)"]
+        Health["GET /api/health"]
+        Sync["GET /api/sync (SSRF Allowlist + Item Sanitizer)"]
+        Action["POST /api/action (Payload Coercion + HTML Guard)"]
+    end
+
+    subgraph Google["Google Workspace Cloud"]
+        GAS["Google Apps Script Web App (/exec)"]
+        Sheets["Google Sheets (Category Tabs + LOGS Append-Only Tab)"]
+        GAS <--> Sheets
+    end
+
+    Engine -->|"Primary: Same-Origin JSON Proxy"| Server
+    Engine -.->|"Fallback: Direct HTTPS"| GAS
+    Sync -->|"GET doGet()"| GAS
+    Action -->|"POST doPost()"| GAS
 ```
-                                  USER INTERFACE
- ┌────────────────────────────────────────────────────────────────────────────────────────┐
- │  Dashboard KPIs  │  Catalog Browser  │  Team Lookups  │  Pack Lists  │  Audit Logs     │
- └──────────────┬─────────────────────────────┬─────────────────────────────┬─────────────┘
-                │                             │                             │
-                ▼                             ▼                             ▼
- ┌──────────────────────────┐  ┌──────────────────────────┐  ┌────────────────────────────┐
- │  Web Audio Synthesizer   │  │  Hardware Spec Registry  │  │  Power-User Hotkey Bus     │
- │  (Procedural Oscillators)│  │  (Official VEX V5 Specs) │  │  (Global Window Listener)  │
- └──────────────────────────┘  └──────────────────────────┘  └────────────────────────────┘
-                │                             │                             │
-                └─────────────────────────────┼─────────────────────────────┘
-                                              ▼
-                             ┌──────────────────────────────────┐
-                             │    Reactive State Coordinator    │
-                             │ (Normalized VEX IDs & Filtering) │
-                             └────────────────┬─────────────────┘
-                                              │
-                      ┌───────────────────────┴───────────────────────┐
-                      ▼                                               ▼
-         ┌─────────────────────────┐                     ┌─────────────────────────┐
-         │ Local Storage Cache     │                     │ Express Gateway Proxy   │
-         │ - Sub-1ms Read/Write    │                     │ - /api/sync & /api/logs │
-         │ - SHA-256 State Hash    │                     │ - Request Sanitization  │
-         │ - Offline Resilience    │                     │ - Health Ping Benchmark │
-         └─────────────────────────┘                     └────────────┬────────────┘
-                                                                      │
-                                                                      ▼
-                                                         ┌─────────────────────────┐
-                                                         │ Google Apps Script API  │
-                                                         │ - REST /exec Endpoint   │
-                                                         │ - Google Sheets Storage │
-                                                         │ - Concurrent Locking    │
-                                                         └─────────────────────────┘
-```
+
+### Design & Security Architecture
+- **SSRF-Hardened Proxy Allowlist**: `server.ts` validates all Web App URLs with `new URL()`, requires `https://`, blocks loopback/private/link-local addresses, and restricts targets to `script.google.com` / `script.googleusercontent.com`.
+- **Resilient Cross-Browser Response Handling**: Both `/api/sync` and `/api/action` detect Google login redirects and HTML error pages before JSON parsing, and client fetches parse text safely to prevent browser-specific regex/JSON syntax errors.
+- **Offline-First Cache Hygiene**: Corrupted or mismatched cache entries are automatically sanitized or reset on load so non-string cells from spreadsheets cannot break filtering, sorting, or date calculations.
 
 ---
 
 ## Supported VEX Hardware Telemetry
 
-| Component Category | Official Part # | Bus Interface / Protocol | Operating Range / Tolerance | Game Manual Rule |
-|:---|:---:|:---|:---|:---:|
-| **V5 Brain** | `276-4810` | Dual Cortex-A9 / VEXos / RS-485 | 7.2V – 12.8V Li-ion Smart Battery | `<R11>` Max 1 per robot |
-| **V5 Radio** | `276-4831` | 2.4 GHz DSSS / VEXnet 3.0 / BLE | 16 RF channels, dynamic hopping | `<R11>` Direct line of sight |
-| **Optical Sensor** | `276-4833` | V5 Smart Port (RS-485 bidirectional) | 10 mm – 100 mm proximity, 100 Hz | `<R13>` Legal Smart sensor |
-| **Distance Sensor** | `276-4834` | V5 Smart Port (Class 1 Laser ToF) | 20 mm – 2,000 mm (VCSEL 940nm) | `<R13>` Class 1 IEC 60825-1 |
-| **Inertial Sensor** | `276-4840` | V5 Smart Port (20-bit internal rate gyro) | ±2,000°/s 3-Axis Gyro & ±8G Accel | `<R13>` Rigid chassis mount |
-| **Rotational Sensor**| `276-6010` | V5 Smart Port (Magnetic Encoder) | 360° continuous, 4,096 ticks/rev | `<R13>` Dead-wheel tracking |
-| **Pneumatics Solenoid**| `276-8140`| V5 3-Wire / PCM Driver (5V DC) | 0 – 100 PSI (690 kPa), 12ms shift | `<R12>` Max 100 PSI working |
+| Category | ID Prefix | Official Part # | Interface / Protocol | Operating Spec | Manual Rule | Storage Location |
+|:---|:---:|:---:|:---|:---|:---:|:---|
+| **V5 Brain** | `VEXB-*` | `276-4810` | Dual Cortex-A9 / VEXos / 21 Smart Ports | 7.2V – 12.8V Li-ion Smart Battery | `<R11>` Max 1 per robot | Cabinet 1 |
+| **V5 Radio** | `VEXR-*` | `276-4831` | 2.4 GHz DSSS / VEXnet 3.0 / BLE 4.2 | 16 RF channels, dynamic hopping | `<R11>` Clear line of sight | Cabinet 1 |
+| **Optical Sensor** | `VEXS-O-*` | `276-4833` | V5 Smart Port (RS-485 bidirectional) | 10 mm – 100 mm proximity, 100 Hz | `<R13>` Legal Smart sensor | Sensor Cabinet |
+| **Distance Sensor** | `VEXS-DIST-*` | `276-4834` | V5 Smart Port (Class 1 Laser ToF) | 20 mm – 2,000 mm (VCSEL 940nm) | `<R13>` Class 1 IEC 60825-1 | Sensor Cabinet |
+| **Inertial Sensor** | `VEXS-INER-*` | `276-4840` | V5 Smart Port (6-DOF IMU + Kalman) | +/-2,000 deg/s Gyro & +/-8G Accel | `<R13>` Rigid crossbar mount | Sensor Cabinet |
+| **Rotational Sensor** | `VEXS-ROT-*` | `276-6010` | V5 Smart Port (Magnetic Encoder) | 360 deg continuous, 4,096 ticks/rev | `<R13>` Dead-wheel tracking | Sensor Cabinet |
+| **Pneumatic Solenoid** | `VEXSOL-*` | `276-8140` | V5 3-Wire / PCM Driver (5V DC) | 0 – 100 PSI (690 kPa), 12ms shift | `<R12>` Max 100 PSI working | Pneumatics Cabinet |
 
 ---
 
 ## Getting Started
 
 ### Prerequisites
-- [Bun](https://bun.sh/) *(recommended, `bun.lock` provided)* or **Node.js (v18+)**
-- Modern evergreen browser supporting the Web Audio API and ES2022
+- [Bun](https://bun.sh/) *(recommended, `bun.lock` included)* or **Node.js v20+** with `npm`
+- Modern browser supporting ES2022 and the Web Audio API
 
-### Quick Install
+### Installation & Local Development
 
 ```bash
 # Clone the repository
@@ -158,115 +154,107 @@ cd vex-robotics-inventory
 bun install
 # or: npm install
 
-# Start development server
+# Start the full-stack Express + Vite server on http://localhost:3000
 bun run dev
 # or: npm run dev
 ```
 
-Open `http://localhost:3000` in your browser. The Express server serves Vite with hot-module reloading and hosts the backend API proxy at `/api/*`.
-
-### Build & Verification Commands
+### Available Scripts
 
 | Command | Description |
 |:---|:---|
-| `bun run dev` | Launch local full-stack server on port 3000 with HMR |
-| `bun run build` | Produce optimized, tree-shaken production bundle in `dist/` |
-| `bun run lint` | Run strict TypeScript validation without emitting (`tsc --noEmit`) |
-| `bun run start` | Run production Express server hosting built assets |
-| `bun run create:qr-badges` | Recompile high-resolution QR badge assets for physical pit storage |
+| `bun run dev` | Run full-stack Express + Vite dev server on port `3000` |
+| `bun run lint` | Run TypeScript static verification (`tsc --noEmit`) |
+| `bun run build` | Build production client bundle into `dist/` |
+| `bun run start` | Run Express server in production serving `dist/` |
+| `bun run create:qr-badges` | Generate high-resolution club emblems and QR badges in `public/qr_badges/` |
 
 ---
 
-## Google Apps Script Enterprise Integration
+## Google Sheets LOGS-Only Integration
 
-The application operates out of the box with realistic seed telemetry. To connect your club's live Google Sheet, follow these steps:
+The application ships with deterministic local inventory and works offline immediately. When linked to Google Sheets, it uses a **LOGS-only write architecture**:
 
-1. Create a new Google Sheet with two tabs: `Inventory` and `AuditLogs`.
-2. Open **Extensions > Apps Script** and deploy the following web app handler:
+- **`doGet(e)`**: Reads active hardware sheets (`OPTICAL`, `DISTANCE`, `INERTIAL`, `ROTATIONAL`, `SOLENOIDS`, `RADIO`, `BRAIN`) plus the `LOGS` history tab so formula-driven statuses remain accurate.
+- **`doPost(e)`**: Only appends a single immutable audit row to the `LOGS` sheet (`Timestamp`, `Item ID`, `Action`, `Team`, `Notes`, `Borrower Email`, `Category`, `Number`), leaving all category sheets and `ARRAYFORMULA` / `XLOOKUP` formulas untouched.
 
-```javascript
-function doGet(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var invSheet = ss.getSheetByName("Inventory");
-  var logSheet = ss.getSheetByName("AuditLogs");
+### Setup Steps
+1. Open your Google Sheet and navigate to **Extensions > Apps Script**.
+2. In the app, unlock **Admin** mode, open **Settings > Backend Code**, and copy the `Code.gs` script into Apps Script.
+3. Click **Deploy > New deployment > Web app**:
+   - **Execute as**: `Me`
+   - **Who has access**: `Anyone`
+4. Copy the resulting `https://script.google.com/macros/s/.../exec` URL into **Settings > API Endpoint** and click **Connect & Sync**.
 
-  var invData = invSheet ? invSheet.getDataRange().getValues() : [];
-  var logData = logSheet ? logSheet.getDataRange().getValues() : [];
+---
 
-  var headers = invData[0] || [];
-  var items = [];
-  for (var i = 1; i < invData.length; i++) {
-    var row = invData[i];
-    items.push({
-      itemId: row[0],
-      itemName: row[1],
-      category: row[2],
-      location: row[3],
-      status: row[4],
-      currentUser: row[5],
-      notes: row[6],
-      lastUpdated: row[7]
-    });
-  }
+## API Reference
 
-  return ContentService.createTextOutput(JSON.stringify({
-    success: true,
-    items: items,
-    logs: []
-  })).setMimeType(ContentService.MimeType.JSON);
-}
+| Endpoint | Method | Query / Body | Description |
+|:---|:---:|:---|:---|
+| `/api/health` | `GET` | — | Returns `{ status: "ok", timestamp }` for uptime and RTT latency checks |
+| `/api/sync` | `GET` | `?url=<GAS_EXEC_URL>` | Proxies `doGet()`, validates IDs/categories, strips formula artifacts, returns normalized `inventory` & `logs` |
+| `/api/action` | `POST` | `{ url, action, itemId, team, notes, email, category, number }` | Sanitizes types/numbers, proxies `doPost()` to Google Apps Script, and detects HTML/permission errors |
 
-function doPost(e) {
-  var lock = LockService.getScriptLock();
-  lock.tryLock(10000);
+---
 
-  try {
-    var payload = JSON.parse(e.postData.contents);
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var invSheet = ss.getSheetByName("Inventory");
-    var logSheet = ss.getSheetByName("AuditLogs");
+## Project Structure
 
-    // Perform check-in or checkout row update
-    // Append audit record to logSheet
-    logSheet.appendRow([
-      new Date().toISOString(),
-      payload.action,
-      payload.itemId,
-      payload.team,
-      payload.email,
-      payload.notes
-    ]);
-
-    return ContentService.createTextOutput(JSON.stringify({
-      success: true,
-      message: "Transaction logged successfully"
-    })).setMimeType(ContentService.MimeType.JSON);
-  } finally {
-    lock.releaseLock();
-  }
-}
+```
+.
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md         # Structured hardware/sync bug report template
+│   │   ├── feature_request.md    # Feature & VEX rule proposal template
+│   │   └── config.yml            # Issue chooser links and configuration
+│   ├── workflows/
+│   │   └── ci.yml                # Automated Bun install, TypeScript check & Vite build
+│   └── pull_request_template.md  # Pre-merge verification checklist
+├── public/                       # Club logos, favicons, and generated QR badge PNGs
+├── src/
+│   ├── components/
+│   │   ├── ActivityLogs.tsx      # Searchable, filterable audit trail + CSV export
+│   │   ├── AdminUnlockModal.tsx  # PIN / authorized email admin authentication
+│   │   ├── CheckInOutModal.tsx   # Borrower kiosk modal with Smart ID assembly & admin bypass
+│   │   ├── ClubAssetsModal.tsx   # Brand logo & QR badge download center
+│   │   ├── CommandCenter.tsx     # Primary telemetry dashboard & drilldown modals
+│   │   ├── CompetitionPackList.tsx # Tournament flight-case checklist & deficit alerts
+│   │   ├── Header.tsx            # Desktop navigation, sync indicator, utilities
+│   │   ├── InventoryBrowser.tsx  # Full catalog table, batch actions & CSV export
+│   │   ├── KeyboardShortcutsModal.tsx # Hotkey cheatsheet overlay
+│   │   ├── MobileBottomNav.tsx   # Mobile thumb-zone navigation bar
+│   │   ├── MobileInventoryList.tsx # Touch-optimized mobile hardware cards
+│   │   ├── MobileTopHeader.tsx   # Compact mobile header bar
+│   │   ├── SettingsModal.tsx     # GAS URL config, admin PIN/emails, setup guide & Code.gs
+│   │   ├── SystemDiagnosticsModal.tsx # SHA-256 hash, cache meter, RTT ping & JSON export
+│   │   ├── TeamLookup.tsx        # Roster hardware breakdown & 1-click/batch admin returns
+│   │   └── Toast.tsx             # Non-blocking notification stack
+│   ├── data/
+│   │   ├── mockInventory.ts      # Deterministic offline seed inventory & pack list
+│   │   └── vexSpecs.ts           # Official VEX V5 hardware specifications & manual rules
+│   ├── services/
+│   │   ├── sheetApi.ts           # Proxy/direct Google Sheets client, cache & Code.gs source
+│   │   └── soundFx.ts            # Procedural Web Audio API sound synthesizer
+│   ├── App.tsx                   # Root application state, sync orchestration & shortcuts
+│   ├── index.css                 # Tailwind v4 theme, micro-animations & print styles
+│   └── types.ts                  # TypeScript models, ID normalizer & category classifier
+├── create_qr_badges.mjs          # Sharp + QRCode asset build script
+├── server.ts                     # Express proxy & Vite/static host on port 3000
+├── CONTRIBUTING.md               # Engineering conventions & PR workflow
+├── SECURITY.md                   # Security model & vulnerability reporting policy
+└── LICENSE                       # MIT License
 ```
 
-3. Deploy as a **Web App** (Execute as: *Me*, Who has access: *Anyone*).
-4. In the VEX Inventory web app, open **Settings (`Admin`)** and paste your Web App URL. The client will immediately execute a verification test and handshake.
+---
+
+## Contributing & Security
+
+- **Contributing**: Mentors, coaches, and team builders can read [`CONTRIBUTING.md`](CONTRIBUTING.md) for ID normalization rules, React hook hygiene, and verification commands.
+- **Security**: See [`SECURITY.md`](SECURITY.md) for details on proxy URL allowlisting, admin privilege boundaries, and reporting security issues.
 
 ---
 
-## Security & Best Practices
+## Credits & License
 
-- **Zero-Secret Client**: No private API keys or database passwords are ever exposed in client bundles.
-- **Student Email Privacy**: Email addresses are collected solely for pit equipment accountability and forwarded over HTTPS directly to the club's authorized Sheets endpoint.
-- **Admin Lock Protection**: Critical settings, bulk imports, and sheet re-links require PIN authentication or verified administrator credentials.
-
----
-
-## Contributing
-
-Contributions from VEX Robotics mentors, coaches, and team builders are welcome! Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for details on code style, commit standards, and pull request procedures.
-
----
-
-## License
-
-This project is open source and licensed under the [MIT License](LICENSE).
-Copyright © 2024–2026 VEX Robotics Competition Team 654.
+Built by **Trishanth Yakkala** for **VEX Robotics Competition Club 654**.
+Open source under the [MIT License](LICENSE).

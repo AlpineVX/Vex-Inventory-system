@@ -7,16 +7,16 @@ assignees: ""
 ---
 
 ### Problem Statement
-Is your feature request related to a specific competition pit challenge, tournament inspection rule, or hardware bottleneck?
+Describe the competition pit workflow challenge, tournament inspection requirement, or hardware tracking gap.
 
 ### Proposed Solution
-A clear description of what you want to happen and how it assists club builders or mentors.
+Describe the desired behavior and how it helps club builders, drivers, or mentors.
 
 ### VEX Robotics Rule or Hardware Context
-Mention any applicable VEX Game Manual citations (`<R11>`, `<R12>`, `<R13>`) or part numbers involved.
+Reference any applicable VEX Game Manual rules (`<R11>`, `<R12>`, `<R13>`) or official VEX V5 part numbers involved.
 
 ### Alternative Considerations
-Describe any alternative solutions, workflows, or workarounds you have considered.
+Note any alternative workflows or spreadsheet formulas considered.
 
 ### Additional Context
-Add any other context, mockup screenshots, or spreadsheets.
+Add screenshots, sketches, or sample Google Sheet column structures if helpful.
