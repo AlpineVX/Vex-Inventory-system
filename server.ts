@@ -19,32 +19,77 @@ async function startServer() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // Google Apps Script Proxy GET endpoint (bypasses browser CORS & redirect limits)
-  app.get('/api/sync', async (req: Request, res: Response) => {
-    const rawUrl = req.query.url as string;
-    if (!rawUrl || typeof rawUrl !== 'string') {
-      res.status(400).json({ error: 'Please provide a valid Google Apps Script Web App URL.' });
-      return;
+  const validateGasProxyUrl = (rawUrl: unknown): { url?: string; error?: string } => {
+    if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.trim()) {
+      return { error: 'Please provide a valid Google Apps Script Web App URL.' };
     }
 
-    const url = rawUrl.trim();
+    const trimmed = rawUrl.trim();
 
-    // Check for common URL mistakes
-    if (url.includes('docs.google.com/spreadsheets')) {
-      res.status(400).json({
+    if (trimmed.includes('docs.google.com/spreadsheets')) {
+      return {
         error:
           "You entered the Google Sheet spreadsheet link instead of the Apps Script Web App URL. In your Google Sheet, click Extensions > Apps Script > Deploy > New deployment (or Manage deployments) > Select Web app > set 'Who has access' to 'Anyone' > Copy the URL ending in '/exec'.",
-      });
+      };
+    }
+
+    if (trimmed.endsWith('/edit') || trimmed.includes('/edit?')) {
+      return {
+        error:
+          "You entered the Apps Script Editor URL (/edit). Please click 'Deploy' (top right) > 'Manage deployments' > Copy the Web App URL that ends in '/exec'.",
+      };
+    }
+
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(trimmed);
+    } catch {
+      return { error: 'Invalid Google Apps Script Web App URL format. Please copy the full https:// URL.' };
+    }
+
+    if (parsedUrl.protocol !== 'https:') {
+      return { error: 'Google Apps Script Web App URL must use https://.' };
+    }
+
+    const host = parsedUrl.hostname.toLowerCase();
+    const isBlockedHost =
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      host === '[::1]' ||
+      host.startsWith('10.') ||
+      host.startsWith('192.168.') ||
+      host.startsWith('169.254.') ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+
+    if (isBlockedHost) {
+      return { error: 'Private or local network URLs are not permitted.' };
+    }
+
+    const isAllowedGasHost =
+      host === 'script.google.com' ||
+      host === 'script.googleusercontent.com' ||
+      host.endsWith('.script.google.com') ||
+      host.endsWith('.script.googleusercontent.com');
+
+    if (!isAllowedGasHost) {
+      return {
+        error: 'URL must be a valid Google Apps Script Web App endpoint (script.google.com).',
+      };
+    }
+
+    return { url: parsedUrl.toString() };
+  };
+
+  // Google Apps Script Proxy GET endpoint (bypasses browser CORS & redirect limits)
+  app.get('/api/sync', async (req: Request, res: Response) => {
+    const validated = validateGasProxyUrl(req.query.url);
+    if (validated.error || !validated.url) {
+      res.status(400).json({ error: validated.error || 'Invalid Google Apps Script Web App URL.' });
       return;
     }
 
-    if (url.endsWith('/edit') || url.includes('/edit?')) {
-      res.status(400).json({
-        error:
-          "You entered the Apps Script Editor URL (/edit). Please click 'Deploy' (top right) > 'Manage deployments' > Copy the Web App URL that ends in '/exec'.",
-      });
-      return;
-    }
+    const url = validated.url;
 
     try {
       const controller = new AbortController();
@@ -260,6 +305,12 @@ async function startServer() {
           category = 'Radio';
         }
 
+        const rawDateOut = item.dateOut !== undefined && item.dateOut !== null ? String(item.dateOut).trim() : '';
+        const dateOut = status === 'Checked Out' && rawDateOut ? rawDateOut.split('T')[0] : '';
+        const location = item.location !== undefined && item.location !== null ? String(item.location).trim() : '';
+        const timesNum = Number(item.timesCheckedOut);
+        const timesCheckedOut = Number.isFinite(timesNum) && timesNum >= 0 ? timesNum : 0;
+
         return {
           ...item,
           itemId: rawId,
@@ -268,6 +319,9 @@ async function startServer() {
           notes,
           status,
           currentUser,
+          dateOut,
+          location,
+          timesCheckedOut,
         };
       });
 
@@ -291,38 +345,62 @@ async function startServer() {
 
   // Google Apps Script Proxy POST action endpoint (Check In / Check Out)
   app.post('/api/action', async (req: Request, res: Response) => {
-    const { url, ...payload } = req.body;
-    if (!url || typeof url !== 'string') {
-      res.status(400).json({ error: 'Missing or invalid Google Apps Script Web App URL.' });
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const { url: rawUrl, ...rawPayload } = body;
+    const validated = validateGasProxyUrl(rawUrl);
+    if (validated.error || !validated.url) {
+      res.status(400).json({ error: validated.error || 'Missing or invalid Google Apps Script Web App URL.' });
       return;
     }
 
-    // Sanitize action and identifiers
-    payload.action = payload.action === 'Check In' ? 'Check In' : 'Check Out';
-    payload.itemId = String(payload.itemId || '').trim();
-    payload.team = String(payload.team || payload.currentUser || '').trim();
-    payload.notes = String(payload.notes || '').trim();
-    payload.userEmail = String(payload.userEmail || payload.email || '').trim();
-    payload.category = String(payload.category || payload.sensorType || '').trim();
+    const action = rawPayload.action === 'Check In' ? 'Check In' : 'Check Out';
+    const itemId = String(rawPayload.itemId ?? '').trim();
+    if (!itemId) {
+      res.status(400).json({ error: 'Missing or invalid hardware Item ID.' });
+      return;
+    }
 
-    // Coerce numeric part to integer to satisfy Google Sheets number validations
-    if (payload.number !== undefined && payload.number !== null && payload.number !== '') {
-      const parsedNum = parseInt(String(payload.number), 10);
+    const team = String(rawPayload.team ?? rawPayload.currentUser ?? '').trim();
+    const notes = String(rawPayload.notes ?? '').trim();
+    const userEmail = String(rawPayload.userEmail ?? rawPayload.email ?? '').trim();
+    const category = String(rawPayload.category ?? rawPayload.sensorType ?? '').trim();
+
+    // Coerce numeric part to integer (or empty string if none) to satisfy Google Sheets validations
+    let number: number | '' = '';
+    if (rawPayload.number !== undefined && rawPayload.number !== null && rawPayload.number !== '') {
+      const parsedNum = parseInt(String(rawPayload.number).replace(/\D+/g, ''), 10);
       if (!isNaN(parsedNum)) {
-        payload.number = parsedNum;
-      }
-    } else if (payload.itemId) {
-      const trailingMatch = String(payload.itemId).match(/(\d+)\s*$/) || String(payload.itemId).match(/\d+/);
-      if (trailingMatch) {
-        payload.number = parseInt(trailingMatch[1] || trailingMatch[0], 10);
+        number = parsedNum;
       }
     }
+    if (number === '' && itemId) {
+      const trailingMatch = itemId.match(/(\d+)\s*$/) || itemId.match(/\d+/);
+      if (trailingMatch) {
+        const parsedFromId = parseInt(trailingMatch[1] || trailingMatch[0], 10);
+        if (!isNaN(parsedFromId)) {
+          number = parsedFromId;
+        }
+      }
+    }
+
+    const payload = {
+      action,
+      itemId,
+      team,
+      notes,
+      email: userEmail,
+      userEmail,
+      currentUser: action === 'Check Out' ? team : '',
+      category,
+      sensorType: category,
+      number,
+    };
 
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 20000);
 
-      const response = await fetch(url.trim(), {
+      const response = await fetch(validated.url, {
         method: 'POST',
         headers: {
           'Content-Type': 'text/plain;charset=utf-8',
@@ -347,6 +425,21 @@ async function startServer() {
       }
 
       const text = await response.text();
+      if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+        if (text.includes('Script function not found') || text.includes('Script error')) {
+          res.status(400).json({
+            error:
+              'Google Apps Script execution error: Verify doPost() is defined in your script and deployed as a Web App.',
+          });
+          return;
+        }
+        res.status(400).json({
+          error:
+            "Google Apps Script returned an HTML page instead of JSON. Ensure 'Who has access' is set to 'Anyone' and redeploy.",
+        });
+        return;
+      }
+
       let parsed: any;
       try {
         parsed = JSON.parse(text);
@@ -356,7 +449,7 @@ async function startServer() {
 
       if (parsed && (parsed.status === 'error' || parsed.error)) {
         res.status(422).json({
-          error: parsed.message || parsed.error || 'Google Apps Script reported an error saving action.',
+          error: String(parsed.message || parsed.error || 'Google Apps Script reported an error saving action.'),
           details: parsed,
         });
         return;

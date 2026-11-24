@@ -95,7 +95,9 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
     const start = performance.now();
     try {
       const res = await fetch('/api/health');
-      await res.json();
+      if (!res.ok) throw new Error('Unhealthy');
+      const text = await res.text();
+      JSON.parse(text);
       const elapsed = Math.round(performance.now() - start);
       setLatencyMs(elapsed);
       playSuccess();

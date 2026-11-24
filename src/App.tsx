@@ -98,8 +98,16 @@ export default function App() {
         try {
           const parsed = JSON.parse(saved);
           return {
-            ...parsed,
+            adminEmails:
+              Array.isArray(parsed?.adminEmails) && parsed.adminEmails.length > 0
+                ? parsed.adminEmails.map((em: unknown) => String(em).trim()).filter(Boolean)
+                : [...DEFAULT_ADMIN_EMAILS],
+            adminPin:
+              typeof parsed?.adminPin === 'string' && parsed.adminPin.trim()
+                ? parsed.adminPin
+                : DEFAULT_ADMIN_PIN,
             isUnlocked: false, // Default to locked on startup so regular people can only check out/in
+            kioskOnly: Boolean(parsed?.kioskOnly),
           };
         } catch (e) {
           console.error('Failed to parse admin settings', e);
@@ -766,6 +774,7 @@ export default function App() {
         defaultAction={checkoutDefaultAction}
         presetTeam={checkoutPresetTeam}
         defaultEmail=""
+        isAdmin={adminSettings.isUnlocked}
         onSubmit={handleSubmitAction}
       />
 

@@ -38,11 +38,11 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase().trim();
           const matches =
-            log.itemId.toLowerCase().includes(q) ||
-            (log.itemName && log.itemName.toLowerCase().includes(q)) ||
-            log.team.toLowerCase().includes(q) ||
-            (log.notes && log.notes.toLowerCase().includes(q)) ||
-            (log.userEmail && log.userEmail.toLowerCase().includes(q));
+            String(log.itemId || '').toLowerCase().includes(q) ||
+            String(log.itemName || '').toLowerCase().includes(q) ||
+            String(log.team || '').toLowerCase().includes(q) ||
+            String(log.notes || '').toLowerCase().includes(q) ||
+            String(log.userEmail || '').toLowerCase().includes(q);
           if (!matches) return false;
         }
         return true;

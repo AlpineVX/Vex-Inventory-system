@@ -142,12 +142,12 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
       const q = searchQuery.toLowerCase().trim();
       result = result.filter(
         (i) =>
-          i.itemId.toLowerCase().includes(q) ||
-          i.itemName.toLowerCase().includes(q) ||
-          i.category.toLowerCase().includes(q) ||
-          i.currentUser.toLowerCase().includes(q) ||
-          i.notes.toLowerCase().includes(q) ||
-          (i.location && i.location.toLowerCase().includes(q))
+          String(i.itemId || '').toLowerCase().includes(q) ||
+          String(i.itemName || '').toLowerCase().includes(q) ||
+          String(i.category || '').toLowerCase().includes(q) ||
+          String(i.currentUser || '').toLowerCase().includes(q) ||
+          String(i.notes || '').toLowerCase().includes(q) ||
+          String(i.location || '').toLowerCase().includes(q)
       );
     }
 
@@ -155,15 +155,15 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
     return [...result].sort((a, b) => {
       let cmp = 0;
       if (sortField === 'itemId') {
-        cmp = a.itemId.localeCompare(b.itemId, undefined, { numeric: true, sensitivity: 'base' });
+        cmp = String(a.itemId || '').localeCompare(String(b.itemId || ''), undefined, { numeric: true, sensitivity: 'base' });
       } else if (sortField === 'itemName') {
-        cmp = a.itemName.localeCompare(b.itemName, undefined, { numeric: true, sensitivity: 'base' });
+        cmp = String(a.itemName || '').localeCompare(String(b.itemName || ''), undefined, { numeric: true, sensitivity: 'base' });
       } else if (sortField === 'category') {
-        cmp = a.category.localeCompare(b.category);
+        cmp = String(a.category || '').localeCompare(String(b.category || ''));
       } else if (sortField === 'status') {
-        cmp = a.status.localeCompare(b.status);
+        cmp = String(a.status || '').localeCompare(String(b.status || ''));
       } else if (sortField === 'dateOut') {
-        cmp = (a.dateOut || '').localeCompare(b.dateOut || '');
+        cmp = String(a.dateOut || '').localeCompare(String(b.dateOut || ''));
       }
       return sortAsc ? cmp : -cmp;
     });

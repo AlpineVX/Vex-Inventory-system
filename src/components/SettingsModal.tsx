@@ -84,7 +84,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     e.preventDefault();
     setAdminEmailError(null);
     const clean = newAdminEmail.trim().toLowerCase();
-    if (clean && !adminSettings.adminEmails.some((em) => em.toLowerCase() === clean)) {
+    if (!clean || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+      setAdminEmailError('Please enter a valid email address.');
+      return;
+    }
+    if (!adminSettings.adminEmails.some((em) => em.toLowerCase() === clean)) {
       onUpdateAdminSettings({
         ...adminSettings,
         adminEmails: [...adminSettings.adminEmails, clean],
@@ -186,7 +190,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="p-6 overflow-y-auto flex-1 space-y-5 text-xs font-sans">
           {activeTab === 'url' && (
             <div className="space-y-4">
-              <form onSubmit={handleTestAndSave} className="space-y-4">
+              <form onSubmit={handleTestAndSave} noValidate className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold font-mono text-zinc-200 mb-1.5">
                     GOOGLE APPS SCRIPT WEB APP URL
@@ -325,7 +329,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
                 </div>
 
-                <form onSubmit={handleSavePin} className="flex items-center gap-2 font-mono">
+                <form onSubmit={handleSavePin} noValidate className="flex items-center gap-2 font-mono">
                   <input
                     type="text"
                     value={newPin}
@@ -349,7 +353,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span className="text-zinc-400 font-mono text-[11px]">{adminSettings.adminEmails.length} coaches/leads</span>
                 </div>
 
-                <form onSubmit={handleAddAdminEmail} className="flex items-center gap-2 font-mono">
+                <form onSubmit={handleAddAdminEmail} noValidate className="flex items-center gap-2 font-mono">
                   <input
                     type="email"
                     value={newAdminEmail}

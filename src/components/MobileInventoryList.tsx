@@ -79,12 +79,12 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
       const q = searchQuery.toLowerCase().trim();
       result = result.filter(
         (i) =>
-          i.itemId.toLowerCase().includes(q) ||
-          i.itemName.toLowerCase().includes(q) ||
-          i.category.toLowerCase().includes(q) ||
-          (i.currentUser && i.currentUser.toLowerCase().includes(q)) ||
-          (i.location && i.location.toLowerCase().includes(q)) ||
-          (i.notes && i.notes.toLowerCase().includes(q))
+          String(i.itemId || '').toLowerCase().includes(q) ||
+          String(i.itemName || '').toLowerCase().includes(q) ||
+          String(i.category || '').toLowerCase().includes(q) ||
+          String(i.currentUser || '').toLowerCase().includes(q) ||
+          String(i.location || '').toLowerCase().includes(q) ||
+          String(i.notes || '').toLowerCase().includes(q)
       );
     }
 
@@ -202,9 +202,11 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
             let isOverdue = false;
             let daysOut = 0;
             if (!isAvailable && item.dateOut) {
-              const diffMs = now - new Date(item.dateOut).getTime();
-              daysOut = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-              isOverdue = daysOut >= 100;
+              const parsedMs = new Date(item.dateOut).getTime();
+              if (!isNaN(parsedMs)) {
+                daysOut = Math.max(0, Math.floor((now - parsedMs) / (1000 * 60 * 60 * 24)));
+                isOverdue = daysOut >= 100;
+              }
             }
 
             return (

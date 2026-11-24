@@ -70,7 +70,17 @@ export function getCachedInventory(): InventoryItem[] | null {
       localStorage.removeItem(STORAGE_KEY_INVENTORY);
       return null;
     }
-    return parsed;
+    return parsed.map((item: any) => ({
+      itemId: String(item.itemId ?? '').trim(),
+      itemName: String(item.itemName ?? '').trim(),
+      category: classifyVexCategory(item.category, item.itemName, item.itemId),
+      status: item.status === 'Checked Out' ? 'Checked Out' : 'Available',
+      currentUser: String(item.currentUser ?? '').trim(),
+      dateOut: String(item.dateOut ?? '').trim(),
+      notes: String(item.notes ?? '').trim(),
+      timesCheckedOut: Number.isFinite(Number(item.timesCheckedOut)) ? Number(item.timesCheckedOut) : 0,
+      location: item.location ? String(item.location).trim() : getCategoryDefaultLocation(String(item.category ?? '')),
+    }));
   } catch {
     localStorage.removeItem(STORAGE_KEY_INVENTORY);
     return null;
@@ -87,13 +97,37 @@ export function saveCachedInventory(items: InventoryItem[]): void {
   }
 }
 
+function safeIsoTimestamp(val: unknown): string {
+  if (val === null || val === undefined || val === '') return new Date().toISOString();
+  const d = new Date(val as string | number);
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+
 export function getCachedLogs(): AuditLog[] | null {
   if (typeof window === 'undefined') return null;
   const raw = localStorage.getItem(STORAGE_KEY_LOGS);
   if (!raw) return null;
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      localStorage.removeItem(STORAGE_KEY_LOGS);
+      return null;
+    }
+    return parsed
+      .filter((l: any) => l && typeof l === 'object' && l.itemId)
+      .map((l: any, idx: number) => ({
+        id: String(l.id || `cached-log-${idx}`),
+        timestamp: safeIsoTimestamp(l.timestamp),
+        itemId: String(l.itemId ?? '').trim(),
+        itemName: l.itemName ? String(l.itemName).trim() : undefined,
+        action: l.action === 'Check Out' ? 'Check Out' : 'Check In',
+        team: String(l.team ?? '').trim(),
+        notes: String(l.notes ?? '').trim(),
+        userEmail: String(l.userEmail ?? '').trim(),
+        category: l.category ? String(l.category).trim() : undefined,
+      }));
   } catch {
+    localStorage.removeItem(STORAGE_KEY_LOGS);
     return null;
   }
 }
@@ -142,14 +176,14 @@ export async function fetchLiveInventory(apiUrl: string): Promise<{
   inventory: InventoryItem[];
   logs: AuditLog[];
 }> {
-  validateAppScriptUrl(apiUrl);
+  const cleanUrl = String(apiUrl || '').trim();
+  validateAppScriptUrl(cleanUrl);
 
   let rawData: SheetApiResponse | null = null;
-  let lastError = '';
 
   // 1. Try server-side proxy first (bypasses CORS & handles redirects cleanly)
   try {
-    const proxyUrl = `/api/sync?url=${encodeURIComponent(apiUrl)}`;
+    const proxyUrl = `/api/sync?url=${encodeURIComponent(cleanUrl)}`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 18000);
 
@@ -159,18 +193,32 @@ export async function fetchLiveInventory(apiUrl: string): Promise<{
     });
     clearTimeout(timeoutId);
 
-    const proxyJson = await proxyRes.json();
-    if (!proxyRes.ok) {
-      throw new Error(proxyJson.error || `Server proxy error (HTTP ${proxyRes.status})`);
+    const proxyText = await proxyRes.text();
+    let proxyJson: any = null;
+    try {
+      proxyJson = JSON.parse(proxyText);
+    } catch {
+      proxyJson = null;
     }
 
-    rawData = proxyJson as SheetApiResponse;
+    if (!proxyRes.ok) {
+      throw new Error(proxyJson?.error || `Server proxy error (HTTP ${proxyRes.status})`);
+    }
+
+    if (proxyJson) {
+      rawData = proxyJson as SheetApiResponse;
+    }
   } catch (proxyErr: any) {
-    // If the proxy gave a specific actionable error message from Google Apps Script, rethrow it
-    if (proxyErr.message && !proxyErr.message.includes('Failed to fetch') && !proxyErr.message.includes('Unexpected token')) {
+    // Only fall back to direct fetch on network/parse failures; surface actionable Apps Script/validation errors
+    const msg = String(proxyErr?.message || '');
+    const isNetworkOrParseError =
+      proxyErr?.name === 'AbortError' ||
+      msg.includes('Failed to fetch') ||
+      msg.includes('NetworkError') ||
+      msg.includes('Load failed');
+    if (msg && !isNetworkOrParseError) {
       throw proxyErr;
     }
-    lastError = proxyErr.message;
   }
 
   // 2. Direct fallback (if proxy is unavailable)
@@ -180,7 +228,7 @@ export async function fetchLiveInventory(apiUrl: string): Promise<{
 
     try {
       // NOTE: Do NOT send custom headers like Accept: application/json here to prevent CORS preflight
-      const res = await fetch(apiUrl, {
+      const res = await fetch(cleanUrl, {
         method: 'GET',
         redirect: 'follow',
         signal: controller.signal,
@@ -192,13 +240,24 @@ export async function fetchLiveInventory(apiUrl: string): Promise<{
         throw new Error(`Google Apps Script responded with HTTP ${res.status}: ${res.statusText}`);
       }
 
-      rawData = await res.json();
+      const text = await res.text();
+      if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+        throw new Error(
+          "Google Apps Script returned an HTML page instead of JSON. Ensure 'Who has access' is set to 'Anyone' and redeploy."
+        );
+      }
+
+      try {
+        rawData = JSON.parse(text);
+      } catch {
+        throw new Error('Google Apps Script returned an invalid JSON response. Please verify your Code.gs doGet() output.');
+      }
     } catch (directErr: any) {
       clearTimeout(timeoutId);
       if (directErr.name === 'AbortError') {
         throw new Error('Sync timed out. Verify your Google Apps Script is published and accessible.');
       }
-      if (directErr.message?.includes('Failed to fetch')) {
+      if (directErr.message?.includes('Failed to fetch') || directErr.message?.includes('Load failed')) {
         throw new Error(
           "Sync failed ('Failed to fetch'). This occurs when Google Apps Script is not set to 'Who has access: Anyone' (causing an unauthorized redirect), or the Web App URL is invalid. In Google Apps Script, click Deploy > Manage deployments > Edit > set 'Who has access' to 'Anyone' > Deploy."
         );
@@ -223,31 +282,31 @@ export async function fetchLiveInventory(apiUrl: string): Promise<{
         .filter((row) => row && (Array.isArray(row) ? row.length >= 2 : row.itemId))
         .map((row, index) => {
           if (Array.isArray(row)) {
-            const rawId = String(row[1] || '').trim();
+            const rawId = String(row[1] ?? '').trim();
             const normId = normalizeItemId(rawId);
             return {
               id: `sheet-log-${index}-${Date.now()}`,
-              timestamp: row[0] ? new Date(row[0]).toISOString() : new Date().toISOString(),
+              timestamp: safeIsoTimestamp(row[0]),
               itemId: normId || rawId,
-              action: (String(row[2]).trim() === 'Check Out' ? 'Check Out' : 'Check In') as 'Check Out' | 'Check In',
-              team: String(row[3] || '').trim(),
-              notes: String(row[4] || '').trim(),
-              userEmail: String(row[5] || '').trim(),
-              category: String(row[6] || '').trim(),
+              action: (String(row[2] ?? '').trim() === 'Check Out' ? 'Check Out' : 'Check In') as 'Check Out' | 'Check In',
+              team: String(row[3] ?? '').trim(),
+              notes: String(row[4] ?? '').trim(),
+              userEmail: String(row[5] ?? '').trim(),
+              category: String(row[6] ?? '').trim(),
             };
           }
-          const rawId = String(row.itemId || '').trim();
+          const rawId = String(row.itemId ?? '').trim();
           const normId = normalizeItemId(rawId);
           return {
-            id: row.id || `sheet-log-${index}-${Date.now()}`,
-            timestamp: row.timestamp || new Date().toISOString(),
+            id: String(row.id || `sheet-log-${index}-${Date.now()}`),
+            timestamp: safeIsoTimestamp(row.timestamp),
             itemId: normId || rawId,
-            itemName: row.itemName,
+            itemName: row.itemName ? String(row.itemName).trim() : undefined,
             action: (row.action === 'Check Out' ? 'Check Out' : 'Check In') as 'Check Out' | 'Check In',
-            team: String(row.team || '').trim(),
-            notes: String(row.notes || '').trim(),
-            userEmail: String(row.userEmail || row.email || '').trim(),
-            category: row.category,
+            team: String(row.team ?? '').trim(),
+            notes: String(row.notes ?? '').trim(),
+            userEmail: String(row.userEmail ?? row.email ?? '').trim(),
+            category: row.category ? String(row.category).trim() : undefined,
           };
         })
     : [];
@@ -432,31 +491,34 @@ export async function postInventoryAction(
   apiUrl: string,
   payload: PostActionPayload
 ): Promise<{ status: string; message: string }> {
-  validateAppScriptUrl(apiUrl);
+  const cleanUrl = String(apiUrl || '').trim();
+  validateAppScriptUrl(cleanUrl);
+
+  const normalizedId = normalizeItemId(payload.itemId, payload.category);
+  const trailingMatch = normalizedId.match(/(\d+)\s*$/) || normalizedId.match(/\d+/);
+  const numDigits = trailingMatch ? (trailingMatch[1] || trailingMatch[0]) : '';
+  const numericNumber: number | '' = numDigits ? parseInt(numDigits, 10) : '';
+  const determinedCategory = String(
+    payload.category || classifyVexCategory(undefined, undefined, normalizedId)
+  ).trim();
+
+  const enhancedPayload = {
+    action: payload.action === 'Check In' ? 'Check In' : 'Check Out',
+    itemId: normalizedId,
+    team: String(payload.team ?? '').trim(),
+    notes: String(payload.notes ?? '').trim(),
+    email: String(payload.email ?? '').trim(),
+    userEmail: String(payload.email ?? '').trim(),
+    currentUser: payload.action === 'Check Out' ? String(payload.team ?? '').trim() : '',
+    category: determinedCategory,
+    sensorType: determinedCategory,
+    number: Number.isFinite(numericNumber) ? numericNumber : '',
+  };
 
   // 1. Try server proxy first
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 18000);
-
-    const normalizedId = normalizeItemId(payload.itemId, payload.category);
-    const trailingMatch = normalizedId.match(/(\d+)\s*$/) || normalizedId.match(/\d+/);
-    const numDigits = trailingMatch ? (trailingMatch[1] || trailingMatch[0]) : '';
-    const numericNumber = numDigits ? parseInt(numDigits, 10) : '';
-    const determinedCategory = payload.category || classifyVexCategory(undefined, undefined, normalizedId);
-
-    const enhancedPayload = {
-      ...payload,
-      action: payload.action === 'Check In' ? 'Check In' : 'Check Out',
-      itemId: normalizedId,
-      team: payload.team || '',
-      notes: payload.notes || '',
-      userEmail: payload.email || '',
-      currentUser: payload.action === 'Check Out' ? (payload.team || '') : '',
-      category: determinedCategory,
-      sensorType: determinedCategory,
-      number: numericNumber,
-    };
 
     const proxyRes = await fetch('/api/action', {
       method: 'POST',
@@ -464,26 +526,39 @@ export async function postInventoryAction(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        url: apiUrl,
+        url: cleanUrl,
         ...enhancedPayload,
       }),
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
-    const json = await proxyRes.json();
+    const proxyText = await proxyRes.text();
+    let json: any = null;
+    try {
+      json = JSON.parse(proxyText);
+    } catch {
+      json = null;
+    }
 
     if (!proxyRes.ok) {
-      throw new Error(json.error || `Proxy error (HTTP ${proxyRes.status})`);
+      throw new Error(json?.error || `Proxy error (HTTP ${proxyRes.status})`);
     }
 
     if (json && (json.status === 'error' || json.error)) {
       throw new Error(json.message || json.error || 'Google Apps Script reported an error');
     }
 
-    return json;
+    if (json) {
+      return json;
+    }
   } catch (proxyErr: any) {
-    if (proxyErr.message && !proxyErr.message.includes('Failed to fetch')) {
+    const msg = String(proxyErr?.message || '');
+    const isNetworkFailure =
+      msg.includes('Failed to fetch') ||
+      msg.includes('NetworkError') ||
+      msg.includes('Load failed');
+    if (msg && !isNetworkFailure) {
       throw proxyErr;
     }
   }
@@ -493,26 +568,7 @@ export async function postInventoryAction(
   const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const normalizedId = normalizeItemId(payload.itemId, payload.category);
-    const trailingMatch = normalizedId.match(/(\d+)\s*$/) || normalizedId.match(/\d+/);
-    const numDigits = trailingMatch ? (trailingMatch[1] || trailingMatch[0]) : '';
-    const numericNumber = numDigits ? parseInt(numDigits, 10) : '';
-    const determinedCategory = payload.category || classifyVexCategory(undefined, undefined, normalizedId);
-
-    const enhancedPayload = {
-      ...payload,
-      action: payload.action === 'Check In' ? 'Check In' : 'Check Out',
-      itemId: normalizedId,
-      team: payload.team || '',
-      notes: payload.notes || '',
-      userEmail: payload.email || '',
-      currentUser: payload.action === 'Check Out' ? (payload.team || '') : '',
-      category: determinedCategory,
-      sensorType: determinedCategory,
-      number: numericNumber,
-    };
-
-    const res = await fetch(apiUrl, {
+    const res = await fetch(cleanUrl, {
       method: 'POST',
       body: JSON.stringify(enhancedPayload),
       headers: {
@@ -529,24 +585,31 @@ export async function postInventoryAction(
     }
 
     const text = await res.text();
+    if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+      throw new Error(
+        "Google Apps Script returned an HTML page instead of JSON. Ensure 'Who has access' is set to 'Anyone' and redeploy."
+      );
+    }
+
+    let parsed: any = null;
     try {
-      const parsed = JSON.parse(text);
-      if (parsed && (parsed.status === 'error' || parsed.error)) {
-        throw new Error(parsed.message || parsed.error || 'Google Apps Script returned an error');
-      }
-      return parsed;
-    } catch (parseErr: any) {
-      if (parseErr.message && !parseErr.message.includes('JSON')) {
-        throw parseErr;
-      }
+      parsed = JSON.parse(text);
+    } catch {
+      // Apps Script occasionally returns plain text confirmations; treat non-HTML non-JSON as saved
       return { status: 'success', message: 'Action saved' };
     }
+
+    if (parsed && (parsed.status === 'error' || parsed.error)) {
+      throw new Error(parsed.message || parsed.error || 'Google Apps Script returned an error');
+    }
+
+    return parsed || { status: 'success', message: 'Action saved' };
   } catch (err: any) {
     clearTimeout(timeoutId);
     if (err.name === 'AbortError') {
       throw new Error('Network timeout contacting Google Apps Script.');
     }
-    if (err.message?.includes('Failed to fetch')) {
+    if (err.message?.includes('Failed to fetch') || err.message?.includes('Load failed')) {
       throw new Error(
         "Action POST failed ('Failed to fetch'). In Google Apps Script, click Deploy > Manage deployments > Edit > set 'Who has access' to 'Anyone' > Deploy."
       );

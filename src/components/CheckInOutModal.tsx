@@ -30,6 +30,7 @@ interface CheckInOutModalProps {
   defaultAction?: 'Check Out' | 'Check In';
   presetTeam?: string;
   defaultEmail?: string;
+  isAdmin?: boolean;
   onSubmit: (data: {
     action: 'Check Out' | 'Check In';
     itemId: string;
@@ -68,6 +69,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
   defaultAction = 'Check Out',
   presetTeam = '654V',
   defaultEmail = '',
+  isAdmin = false,
   onSubmit,
 }) => {
   const [action, setAction] = useState<'Check Out' | 'Check In'>(defaultAction);
@@ -185,8 +187,10 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
 
       if (preselectedItem) {
         setSelectedItemId(preselectedItem.itemId);
-        setAssembledType(preselectedItem.category);
-        const prefix = CATEGORY_PREFIX_MAP[preselectedItem.category] || 'VEX';
+        const safeCat = classifyVexCategory(preselectedItem.category, preselectedItem.itemName, preselectedItem.itemId);
+        const resolvedCat: VexCategory = safeCat === 'Sensors' ? 'Distance' : safeCat;
+        setAssembledType(resolvedCat);
+        const prefix = CATEGORY_PREFIX_MAP[resolvedCat] || 'VEX';
         let numPart = preselectedItem.itemId;
         if (numPart.toUpperCase().startsWith(`${prefix.toUpperCase()}-`)) {
           numPart = numPart.slice(prefix.length + 1);
@@ -224,8 +228,13 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
   // Auto-sync team if checking in an item that has an assigned team
   useEffect(() => {
     if (action === 'Check In' && currentMatchedItem?.currentUser) {
-      setTeam(currentMatchedItem.currentUser);
-      setIsCustomTeam(!CLUB_TEAMS.includes(currentMatchedItem.currentUser as any));
+      const holder = currentMatchedItem.currentUser;
+      setTeam(holder);
+      const isClub = CLUB_TEAMS.includes(holder as any);
+      setIsCustomTeam(!isClub);
+      if (!isClub) {
+        setCustomTeam(holder);
+      }
     }
   }, [action, currentMatchedItem]);
 
@@ -242,10 +251,10 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
       const q = itemSearch.toLowerCase();
       pool = pool.filter(
         (i) =>
-          i.itemId.toLowerCase().includes(q) ||
-          i.itemName.toLowerCase().includes(q) ||
-          i.category.toLowerCase().includes(q) ||
-          i.currentUser.toLowerCase().includes(q)
+          String(i.itemId || '').toLowerCase().includes(q) ||
+          String(i.itemName || '').toLowerCase().includes(q) ||
+          String(i.category || '').toLowerCase().includes(q) ||
+          String(i.currentUser || '').toLowerCase().includes(q)
       );
     }
     return pool.slice(0, 24);
@@ -275,13 +284,13 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
     }
 
     const cleanEmail = email.trim();
-    if (!cleanEmail) {
+    if (!isAdmin && !cleanEmail) {
       setErrorMessage('Borrower email address is required.');
       return;
     }
 
-    // Basic email format validation
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    // Basic email format validation when an email is provided
+    if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       setErrorMessage('Please enter a valid email address (e.g. s123456@ltisdschools.net or student@school.org).');
       return;
     }
@@ -369,7 +378,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
         </div>
 
         {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} noValidate className="p-5 space-y-4 overflow-y-auto flex-1">
           {/* Item Selection Section: Assemble (Type + Part #) vs Search */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
@@ -639,7 +648,10 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                   <input
                     type="text"
                     value={itemSearch}
-                    onChange={(e) => setItemSearch(e.target.value)}
+                    onChange={(e) => {
+                      setItemSearch(e.target.value);
+                      if (selectedItemId) setSelectedItemId('');
+                    }}
                     placeholder="Search by ID (e.g. SOL-001) or component name..."
                     className="w-full pl-8 pr-3 py-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400"
                   />
@@ -786,21 +798,31 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
             </div>
           </div>
 
-          {/* 4. Responsible Person Email (Required) */}
+          {/* 4. Responsible Person Email (Required for regular members, optional for admins) */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-semibold text-zinc-200 flex items-center gap-1">
                 <span>4. Borrower / Student Email Address</span>
-                <span className="text-rose-400">*</span>
+                {!isAdmin && <span className="text-rose-400">*</span>}
               </label>
-              <span className="text-[11px] text-rose-400/90 font-medium">Required</span>
+              {isAdmin ? (
+                <span className="text-[11px] text-amber-400 font-medium font-mono">
+                  Optional (Admin)
+                </span>
+              ) : (
+                <span className="text-[11px] text-rose-400/90 font-medium">Required</span>
+              )}
             </div>
             <input
               type="email"
-              required
+              required={!isAdmin}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. s123456@ltisdschools.net or student@school.org"
+              placeholder={
+                isAdmin
+                  ? 'Optional in Admin mode — or enter borrower email'
+                  : 'e.g. s123456@ltisdschools.net or student@school.org'
+              }
               className="w-full px-3 py-1.5 text-xs bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400 font-mono"
             />
           </div>

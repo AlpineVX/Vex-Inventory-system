@@ -37,6 +37,10 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({
       }
     } else {
       const cleanEmail = emailInput.trim().toLowerCase();
+      if (!cleanEmail) {
+        setError('Please enter an admin email address.');
+        return;
+      }
       const match = adminSettings.adminEmails.some(
         (adminEmail) => adminEmail.toLowerCase() === cleanEmail
       );
@@ -110,7 +114,7 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleUnlock} className="p-5 space-y-4">
+        <form onSubmit={handleUnlock} noValidate className="p-5 space-y-4">
           {method === 'pin' ? (
             <div>
               <label className="block text-xs font-bold font-mono text-zinc-300 mb-1.5">

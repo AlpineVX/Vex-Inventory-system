@@ -218,20 +218,26 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         if (!q) return true;
 
         return (
-          item.itemId.toLowerCase().includes(q) ||
-          item.itemName.toLowerCase().includes(q) ||
-          item.category.toLowerCase().includes(q) ||
-          (item.currentUser && item.currentUser.toLowerCase().includes(q)) ||
-          loc.toLowerCase().includes(q) ||
-          (item.notes && item.notes.toLowerCase().includes(q))
+          String(item.itemId || '').toLowerCase().includes(q) ||
+          String(item.itemName || '').toLowerCase().includes(q) ||
+          String(item.category || '').toLowerCase().includes(q) ||
+          String(item.currentUser || '').toLowerCase().includes(q) ||
+          String(loc || '').toLowerCase().includes(q) ||
+          String(item.notes || '').toLowerCase().includes(q)
         );
       })
       .slice(0, 8);
   }, [items, searchQuery, categoryFilter, activeCabinetFilter]);
 
-  // Recent 4 log entries for live lab activity
+  // Recent 4 log entries for live lab activity (newest first)
   const recentLogs = useMemo(() => {
-    return [...logs].slice(-4).reverse();
+    return [...logs]
+      .sort((a, b) => {
+        const timeA = new Date(a.timestamp).getTime() || 0;
+        const timeB = new Date(b.timestamp).getTime() || 0;
+        return timeB - timeA;
+      })
+      .slice(0, 4);
   }, [logs]);
 
   // Time formatter
@@ -350,8 +356,10 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
             Checking Out or Returning Hardware?
           </h2>
           <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-            Click component type (e.g. Solenoid, Brain, Radio, Optical) &amp; enter part number. Borrower email
-            address is strictly required for accountability.
+            Click component type (e.g. Solenoid, Brain, Radio, Optical) &amp; enter part number.{' '}
+            {isAdmin
+              ? 'Admin mode active — email is optional for checkouts and check-ins.'
+              : 'Borrower email address is strictly required for accountability.'}
           </p>
         </div>
 
@@ -957,7 +965,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                       </div>
 
                       <div className="flex items-center gap-3 text-zinc-500 text-[11px] font-mono shrink-0 sm:text-right">
-                        <span>{log.userEmail}</span>
+                        {log.userEmail && <span>{log.userEmail}</span>}
                         <span className="text-zinc-400 font-medium">{formatTimeAgo(log.timestamp)}</span>
                       </div>
                     </div>
@@ -1202,7 +1210,9 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                     <div className="text-xs text-zinc-200 bg-[#161a22] p-2 rounded border border-zinc-800">
                       &ldquo;{log.notes}&rdquo;
                     </div>
-                    <div className="text-[10px] text-zinc-500">Reported by {log.userEmail}</div>
+                    <div className="text-[10px] text-zinc-500">
+                      Reported by {log.userEmail || 'Admin'}
+                    </div>
                   </div>
                 ))
               )}
