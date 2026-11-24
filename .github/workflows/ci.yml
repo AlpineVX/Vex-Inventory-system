@@ -42,4 +42,4 @@ jobs:
         run: bun run build
 
       - name: Verify Server Bundle Syntax
-        run: bun build server.ts --target=node --outfile=/tmp/server-check.mjs
+        run: bun build server.ts --target=node --packages=external --outfile=/tmp/server-check.mjs && node --check /tmp/server-check.mjs
