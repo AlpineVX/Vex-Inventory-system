@@ -1,18 +1,17 @@
-## Pull Request Overview
+## Summary
 
-### Summary of Changes
-Provide a concise summary of the changes made and the problem solved.
+Briefly describe what changed and why.
 
 ### Related Issue
 Closes #(issue number)
 
 ---
 
-## Pre-Merge Quality Checklist
+## Checklist
 
-- [ ] **TypeScript Linting**: Passed `bun run lint` (or `npm run lint`) with zero errors.
-- [ ] **Production Build**: Passed `bun run build` cleanly.
-- [ ] **Rules of Hooks**: All React hooks execute unconditionally before any early returns.
-- [ ] **ID Normalization & Data Hygiene**: Verified shorthand and canonical IDs (`VEXSOL-1`, `sol 1`, `VEXS-DIST-4`, `4`) and safe string/date handling.
-- [ ] **Admin & Member Accountability**: Verified regular members still require a valid email while unlocked admins can check out and check in cleanly.
-- [ ] **Visual & Print Integrity**: Obsidian/zinc dark theme with amber/emerald accents and `@media print` custody sheet remain intact.
+- [ ] **TypeScript Check**: Ran `bun run lint` (`tsc --noEmit`) with zero errors.
+- [ ] **Production Build**: Ran `bun run build` cleanly.
+- [ ] **React Hooks**: All hooks are called unconditionally before any early returns.
+- [ ] **Part ID Matching**: Checked shorthand and full IDs (`VEXSOL-1`, `sol 1`, `VEXS-DIST-4`, `4`).
+- [ ] **Student & Admin Rules**: Verified students still enter an email on check out/in while signed-in admins work smoothly.
+- [ ] **Red, Black & White Theme + Mobile**: Preserved the red/black/white palette (no green), tested Phone View & Desktop View, and kept print sheets readable.

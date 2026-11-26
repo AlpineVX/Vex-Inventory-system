@@ -1,0 +1,33 @@
+name: Feature Request
+description: Suggest an improvement for part tracking, mobile layout, pack lists, or Google Sheets sync
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Explain what is slow or frustrating during shop work or tournaments.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Suggested Improvement
+      description: Describe how you want it to work for students, drivers, or coaches.
+    validations:
+      required: true
+
+  - type: input
+    id: vex-context
+    attributes:
+      label: VEX Rule or Part Category (Optional)
+      description: Example: V5 Brains, Solenoids, or Game Manual rule <R11> / <R12> / <R13>
+      placeholder: VEXS-DIST / <R13>
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra Notes or Mockups (Optional)
+      description: Add screenshots, rough sketches, or Google Sheet column examples if helpful.

@@ -1,0 +1,90 @@
+name: Bug Report
+description: Report a checkout bug, part ID issue, mobile layout problem, or Google Sheets sync error
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Tell us clearly what went wrong.
+      placeholder: When I tried to check out VEXSOL-1 on my phone...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area of the App
+      options:
+        - Overview Dashboard
+        - Check Out / Check In Modal
+        - Full Parts Inventory
+        - Team Parts
+        - Competition Pack List
+        - Activity Log
+        - Phone View / Mobile Layout
+        - Google Sheets Sync (/api/sync or /api/action)
+        - Admin Sign In / Settings
+        - Sound Effects or Print Sheet
+    validations:
+      required: true
+
+  - type: dropdown
+    id: team
+    attributes:
+      label: Team Involved (Optional)
+      options:
+        - N/A
+        - 654K
+        - 654J
+        - 654A
+        - 654B
+        - 654G
+        - 654T
+        - 654V
+        - 654Y
+        - 654X
+        - 654Z
+        - 654W
+        - RECF
+
+  - type: input
+    id: part-id
+    attributes:
+      label: Part ID or Search Text (Optional)
+      description: Example: VEXSOL-1, sol 1, VEXS-DIST-4, or 4
+      placeholder: VEXSOL-1
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can someone else trigger the issue?
+      value: |
+        1. Open '...'
+        2. Click '...'
+        3. Enter '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device & Browser
+      options:
+        - Desktop - Chrome
+        - Desktop - Safari
+        - Desktop - Firefox / Edge
+        - Phone - iOS Safari
+        - Phone - Android Chrome
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Screenshots or Status Details (Optional)
+      description: Press D in the app to open App Status & Cache if sync info helps.

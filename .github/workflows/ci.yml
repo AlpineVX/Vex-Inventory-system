@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI
 
 on:
   push:
@@ -6,13 +6,16 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   verify:
-    name: Type-Check, Server Check & Build
+    name: Type-Check, Build & Server Check
     runs-on: ubuntu-latest
 
     steps:
@@ -35,11 +38,17 @@ jobs:
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
-      - name: TypeScript Verification
+      - name: Check TypeScript
         run: bun run lint
 
-      - name: Production Vite Build
+      - name: Build Production Bundle
         run: bun run build
 
-      - name: Verify Server Bundle Syntax
+      - name: Check Express Server Bundle
         run: bun build server.ts --target=node --packages=external --outfile=/tmp/server-check.mjs && node --check /tmp/server-check.mjs
+
+      - name: Check Required Public Assets
+        run: |
+          test -f public/lake_travis_logo_transparent.png
+          test -f public/favicon.ico
+          test -f .env.example
