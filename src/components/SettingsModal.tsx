@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Link,
@@ -6,16 +6,11 @@ import {
   Check,
   CheckCircle2,
   AlertCircle,
-  ExternalLink,
   Loader2,
-  RefreshCw,
-  FileCode,
   RotateCcw,
-  ShieldCheck,
   KeyRound,
   UserPlus,
   Trash2,
-  Lock,
 } from 'lucide-react';
 import { SyncStatus, AdminSettings } from '../types';
 import { APPS_SCRIPT_SOURCE } from '../services/sheetApi';
@@ -52,9 +47,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [adminEmailError, setAdminEmailError] = useState<string | null>(null);
   const [newPin, setNewPin] = useState(adminSettings.adminPin);
   const [pinSavedNotice, setPinSavedNotice] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   const { containerRef: tabBarRef, setItemRef: setTabRef, indicator: tabIndicator } =
     useSlidingIndicator<'url' | 'instructions' | 'code' | 'security'>(activeTab, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setUrlInput(syncStatus.url);
+      setNewPin(adminSettings.adminPin);
+      setTestResult(null);
+      setAdminEmailError(null);
+      setConfirmReset(false);
+    }
+  }, [isOpen, syncStatus.url, adminSettings.adminPin]);
 
   if (!isOpen) return null;
 
@@ -80,7 +86,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(APPS_SCRIPT_SOURCE);
+    navigator.clipboard?.writeText(APPS_SCRIPT_SOURCE).catch(() => {});
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2500);
   };
@@ -129,7 +135,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter font-sans">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isTesting) {
+          playClick();
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter font-sans"
+    >
       <div className="bg-[#111114] border-t sm:border border-[#27272d] rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[92vh] pb-[env(safe-area-inset-bottom,0px)] animate-modal-enter">
         {/* Mobile grab handle */}
         <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
@@ -250,13 +264,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="flex items-center gap-2 font-mono">
                     <span
                       className={`w-2 h-2 rounded-full ${
-                        syncStatus.url ? 'bg-red-500 radar-dot' : 'bg-amber-500'
+                        syncStatus.url ? 'bg-red-500' : 'bg-amber-500'
                       }`}
                     />
                     <span className="text-zinc-400 text-xs">
                       STATUS:{' '}
                       <strong className="text-zinc-100">
-                        {syncStatus.url ? 'Connected to Google Sheet' : 'Local Mode (279 Parts)'}
+                        {syncStatus.url ? 'Connected to Google Sheet' : 'Local Browser Cache'}
                       </strong>
                     </span>
                   </div>
@@ -321,22 +335,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div>
                   <div className="font-bold text-zinc-100 font-mono">RESET DEFAULT PARTS LIST</div>
                   <p className="text-zinc-400 text-[11px] mt-0.5">
-                    Restore the starting 279-part club list (238 Available, 41 Checked Out matching the sheet).
+                    Restore the starting club inventory list (Brains, Radios, Sensors, and Solenoids).
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (confirm('Are you sure you want to reset all parts back to the starting club list?')) {
-                      onResetFactoryData();
-                      onClose();
-                    }
-                  }}
-                  className="flex items-center justify-center gap-1.5 min-h-[38px] sm:min-h-0 px-3 py-1.5 text-xs font-mono font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-lg transition-colors shrink-0"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Reset Inventory</span>
-                </button>
+                {confirmReset ? (
+                  <div className="flex items-center gap-2 shrink-0 animate-pop">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClick();
+                        setConfirmReset(false);
+                      }}
+                      className="min-h-[38px] sm:min-h-0 px-3 py-1.5 text-xs font-mono font-bold text-zinc-300 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClick();
+                        onResetFactoryData();
+                        setConfirmReset(false);
+                        onClose();
+                      }}
+                      className="min-h-[38px] sm:min-h-0 px-3 py-1.5 text-xs font-mono font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors btn-crimson-glow"
+                    >
+                      Confirm Reset
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick();
+                      setConfirmReset(true);
+                    }}
+                    className="flex items-center justify-center gap-1.5 min-h-[38px] sm:min-h-0 px-3 py-1.5 text-xs font-mono font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 rounded-lg transition-colors shrink-0 btn-tactile"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset Inventory</span>
+                  </button>
+                )}
               </div>
             </div>
           )}

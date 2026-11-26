@@ -18,6 +18,8 @@ import {
   History,
   Cpu,
   ShieldAlert,
+  Wrench,
+  QrCode,
 } from 'lucide-react';
 import {
   InventoryItem,
@@ -40,6 +42,8 @@ interface InventoryBrowserProps {
   onSelectCategory: (cat: VexCategory | 'All') => void;
   onOpenCheckout: (item: InventoryItem, defaultAction?: 'Check Out' | 'Check In') => void;
   onBatchAction?: (items: InventoryItem[], action: 'Check Out' | 'Check In') => void;
+  onToggleCondition?: (item: InventoryItem) => void;
+  onOpenLabelPrinter?: () => void;
   isAdmin?: boolean;
   onOpenAdminUnlock?: () => void;
   isMobileMode?: boolean;
@@ -64,12 +68,14 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
   onSelectCategory,
   onOpenCheckout,
   onBatchAction,
+  onToggleCondition,
+  onOpenLabelPrinter,
   isAdmin = false,
   onOpenAdminUnlock,
   isMobileMode = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Available' | 'Checked Out'>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Available' | 'Checked Out' | 'Needs Repair'>('All');
   const [teamFilter, setTeamFilter] = useState<string>('All');
   const [sortField, setSortField] = useState<'itemId' | 'itemName' | 'category' | 'status' | 'dateOut'>('itemId');
   const [sortAsc, setSortAsc] = useState<boolean>(true);
@@ -109,19 +115,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
     useSlidingIndicator<VexCategory | 'All'>(selectedCategory);
 
   const { containerRef: statusBarRef, setItemRef: setStatusTabRef, indicator: statusIndicator } =
-    useSlidingIndicator<'All' | 'Available' | 'Checked Out'>(statusFilter);
-
-  // Keyboard shortcut '/' to search
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '/' && document.activeElement !== searchInputRef.current) {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    useSlidingIndicator<'All' | 'Available' | 'Checked Out' | 'Needs Repair'>(statusFilter);
 
   // Compute category counts
   const categoryCounts = useMemo(() => {
@@ -172,8 +166,10 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
       }
     }
 
-    // Status filter
-    if (statusFilter !== 'All') {
+    // Status / Condition filter
+    if (statusFilter === 'Needs Repair') {
+      result = result.filter((i) => i.condition === 'Needs Repair');
+    } else if (statusFilter !== 'All') {
       result = result.filter((i) => i.status === statusFilter);
     }
 
@@ -274,6 +270,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const selectedItemsList = useMemo(() => {
@@ -295,6 +292,8 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
         selectedCategory={selectedCategory}
         onSelectCategory={onSelectCategory}
         onOpenCheckout={onOpenCheckout}
+        onToggleCondition={onToggleCondition}
+        onOpenLabelPrinter={onOpenLabelPrinter}
         isAdmin={isAdmin}
         onOpenAdminUnlock={onOpenAdminUnlock || (() => {})}
       />
@@ -311,6 +310,8 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
           selectedCategory={selectedCategory}
           onSelectCategory={onSelectCategory}
           onOpenCheckout={onOpenCheckout}
+          onToggleCondition={onToggleCondition}
+          onOpenLabelPrinter={onOpenLabelPrinter}
           isAdmin={isAdmin}
           onOpenAdminUnlock={onOpenAdminUnlock || (() => {})}
         />
@@ -330,6 +331,18 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {onOpenLabelPrinter && (
+                <button
+                  onClick={() => {
+                    playClick();
+                    onOpenLabelPrinter();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors btn-tactile"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-red-400" />
+                  <span>Print QR Labels</span>
+                </button>
+              )}
               <button
                 onClick={exportToCSV}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors btn-tactile"
@@ -394,10 +407,11 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
             <input
               ref={searchInputRef}
+              data-global-search="true"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search item ID, specs, team... (Press '/' to focus)"
+              placeholder="Search part ID, specs, team... (Press '/' to focus)"
               className="w-full pl-9 pr-8 py-1.5 text-xs bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-500 crimson-focus-glow font-sans"
             />
             {searchQuery && (
@@ -428,6 +442,8 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                   className={`absolute top-0 left-0 rounded-md pointer-events-none transition-[transform,width,height,background-color,border-color] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)] border ${
                     statusFilter === 'Checked Out'
                       ? 'bg-amber-500/20 border-amber-500/40'
+                      : statusFilter === 'Needs Repair'
+                      ? 'bg-red-500/20 border-red-500/40'
                       : statusFilter === 'Available'
                       ? 'bg-zinc-200/15 border-zinc-400/40'
                       : 'bg-[#1a1a1f] border-red-500/40'
@@ -470,6 +486,18 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
               >
                 Checked Out
               </button>
+              <button
+                ref={setStatusTabRef('Needs Repair')}
+                onClick={() => {
+                  playClick();
+                  setStatusFilter('Needs Repair');
+                }}
+                className={`relative z-10 px-2.5 py-1 rounded-md transition-colors duration-150 ${
+                  statusFilter === 'Needs Repair' ? 'text-red-400 font-semibold' : 'text-zinc-400 hover:text-zinc-100'
+                }`}
+              >
+                Needs Repair
+              </button>
             </div>
 
             {/* Team Filter Dropdown */}
@@ -505,7 +533,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-red-400 font-mono">
-                  QUICK ITEM LOOKUP
+                  EXACT PART MATCH
                 </span>
                 <span className="text-xs font-mono font-bold text-zinc-100 bg-[#09090b] px-2 py-0.5 rounded border border-[#27272d]">
                   {matchedExactItem.itemId}
@@ -522,16 +550,16 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                         : 'text-amber-400 font-mono'
                     }
                   >
-                    [{matchedExactItem.status.toUpperCase()}]
+                    {matchedExactItem.status}
                   </strong>
                 </span>
                 <span>·</span>
                 <span>
-                  Current Holder:{' '}
+                  Checked Out To:{' '}
                   <strong className="text-zinc-200">
                     {matchedExactItem.currentUser
                       ? `Team ${matchedExactItem.currentUser}`
-                      : 'In Storage'}
+                      : 'In Pit Storage'}
                   </strong>
                 </span>
                 <span>·</span>
@@ -637,7 +665,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                     className={`py-3 px-3 w-64 font-semibold hover:text-zinc-100 cursor-pointer transition-colors ${sortField === 'itemName' ? 'text-zinc-100' : ''}`}
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>ITEM NAME &amp; SPECS</span>
+                      <span>PART NAME &amp; SPECS</span>
                       {sortField === 'itemName' ? (
                         <ChevronDown className={`w-3.5 h-3.5 text-red-400 transition-transform duration-200 ${sortAsc ? '' : 'rotate-180'}`} />
                       ) : (
@@ -671,7 +699,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                       )}
                     </div>
                   </th>
-                  <th className="py-3 px-3 w-36 font-semibold">CURRENT HOLDER</th>
+                  <th className="py-3 px-3 w-36 font-semibold">TEAM</th>
                   <th
                     onClick={() => toggleSort('dateOut')}
                     className={`py-3 px-3 w-28 font-semibold hover:text-zinc-100 cursor-pointer transition-colors ${sortField === 'dateOut' ? 'text-zinc-100' : ''}`}
@@ -778,15 +806,23 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
 
                         {/* Status */}
                         <td className="py-2.5 px-3 whitespace-nowrap">
-                          {isAvailable ? (
-                            <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-zinc-200/10 text-zinc-200 border border-zinc-400/25 rounded">
-                              AVAILABLE
-                            </span>
-                          ) : (
-                            <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded">
-                              CHECKED OUT
-                            </span>
-                          )}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {isAvailable ? (
+                              <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-zinc-200/10 text-zinc-200 border border-zinc-400/25 rounded">
+                                AVAILABLE
+                              </span>
+                            ) : (
+                              <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded">
+                                CHECKED OUT
+                              </span>
+                            )}
+                            {item.condition === 'Needs Repair' && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase bg-red-500/15 text-red-400 border border-red-500/35 rounded">
+                                <Wrench className="w-2.5 h-2.5" />
+                                REPAIR
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Team / Holder */}
@@ -856,10 +892,10 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
             <div className="flex items-center gap-2">
               <span>
                 SHOWING <span className="font-bold text-zinc-100">{filteredItems.length}</span> OF{' '}
-                <span className="font-bold text-zinc-100">{items.length}</span> ITEMS
+                <span className="font-bold text-zinc-100">{items.length}</span> PARTS
               </span>
-              {selectedCategory !== 'All' && <span>IN [{selectedCategory.toUpperCase()}]</span>}
-              <span className="hidden lg:inline text-zinc-600">· Click any row to inspect specs &amp; history</span>
+              {selectedCategory !== 'All' && <span>in {selectedCategory}</span>}
+              <span className="hidden lg:inline text-zinc-600">· Click any row for specs &amp; history</span>
             </div>
             <div className="flex items-center gap-3">
               <span>
@@ -874,16 +910,16 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
         </div>
       </div>
 
-      {/* Hardware Inspector Slide-Over Drawer */}
+      {/* Part Details Slide-Over Drawer */}
       {inspectedItem && (
         <div
           className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-xs animate-backdrop-enter"
           onClick={() => setInspectedItemId(null)}
         >
           <aside
-            aria-label="Hardware Inspector"
+            aria-label="Part Details"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-[#111114] border-l border-[#27272d] h-full flex flex-col shadow-2xl animate-modal-enter"
+            className="w-full max-w-md bg-[#111114] border-l border-[#27272d] h-full flex flex-col shadow-2xl animate-drawer-enter"
           >
             {(() => {
               const spec = getVexHardwareSpec(inspectedItem.category);
@@ -900,12 +936,12 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                         <button
                           type="button"
                           onClick={() => {
-                            navigator.clipboard?.writeText(inspectedItem.itemId);
+                            navigator.clipboard?.writeText(inspectedItem.itemId).catch(() => {});
                             playClick();
                             setCopiedId(true);
                             setTimeout(() => setCopiedId(false), 1600);
                           }}
-                          className="text-[11px] font-mono text-zinc-400 hover:text-zinc-100 flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#1a1a1f] border border-[#27272d]"
+                          className="text-[11px] font-mono text-zinc-400 hover:text-zinc-100 flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#1a1a1f] border border-[#27272d] btn-tactile"
                           title="Copy Part ID"
                         >
                           {copiedId ? <Check className="w-3 h-3 text-zinc-100" /> : <Copy className="w-3 h-3" />}
@@ -932,24 +968,32 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                   <div className="flex-1 overflow-y-auto p-5 space-y-5">
                     {/* Status Card */}
                     <div className="p-4 rounded-xl bg-[#09090b] border border-[#27272d] space-y-2.5">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
                           Current Status
                         </span>
-                        <span
-                          className={`px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded border ${
-                            isAvail
-                              ? 'bg-zinc-200/10 text-zinc-200 border-zinc-400/25'
-                              : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                          }`}
-                        >
-                          {inspectedItem.status}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {inspectedItem.condition === 'Needs Repair' && (
+                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded border bg-red-500/15 text-red-400 border-red-500/35 flex items-center gap-1">
+                              <Wrench className="w-3 h-3" />
+                              Needs Repair
+                            </span>
+                          )}
+                          <span
+                            className={`px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded border ${
+                              isAvail
+                                ? 'bg-zinc-200/10 text-zinc-200 border-zinc-400/25'
+                                : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                            }`}
+                          >
+                            {inspectedItem.status}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 text-xs pt-1">
                         <div>
-                          <div className="text-[10px] text-zinc-500 font-mono uppercase">Holder</div>
+                          <div className="text-[10px] text-zinc-500 font-mono uppercase">Team</div>
                           <div className="font-semibold text-zinc-100 font-mono mt-0.5">
                             {inspectedItem.currentUser ? `Team ${inspectedItem.currentUser}` : 'In Pit Storage'}
                           </div>
@@ -978,6 +1022,30 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                         <div className="pt-2 border-t border-[#1a1a1f] text-xs text-zinc-300">
                           <div className="text-[10px] text-zinc-500 font-mono uppercase mb-0.5">Active Notes</div>
                           <p className="font-sans leading-relaxed">{inspectedItem.notes}</p>
+                        </div>
+                      )}
+
+                      {onToggleCondition && (
+                        <div className="pt-2 border-t border-[#1a1a1f]">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              playClick();
+                              onToggleCondition(inspectedItem);
+                            }}
+                            className={`w-full py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors btn-tactile ${
+                              inspectedItem.condition === 'Needs Repair'
+                                ? 'bg-zinc-100 hover:bg-white text-zinc-950 border-zinc-200'
+                                : 'bg-[#111114] hover:bg-red-500/10 text-red-400 border-red-500/35'
+                            }`}
+                          >
+                            <Wrench className="w-3.5 h-3.5" />
+                            <span>
+                              {inspectedItem.condition === 'Needs Repair'
+                                ? 'Clear Flag — Mark Part Good'
+                                : 'Flag Part as Needs Repair'}
+                            </span>
+                          </button>
                         </div>
                       )}
                     </div>

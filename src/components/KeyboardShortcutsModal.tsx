@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Command, Keyboard, Search, ArrowRight, CornerDownLeft } from 'lucide-react';
+import { X, Keyboard } from 'lucide-react';
 import { playClick } from '../services/soundFx';
 
 interface KeyboardShortcutsModalProps {
@@ -34,7 +34,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
       items: [
         { keys: ['/', '⌘K'], description: 'Jump to search bar' },
         { keys: ['C'], description: 'Open Check Out / Check In' },
-        { keys: ['P'], description: 'Print current inventory sheet (Ctrl+P)' },
+        { keys: ['P'], description: 'Print current inventory sheet' },
         { keys: ['Esc'], description: 'Close open window or popup' },
         { keys: ['?'], description: 'Show or hide this shortcuts list' },
       ],
@@ -49,8 +49,16 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
-      <div className="bg-[#111114] border border-[#27272d] rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh] animate-modal-enter">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter"
+    >
+      <div className="bg-[#111114] border-t sm:border border-[#27272d] rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh] pb-[env(safe-area-inset-bottom,0px)] animate-modal-enter">
+        {/* Mobile grab handle */}
+        <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+
         {/* Header */}
         <div className="px-5 py-4 bg-[#09090b] border-b border-[#27272d] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -108,8 +116,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
             </div>
           ))}
 
-          <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-[11px] text-zinc-400 font-mono flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-400 radar-dot" />
+          <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-[11px] text-zinc-400 font-mono">
             <span>Tip: Press <kbd className="px-1.5 py-0.5 bg-[#1a1a1f] rounded border border-zinc-700 text-zinc-200">?</kbd> anywhere in the app to open this guide.</span>
           </div>
         </div>

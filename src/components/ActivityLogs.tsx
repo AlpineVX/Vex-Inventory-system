@@ -1,13 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import {
-  FileText,
   Download,
   Search,
-  Filter,
-  Clock,
   ArrowUpRight,
   ArrowDownLeft,
-  Calendar,
   X,
   RotateCcw,
 } from 'lucide-react';
@@ -78,10 +74,11 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, isMobileMode =
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `VEX_Audit_Logs_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `VEX_Activity_Log_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (
@@ -279,7 +276,7 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, isMobileMode =
 
                 <div className="flex items-center justify-between gap-2 text-xs">
                   <span className="font-semibold text-zinc-100 truncate">
-                    {log.itemName || log.category || 'VEX Hardware Item'}
+                    {log.itemName || log.category || 'VEX Part'}
                   </span>
                   {log.team && (
                     <span className="font-mono text-[11px] font-bold text-amber-400 shrink-0">
@@ -382,7 +379,7 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, isMobileMode =
 
                       {/* Component Name */}
                       <td className="py-2.5 px-4 text-zinc-100 font-medium">
-                        {log.itemName || log.category || 'VEX Hardware Item'}
+                        {log.itemName || log.category || 'VEX Part'}
                       </td>
 
                       {/* Team */}

@@ -1,11 +1,13 @@
 import React from 'react';
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info, X, RotateCcw } from 'lucide-react';
 
 export interface ToastMessage {
   id: string;
   type: 'success' | 'error' | 'info';
   title: string;
   message?: string;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 interface ToastProps {
@@ -40,15 +42,30 @@ export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
               <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed break-words">{toast.message}</p>
             )}
           </div>
-          <button
-            onClick={() => onDismiss(toast.id)}
-            className="text-zinc-500 hover:text-zinc-100 p-1 rounded-lg transition-colors btn-tactile"
-            aria-label="Dismiss notification"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {toast.actionLabel && toast.onAction && (
+              <button
+                type="button"
+                onClick={() => {
+                  toast.onAction?.();
+                  onDismiss(toast.id);
+                }}
+                className="px-2.5 py-1 text-[11px] font-mono font-bold text-zinc-950 bg-zinc-100 hover:bg-white rounded-lg transition-colors flex items-center gap-1 btn-tactile"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>{toast.actionLabel}</span>
+              </button>
+            )}
+            <button
+              onClick={() => onDismiss(toast.id)}
+              className="text-zinc-500 hover:text-zinc-100 p-1 rounded-lg transition-colors btn-tactile"
+              aria-label="Dismiss notification"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
-          {/* GPU-composited 5.5s auto-dismiss countdown progress bar */}
+          {/* GPU-composited auto-dismiss countdown progress bar */}
           <div
             aria-hidden="true"
             className={`absolute bottom-0 left-0 right-0 h-[2px] animate-toast-progress ${

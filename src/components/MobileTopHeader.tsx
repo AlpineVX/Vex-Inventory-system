@@ -13,6 +13,8 @@ import {
   MoreHorizontal,
   QrCode,
   X,
+  Search,
+  Download,
 } from 'lucide-react';
 import { ActiveTab, SyncStatus, AdminSettings } from '../types';
 import { playClick, playToggle } from '../services/soundFx';
@@ -32,6 +34,10 @@ interface MobileTopHeaderProps {
   soundEnabled?: boolean;
   onToggleSound?: () => void;
   onOpenDiagnostics?: () => void;
+  onOpenCommandPalette?: () => void;
+  onOpenLabelPrinter?: () => void;
+  canInstallApp?: boolean;
+  onInstallApp?: () => void;
 }
 
 const TAB_LABELS: Record<ActiveTab, string> = {
@@ -57,6 +63,10 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
   soundEnabled = true,
   onToggleSound,
   onOpenDiagnostics,
+  onOpenCommandPalette,
+  onOpenLabelPrinter,
+  canInstallApp = false,
+  onInstallApp,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -73,7 +83,7 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
   }, [menuOpen]);
 
   return (
-    <header className="sticky top-0 z-30 bg-[#09090b]/95 backdrop-blur-md border-b border-[#27272d] h-14 px-3 flex items-center justify-between no-print">
+    <header className="sticky top-0 z-30 bg-[#09090b]/95 backdrop-blur-md border-b border-[#27272d] h-[52px] px-3 flex items-center justify-between no-print">
       {/* Left: Logo & Active View Context */}
       <button
         type="button"
@@ -102,15 +112,29 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
       </button>
 
       {/* Right: Spacious Essential Touch Controls */}
-      <div className="flex items-center gap-2 shrink-0" ref={menuRef}>
-        {/* Audit Logs quick access */}
+      <div className="flex items-center gap-1.5 shrink-0" ref={menuRef}>
+        {onOpenCommandPalette && (
+          <button
+            onClick={() => {
+              playClick();
+              onOpenCommandPalette();
+            }}
+            title="Quick Jump & Search"
+            aria-label="Quick Jump and Search"
+            className="min-w-[38px] min-h-[38px] flex items-center justify-center text-zinc-300 hover:text-zinc-100 bg-[#111114] border border-[#27272d] rounded-xl transition-colors btn-tactile"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Activity Log quick access */}
         <button
           onClick={() => {
             playClick();
             onTabChange(activeTab === 'logs' ? 'dashboard' : 'logs');
           }}
-          title="Audit Logs"
-          aria-label="Audit Logs"
+          title="Activity Log"
+          aria-label="Activity Log"
           className={`min-w-[38px] min-h-[38px] px-2 flex items-center justify-center gap-1 border rounded-xl transition-colors btn-tactile ${
             activeTab === 'logs'
               ? 'bg-red-600/20 border-red-500/50 text-red-400'
@@ -118,7 +142,7 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
           }`}
         >
           <FileText className="w-4 h-4" />
-          <span className="text-[11px] font-medium hidden xs:inline">Logs</span>
+          <span className="text-[11px] font-medium hidden xs:inline">Log</span>
         </button>
 
         {/* Sync button */}
@@ -158,8 +182,8 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
               playClick();
               onOpenAdminUnlock();
             }}
-            title="Admin Login"
-            aria-label="Admin Login"
+            title="Admin Sign In"
+            aria-label="Admin Sign In"
             className="min-w-[38px] min-h-[38px] flex items-center justify-center text-zinc-300 hover:text-zinc-100 bg-[#111114] hover:bg-[#1a1a1f] border border-[#27272d] rounded-xl transition-colors btn-tactile"
           >
             <Lock className="w-4 h-4" />
@@ -201,6 +225,20 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
                 {syncStatus.url && <span className="w-1.5 h-1.5 rounded-full bg-red-500" />}
               </button>
 
+              {onOpenLabelPrinter && (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    playClick();
+                    onOpenLabelPrinter();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-zinc-200 hover:bg-[#1a1a1f] transition-colors"
+                >
+                  <QrCode className="w-4 h-4 text-red-400" />
+                  <span>Print QR Bin Labels</span>
+                </button>
+              )}
+
               {onOpenAssetsModal && (
                 <button
                   onClick={() => {
@@ -210,8 +248,22 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
                   }}
                   className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-zinc-200 hover:bg-[#1a1a1f] transition-colors"
                 >
-                  <QrCode className="w-4 h-4 text-red-400" />
+                  <QrCode className="w-4 h-4 text-zinc-400" />
                   <span>Logos &amp; QR Badges</span>
+                </button>
+              )}
+
+              {canInstallApp && onInstallApp && (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    playClick();
+                    onInstallApp();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-red-300 hover:bg-red-500/10 transition-colors"
+                >
+                  <Download className="w-4 h-4 text-red-400" />
+                  <span>Install App</span>
                 </button>
               )}
 

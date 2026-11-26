@@ -31,7 +31,15 @@ export const SpotlightCard: React.FC<SpotlightCardProps> = ({
       el.style.setProperty('--my', `${y}px`);
       el.style.setProperty('--spotlight-color', spotlightColor);
 
-      if (tilt && rect.width > 0 && rect.height > 0) {
+      const canTilt =
+        tilt &&
+        rect.width > 0 &&
+        rect.height > 0 &&
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(pointer: fine)').matches &&
+        !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+      if (canTilt) {
         const nx = (x / rect.width - 0.5) * 2; // -1..1
         const ny = (y / rect.height - 0.5) * 2; // -1..1
         const maxDeg = 2.2;
@@ -246,5 +254,117 @@ export const AnimatedRingGauge: React.FC<AnimatedRingGaugeProps> = ({
         className="ring-progress"
       />
     </svg>
+  );
+};
+
+interface SwipeableActionCardProps {
+  children: React.ReactNode;
+  actionLabel: string;
+  actionTone?: 'red' | 'light';
+  onSwipeAction: () => void;
+  disabled?: boolean;
+  className?: string;
+}
+
+/**
+ * Touch-friendly horizontal swipe-left container revealing a quick action button on mobile.
+ * Direction-locked so vertical scrolling is never hijacked.
+ */
+export const SwipeableActionCard: React.FC<SwipeableActionCardProps> = ({
+  children,
+  actionLabel,
+  actionTone = 'light',
+  onSwipeAction,
+  disabled = false,
+  className = '',
+}) => {
+  const [offsetX, setOffsetX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startRef = useRef<{ x: number; y: number; baseOffset: number; locked: 'h' | 'v' | null }>({
+    x: 0,
+    y: 0,
+    baseOffset: 0,
+    locked: null,
+  });
+
+  const MAX_REVEAL = -104;
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (disabled || e.touches.length !== 1) return;
+    startRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      baseOffset: offsetX,
+      locked: null,
+    };
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (disabled || !isDragging || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - startRef.current.x;
+    const dy = e.touches[0].clientY - startRef.current.y;
+
+    if (!startRef.current.locked) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      startRef.current.locked = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+    }
+
+    if (startRef.current.locked === 'v') {
+      return;
+    }
+
+    const next = Math.max(MAX_REVEAL - 14, Math.min(0, startRef.current.baseOffset + dx));
+    setOffsetX(next);
+  };
+
+  const handleTouchEnd = () => {
+    if (disabled) return;
+    setIsDragging(false);
+    if (offsetX < -46) {
+      setOffsetX(MAX_REVEAL);
+    } else {
+      setOffsetX(0);
+    }
+  };
+
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      {/* Revealed Right Swipe Action Tray */}
+      <div
+        aria-hidden={offsetX === 0}
+        className="absolute inset-y-0 right-0 w-[104px] flex items-center justify-center p-1.5"
+      >
+        <button
+          type="button"
+          onClick={() => {
+            setOffsetX(0);
+            onSwipeAction();
+          }}
+          className={`w-full h-full rounded-xl font-semibold text-xs flex flex-col items-center justify-center gap-1 px-2 text-center shadow-sm transition-transform active:scale-95 ${
+            actionTone === 'red'
+              ? 'bg-red-600 hover:bg-red-700 text-white'
+              : 'bg-zinc-100 hover:bg-white text-zinc-950'
+          }`}
+        >
+          <span>{actionLabel}</span>
+        </button>
+      </div>
+
+      {/* Sliding Foreground Card */}
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        style={{
+          transform: `translate3d(${offsetX}px, 0, 0)`,
+          transition: isDragging ? 'none' : 'transform 220ms cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+        className="relative z-10 will-change-transform"
+      >
+        {children}
+      </div>
+    </div>
   );
 };

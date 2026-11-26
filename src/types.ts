@@ -217,6 +217,7 @@ export function getCategoryDefaultLocation(category: VexCategory | string): stri
 }
 
 export type ItemStatus = 'Available' | 'Checked Out';
+export type ItemCondition = 'Good' | 'Needs Repair';
 
 export interface InventoryItem {
   itemId: string;
@@ -228,6 +229,20 @@ export interface InventoryItem {
   notes: string;
   timesCheckedOut: number;
   location?: string;
+  condition?: ItemCondition;
+}
+
+export interface OfflineQueueAction {
+  id: string;
+  queuedAt: string;
+  payload: {
+    action: 'Check Out' | 'Check In';
+    itemId: string;
+    team: string;
+    notes: string;
+    email: string;
+    category?: string;
+  };
 }
 
 export interface AuditLog {

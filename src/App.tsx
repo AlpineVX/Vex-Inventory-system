@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   InventoryItem,
   AuditLog,
@@ -11,6 +11,8 @@ import {
   ActiveTab,
   SyncStatus,
   AdminSettings,
+  ItemCondition,
+  OfflineQueueAction,
   DEFAULT_ADMIN_EMAILS,
   DEFAULT_ADMIN_PIN,
   CLUB_TEAMS,
@@ -47,15 +49,67 @@ import { SettingsModal } from './components/SettingsModal';
 import { AdminUnlockModal } from './components/AdminUnlockModal';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { SystemDiagnosticsModal } from './components/SystemDiagnosticsModal';
+import { CommandPalette } from './components/CommandPalette';
+import { LabelPrinterModal } from './components/LabelPrinterModal';
+import { IOSInstallGuideModal, OfflineQueueBanner, usePWAInstallTrigger } from './components/PWAControls';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { ToastContainer, ToastMessage } from './components/Toast';
-import { isSoundEnabled, setSoundEnabled, playToggle, playSuccess, playClick } from './services/soundFx';
+import { isSoundEnabled, setSoundEnabled, playToggle, playClick } from './services/soundFx';
+
+const CONDITION_MAP_KEY = 'vex_item_conditions_v1';
+const OFFLINE_QUEUE_KEY = 'vex_offline_sync_queue';
+
+function loadConditionMap(): Record<string, ItemCondition> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(CONDITION_MAP_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, ItemCondition>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveConditionMap(map: Record<string, ItemCondition>) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CONDITION_MAP_KEY, JSON.stringify(map));
+  } catch {}
+}
+
+function applyConditionMap(list: InventoryItem[], map: Record<string, ItemCondition>): InventoryItem[] {
+  return list.map((item) => {
+    const norm = normalizeItemId(item.itemId, item.category).toUpperCase();
+    const raw = item.itemId.toUpperCase();
+    const cond = map[norm] || map[raw] || item.condition || 'Good';
+    return cond === item.condition ? item : { ...item, condition: cond };
+  });
+}
+
+function loadOfflineQueue(): OfflineQueueAction[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveOfflineQueue(queue: OfflineQueueAction[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+  } catch {}
+}
 
 export default function App() {
   // 1. Core State
   const [items, setItems] = useState<InventoryItem[]>(() => {
+    const condMap = loadConditionMap();
     const version = typeof window !== 'undefined' ? localStorage.getItem('vex_schema_ver') : null;
     if (version !== 'v9') {
-      const fresh = generateDefaultInventory();
+      const fresh = applyConditionMap(generateDefaultInventory(), condMap);
       if (typeof window !== 'undefined') {
         localStorage.setItem('vex_schema_ver', 'v9');
       }
@@ -63,7 +117,8 @@ export default function App() {
       return fresh;
     }
     const cached = getCachedInventory();
-    return cached && cached.length > 0 ? cached : generateDefaultInventory();
+    const base = cached && cached.length > 0 ? cached : generateDefaultInventory();
+    return applyConditionMap(base, condMap);
   });
 
   const [logs, setLogs] = useState<AuditLog[]>(() => {
@@ -143,8 +198,15 @@ export default function App() {
   const [isAssetsModalOpen, setIsAssetsModalOpen] = useState<boolean>(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState<boolean>(false);
   const [isDiagnosticsModalOpen, setIsDiagnosticsModalOpen] = useState<boolean>(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+  const [isLabelPrinterOpen, setIsLabelPrinterOpen] = useState<boolean>(false);
   const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => isSoundEnabled());
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const isOnline = useOnlineStatus();
+  const { canShowInstall, triggerInstall, showIOSGuide, closeIOSGuide } = usePWAInstallTrigger();
+  const [offlineQueue, setOfflineQueue] = useState<OfflineQueueAction[]>(() => loadOfflineQueue());
+  const isFlushingQueueRef = useRef<boolean>(false);
 
   const handleToggleSound = useCallback(() => {
     const next = !soundEnabled;
@@ -153,26 +215,63 @@ export default function App() {
     if (next) playToggle();
   }, [soundEnabled]);
 
+  const handleOpenCheckoutModal = useCallback(
+    (
+      item?: InventoryItem,
+      defaultAction: 'Check Out' | 'Check In' = 'Check Out',
+      presetTeam = '654V'
+    ) => {
+      setCheckoutTargetItem(item);
+      setCheckoutDefaultAction(defaultAction);
+      setCheckoutPresetTeam(presetTeam);
+      setIsCheckoutModalOpen(true);
+    },
+    []
+  );
+
+  // Body scroll lock when any modal is open
+  const isAnyModalOpen =
+    isCheckoutModalOpen ||
+    isSettingsModalOpen ||
+    isAdminUnlockModalOpen ||
+    isAssetsModalOpen ||
+    isShortcutsModalOpen ||
+    isDiagnosticsModalOpen ||
+    isCommandPaletteOpen ||
+    isLabelPrinterOpen ||
+    showIOSGuide;
+
+  useEffect(() => {
+    if (!isAnyModalOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isAnyModalOpen]);
+
   // Global Keyboard Shortcuts Listener
   useEffect(() => {
+    const isKioskLocked = adminSettings.kioskOnly && !adminSettings.isUnlocked;
+    const navigateSafe = (tab: ActiveTab) => {
+      if (isKioskLocked && tab !== 'dashboard' && tab !== 'inventory') {
+        setIsAdminUnlockModalOpen(true);
+        return;
+      }
+      setActiveTab(tab);
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl+K always focuses search even if inside another input
+      // Cmd/Ctrl+K toggles the Command Palette anywhere
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         playClick();
-        const searchEl = document.querySelector<HTMLInputElement>(
-          'input[data-global-search="true"], input[type="text"]'
-        );
-        if (searchEl) {
-          searchEl.focus();
-          searchEl.select();
-        } else {
-          setActiveTab('inventory');
-          requestAnimationFrame(() => {
-            const invSearch = document.querySelector<HTMLInputElement>('input[type="text"]');
-            invSearch?.focus();
-          });
-        }
+        setIsCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+
+      // Never intercept browser shortcuts like Cmd/Ctrl+C, Cmd/Ctrl+V, Alt+...
+      if (e.metaKey || e.ctrlKey || e.altKey) {
         return;
       }
 
@@ -204,27 +303,31 @@ export default function App() {
       } else if (e.key === '1') {
         e.preventDefault();
         playClick();
-        handleTabChange('dashboard');
+        navigateSafe('dashboard');
       } else if (e.key === '2') {
         e.preventDefault();
         playClick();
-        handleTabChange('inventory');
+        navigateSafe('inventory');
       } else if (e.key === '3') {
         e.preventDefault();
         playClick();
-        handleTabChange('teams');
+        navigateSafe('teams');
       } else if (e.key === '4') {
         e.preventDefault();
         playClick();
-        handleTabChange('packlist');
+        navigateSafe('packlist');
       } else if (e.key === '5') {
         e.preventDefault();
         playClick();
-        handleTabChange('logs');
+        navigateSafe('logs');
       } else if (e.key === 'c' || e.key === 'C') {
         e.preventDefault();
         playClick();
-        setIsCheckoutModalOpen(true);
+        handleOpenCheckoutModal();
+      } else if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        playClick();
+        window.print();
       } else if (e.key === 'd' || e.key === 'D') {
         e.preventDefault();
         playClick();
@@ -233,18 +336,21 @@ export default function App() {
         e.preventDefault();
         handleToggleSound();
       } else if (e.key === 'Escape') {
+        setIsCommandPaletteOpen(false);
+        setIsLabelPrinterOpen(false);
         setIsCheckoutModalOpen(false);
         setIsSettingsModalOpen(false);
         setIsAdminUnlockModalOpen(false);
         setIsAssetsModalOpen(false);
         setIsShortcutsModalOpen(false);
         setIsDiagnosticsModalOpen(false);
+        closeIOSGuide();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleToggleSound, adminSettings.kioskOnly, adminSettings.isUnlocked]);
+  }, [handleToggleSound, handleOpenCheckoutModal, adminSettings.kioskOnly, adminSettings.isUnlocked]);
 
   // Mobile viewport detection and manual layout mode switch
   const [viewMode, setViewMode] = useState<'auto' | 'mobile' | 'desktop'>(() => {
@@ -284,14 +390,25 @@ export default function App() {
     );
   };
 
-  // Toast Helper
-  const addToast = useCallback((type: 'success' | 'error' | 'info', title: string, message?: string) => {
-    const id = `toast-${Date.now()}-${Math.random()}`;
-    setToasts((prev) => [...prev, { id, type, title, message }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 5500);
-  }, []);
+  // Toast Helper (supports optional Undo/action button)
+  const addToast = useCallback(
+    (
+      type: 'success' | 'error' | 'info',
+      title: string,
+      message?: string,
+      options?: { actionLabel?: string; onAction?: () => void }
+    ) => {
+      const id = `toast-${Date.now()}-${Math.random()}`;
+      setToasts((prev) => [
+        ...prev,
+        { id, type, title, message, actionLabel: options?.actionLabel, onAction: options?.onAction },
+      ]);
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 5500);
+    },
+    []
+  );
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -312,83 +429,148 @@ export default function App() {
     }
   }, [adminSettings]);
 
-  // Live Sync execution
-  const handleLiveSync = async (apiUrl: string, showToastOnSuccess = true) => {
-    if (!apiUrl) {
-      addToast('info', 'Offline Mode Active', 'Using local inventory cache. Configure Google Sheet URL in Settings.');
-      return;
-    }
-
-    setSyncStatus((prev) => ({ ...prev, isSyncing: true, error: null }));
-
-    try {
-      const data = await fetchLiveInventory(apiUrl);
-      if (data.inventory && data.inventory.length > 0) {
-        setItems(data.inventory);
-        saveCachedInventory(data.inventory);
+  // Live Sync execution (preserves locally flagged Needs Repair conditions)
+  const handleLiveSync = useCallback(
+    async (apiUrl: string, showToastOnSuccess = true) => {
+      if (!apiUrl) {
+        addToast('info', 'Offline Mode Active', 'Using local inventory cache. Configure Google Sheet URL in Settings.');
+        return;
       }
 
-      if (data.logs && data.logs.length > 0) {
-        // Merge incoming sheet logs with local logs, deduplicating and sorting NEWEST-FIRST
-        setLogs((prevLogs) => {
-          const map = new Map<string, AuditLog>();
+      setSyncStatus((prev) => ({ ...prev, isSyncing: true, error: null }));
 
-          // Seed with previous logs
-          prevLogs.forEach((l) => {
-            const key = `${l.timestamp}_${l.itemId}_${l.action}`;
-            map.set(key, l);
+      try {
+        const data = await fetchLiveInventory(apiUrl);
+        if (data.inventory && data.inventory.length > 0) {
+          const synced = applyConditionMap(data.inventory, loadConditionMap());
+          setItems(synced);
+          saveCachedInventory(synced);
+        }
+
+        if (data.logs && data.logs.length > 0) {
+          setLogs((prevLogs) => {
+            const map = new Map<string, AuditLog>();
+
+            prevLogs.forEach((l) => {
+              const key = `${l.timestamp}_${l.itemId}_${l.action}`;
+              map.set(key, l);
+            });
+
+            data.logs.forEach((l) => {
+              const key = `${l.timestamp}_${l.itemId}_${l.action}`;
+              map.set(key, l);
+            });
+
+            const merged = Array.from(map.values()).sort((a, b) => {
+              const timeA = new Date(a.timestamp).getTime() || 0;
+              const timeB = new Date(b.timestamp).getTime() || 0;
+              return timeB - timeA;
+            });
+
+            saveCachedLogs(merged);
+            return merged;
           });
+        }
 
-          // Add newly incoming sheet logs
-          data.logs.forEach((l) => {
-            const key = `${l.timestamp}_${l.itemId}_${l.action}`;
-            map.set(key, l);
-          });
+        const now = new Date();
+        setSyncStatus((prev) => ({
+          ...prev,
+          isSyncing: false,
+          lastSynced: now,
+          error: null,
+          mode: 'live',
+        }));
 
-          // Sort descending (newest timestamp first so recent checkouts appear at the very top)
-          const merged = Array.from(map.values()).sort((a, b) => {
-            const timeA = new Date(a.timestamp).getTime() || 0;
-            const timeB = new Date(b.timestamp).getTime() || 0;
-            return timeB - timeA;
-          });
+        if (showToastOnSuccess) {
+          addToast(
+            'success',
+            'Google Sheet Synced',
+            `Successfully refreshed ${data.inventory.length} items from live spreadsheet.`
+          );
+        }
+      } catch (err: any) {
+        setSyncStatus((prev) => ({
+          ...prev,
+          isSyncing: false,
+          error: err.message,
+        }));
+        if (showToastOnSuccess) {
+          addToast('error', 'Sync Failed', err.message);
+        }
+      }
+    },
+    [addToast]
+  );
 
-          saveCachedLogs(merged);
-          return merged;
-        });
+  // Flush queued offline actions when online
+  const flushOfflineQueue = useCallback(
+    async (showToastOnDone = true) => {
+      if (!syncStatus.url || !isOnline || isFlushingQueueRef.current) return;
+      const currentQueue = loadOfflineQueue();
+      if (currentQueue.length === 0) return;
+
+      isFlushingQueueRef.current = true;
+      const remaining: OfflineQueueAction[] = [];
+      let syncedCount = 0;
+
+      try {
+        for (const entry of currentQueue) {
+          try {
+            await postInventoryAction(syncStatus.url, entry.payload);
+            syncedCount++;
+          } catch {
+            remaining.push(entry);
+          }
+        }
+      } finally {
+        isFlushingQueueRef.current = false;
       }
 
-      const now = new Date();
-      setSyncStatus((prev) => ({
-        ...prev,
-        isSyncing: false,
-        lastSynced: now,
-        error: null,
-        mode: 'live',
-      }));
+      saveOfflineQueue(remaining);
+      setOfflineQueue(remaining);
 
-      if (showToastOnSuccess) {
-        addToast(
-          'success',
-          'Google Sheet Synced',
-          `Successfully refreshed ${data.inventory.length} items from live spreadsheet.`
-        );
+      if (syncedCount > 0) {
+        if (showToastOnDone) {
+          addToast(
+            'success',
+            'Offline Actions Synced',
+            `Uploaded ${syncedCount} pending check-out${syncedCount === 1 ? '' : 's'} to Google Sheets.`
+          );
+        }
+        handleLiveSync(syncStatus.url, false);
       }
-    } catch (err: any) {
-      setSyncStatus((prev) => ({
-        ...prev,
-        isSyncing: false,
-        error: err.message,
-      }));
-      addToast('error', 'Sync Failed', err.message);
-    }
-  };
+    },
+    [syncStatus.url, isOnline, addToast, handleLiveSync]
+  );
 
   // Sync on initial mount if URL exists
   useEffect(() => {
-    if (syncStatus.url) {
-      handleLiveSync(syncStatus.url, false);
+    if (syncStatus.url && isOnline) {
+      flushOfflineQueue(false).then(() => handleLiveSync(syncStatus.url, false));
     }
   }, []);
+
+  // Auto-flush pending offline actions when connection returns
+  useEffect(() => {
+    if (isOnline && syncStatus.url && offlineQueue.length > 0) {
+      flushOfflineQueue(true);
+    }
+  }, [isOnline, syncStatus.url, offlineQueue.length, flushOfflineQueue]);
+
+  // Background polling every 45s while tab is visible
+  useEffect(() => {
+    if (!syncStatus.url) return;
+    const timer = window.setInterval(() => {
+      if (
+        document.visibilityState === 'visible' &&
+        navigator.onLine &&
+        !syncStatus.isSyncing
+      ) {
+        handleLiveSync(syncStatus.url, false);
+      }
+    }, 45000);
+    return () => window.clearInterval(timer);
+  }, [syncStatus.url, syncStatus.isSyncing, handleLiveSync]);
 
   // URL save from Settings Modal
   const handleSaveApiUrl = async (newUrl: string) => {
@@ -437,7 +619,43 @@ export default function App() {
     }
   };
 
-  // Check In / Check Out submission
+  // Toggle Part Health Condition ('Good' <-> 'Needs Repair')
+  const handleToggleItemCondition = useCallback(
+    (item: InventoryItem) => {
+      const nextCondition: ItemCondition = item.condition === 'Needs Repair' ? 'Good' : 'Needs Repair';
+      const normKey = normalizeItemId(item.itemId, item.category).toUpperCase();
+      const map = loadConditionMap();
+      if (nextCondition === 'Needs Repair') {
+        map[normKey] = 'Needs Repair';
+      } else {
+        delete map[normKey];
+        delete map[item.itemId.toUpperCase()];
+      }
+      saveConditionMap(map);
+
+      setItems((prev) => {
+        const next = prev.map((it) => {
+          const itNorm = normalizeItemId(it.itemId, it.category).toUpperCase();
+          return itNorm === normKey || it.itemId.toUpperCase() === item.itemId.toUpperCase()
+            ? { ...it, condition: nextCondition }
+            : it;
+        });
+        saveCachedInventory(next);
+        return next;
+      });
+
+      addToast(
+        nextCondition === 'Needs Repair' ? 'info' : 'success',
+        nextCondition === 'Needs Repair' ? `${item.itemId} Flagged Needs Repair` : `${item.itemId} Marked Good`,
+        nextCondition === 'Needs Repair'
+          ? 'Other students will see a repair warning before checking this part out.'
+          : 'Repair flag cleared from this part.'
+      );
+    },
+    [addToast]
+  );
+
+  // Check In / Check Out submission (supports batch mode, offline queue, condition flags & Undo toast)
   const handleSubmitAction = async (
     payload: {
       action: 'Check Out' | 'Check In';
@@ -446,22 +664,71 @@ export default function App() {
       notes: string;
       email: string;
       category?: string;
+      flagNeedsRepair?: boolean;
     },
-    skipLiveSync = false
+    optionsOrSkipSync:
+      | boolean
+      | {
+          skipLiveSync?: boolean;
+          skipUndo?: boolean;
+          restorePrev?: {
+            status: 'Available' | 'Checked Out';
+            currentUser: string;
+            dateOut?: string;
+            notes?: string;
+            timesCheckedOut: number;
+            condition?: ItemCondition;
+          };
+        } = false
   ) => {
+    const opts = typeof optionsOrSkipSync === 'boolean' ? { skipLiveSync: optionsOrSkipSync } : optionsOrSkipSync;
+    const skipLiveSync = Boolean(opts.skipLiveSync);
+    const skipUndo = Boolean(opts.skipUndo);
+    const restorePrev = opts.restorePrev;
+
     const isOut = payload.action === 'Check Out';
     const normalizedId = normalizeItemId(payload.itemId, payload.category);
     const targetClean = normalizedId.toUpperCase();
     const targetCleanNoDash = targetClean.replace(/[-\s]/g, '');
 
-    // Find matched item for log description & category
+    // Find matched item BEFORE optimistic update (for Undo snapshot)
     const matchedItem = items.find((i) => {
       const curClean = normalizeItemId(i.itemId, i.category).toUpperCase();
       const curNoDash = curClean.replace(/[-\s]/g, '');
       return curClean === targetClean || curNoDash === targetCleanNoDash;
     });
 
-    const determinedCategory: VexCategory = classifyVexCategory(matchedItem?.category || payload.category, undefined, normalizedId);
+    const prevSnapshot = matchedItem
+      ? {
+          status: matchedItem.status,
+          currentUser: matchedItem.currentUser || '',
+          dateOut: matchedItem.dateOut,
+          notes: matchedItem.notes,
+          timesCheckedOut: matchedItem.timesCheckedOut || 0,
+          condition: matchedItem.condition || 'Good',
+        }
+      : undefined;
+
+    const determinedCategory: VexCategory = classifyVexCategory(
+      matchedItem?.category || payload.category,
+      undefined,
+      normalizedId
+    );
+
+    // Persist condition flag if checked in as damaged or restored during undo
+    if (restorePrev) {
+      const condMap = loadConditionMap();
+      if (restorePrev.condition === 'Needs Repair') {
+        condMap[targetClean] = 'Needs Repair';
+      } else {
+        delete condMap[targetClean];
+      }
+      saveConditionMap(condMap);
+    } else if (!isOut && payload.flagNeedsRepair) {
+      const condMap = loadConditionMap();
+      condMap[targetClean] = 'Needs Repair';
+      saveConditionMap(condMap);
+    }
 
     // Remember member's email for faster repeat pit checkouts
     if (!skipLiveSync && payload.email && payload.email.trim()) {
@@ -486,9 +753,11 @@ export default function App() {
       userEmail: payload.email,
       category: determinedCategory,
     };
-    const updatedLogs = [newLog, ...logs];
-    setLogs(updatedLogs);
-    saveCachedLogs(updatedLogs);
+    setLogs((prevLogs) => {
+      const updatedLogs = [newLog, ...prevLogs];
+      saveCachedLogs(updatedLogs);
+      return updatedLogs;
+    });
 
     // 2. Optimistically update local inventory items so immediate UI reflects checkout/return
     setItems((prevItems) => {
@@ -500,14 +769,27 @@ export default function App() {
       if (matchIndex >= 0) {
         const updated = [...prevItems];
         const existing = updated[matchIndex];
-        updated[matchIndex] = {
-          ...existing,
-          status: isOut ? 'Checked Out' : 'Available',
-          currentUser: isOut ? payload.team : '',
-          dateOut: isOut ? new Date().toISOString().split('T')[0] : '',
-          notes: payload.notes || (isOut ? existing.notes : ''),
-          timesCheckedOut: isOut ? (existing.timesCheckedOut || 0) + 1 : existing.timesCheckedOut,
-        };
+        if (restorePrev) {
+          updated[matchIndex] = {
+            ...existing,
+            status: restorePrev.status,
+            currentUser: restorePrev.currentUser,
+            dateOut: restorePrev.dateOut || '',
+            notes: restorePrev.notes || '',
+            timesCheckedOut: restorePrev.timesCheckedOut,
+            condition: restorePrev.condition || 'Good',
+          };
+        } else {
+          updated[matchIndex] = {
+            ...existing,
+            status: isOut ? 'Checked Out' : 'Available',
+            currentUser: isOut ? payload.team : '',
+            dateOut: isOut ? new Date().toISOString().split('T')[0] : '',
+            notes: payload.notes || (isOut ? existing.notes : ''),
+            timesCheckedOut: isOut ? (existing.timesCheckedOut || 0) + 1 : existing.timesCheckedOut,
+            condition: !isOut && payload.flagNeedsRepair ? 'Needs Repair' : existing.condition,
+          };
+        }
         saveCachedInventory(updated);
         return updated;
       } else {
@@ -521,6 +803,7 @@ export default function App() {
           notes: payload.notes || '',
           timesCheckedOut: isOut ? 1 : 0,
           location: getCategoryDefaultLocation(determinedCategory),
+          condition: !isOut && payload.flagNeedsRepair ? 'Needs Repair' : 'Good',
         };
         const updated = [...prevItems, newItem];
         saveCachedInventory(updated);
@@ -528,8 +811,63 @@ export default function App() {
       }
     });
 
-    // 3. Post record to Google Apps Script (appends ONLY to LOGS sheet)
+    // Undo helper for toast
+    const undoOptions =
+      !skipLiveSync && !skipUndo && prevSnapshot
+        ? {
+            actionLabel: 'Undo',
+            onAction: () => {
+              const reverseAction = payload.action === 'Check Out' ? 'Check In' : 'Check Out';
+              void handleSubmitAction(
+                {
+                  action: reverseAction,
+                  itemId: normalizedId,
+                  team: prevSnapshot.currentUser || payload.team,
+                  notes: `Undo ${payload.action} (${normalizedId})`,
+                  email: payload.email || lastBorrowerEmail || 'undo@vex654.club',
+                  category: determinedCategory,
+                },
+                { skipUndo: true, restorePrev: prevSnapshot }
+              );
+            },
+          }
+        : undefined;
+
+    const enqueueForLater = () => {
+      const queued: OfflineQueueAction = {
+        id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        queuedAt: new Date().toISOString(),
+        payload: {
+          action: payload.action,
+          itemId: normalizedId,
+          team: payload.team,
+          notes: payload.notes,
+          email: payload.email,
+          category: determinedCategory,
+        },
+      };
+      setOfflineQueue((prev) => {
+        const next = [...prev, queued];
+        saveOfflineQueue(next);
+        return next;
+      });
+    };
+
+    // 3. Post record to Google Apps Script (or queue offline if disconnected/failed)
     if (syncStatus.url) {
+      if (!isOnline) {
+        enqueueForLater();
+        if (!skipLiveSync) {
+          addToast(
+            'info',
+            `Saved Offline · ${normalizedId}`,
+            `Queued ${payload.action} to sync automatically when Wi-Fi reconnects.`,
+            undoOptions
+          );
+        }
+        return;
+      }
+
       try {
         await postInventoryAction(syncStatus.url, {
           ...payload,
@@ -539,28 +877,61 @@ export default function App() {
         if (!skipLiveSync) {
           addToast(
             'success',
-            'Logged to LOGS Sheet',
-            `Added ${payload.action} for ${normalizedId} to LOGS sheet. Spreadsheet formulas will update item status automatically.`
+            restorePrev ? `Undid Action · ${normalizedId}` : `${payload.action} Recorded · ${normalizedId}`,
+            restorePrev
+              ? `Restored ${normalizedId} back to its previous state.`
+              : `Logged to Google Sheet for Team ${payload.team}.`,
+            undoOptions
           );
-          // Refresh live formula-computed items & logs from Google Sheet
           handleLiveSync(syncStatus.url, false);
         }
       } catch (err: any) {
+        enqueueForLater();
         if (!skipLiveSync) {
           addToast(
-            'error',
-            'Google Sheet Notice',
-            `Log saved locally, but Google Sheet returned: ${err.message}`
+            'info',
+            `Saved Locally · ${normalizedId}`,
+            `Sheet unreachable (${err.message}). Queued to retry automatically.`,
+            undoOptions
           );
         }
       }
     } else if (!skipLiveSync) {
       addToast(
         'success',
-        'Log Added',
-        `Recorded ${payload.action} for ${normalizedId} in LOGS.`
+        restorePrev ? `Undid Action · ${normalizedId}` : `${payload.action} · ${normalizedId}`,
+        restorePrev
+          ? `Restored ${normalizedId} back to previous state.`
+          : `Saved ${payload.action} for Team ${payload.team}.`,
+        undoOptions
       );
     }
+  };
+
+  // Batch Check In / Check Out submission from modal queue
+  const handleBatchModalSubmit = async (
+    entries: Array<{
+      action: 'Check Out' | 'Check In';
+      itemId: string;
+      team: string;
+      notes: string;
+      email: string;
+      category?: string;
+      flagNeedsRepair?: boolean;
+    }>
+  ) => {
+    if (entries.length === 0) return;
+    for (const entry of entries) {
+      await handleSubmitAction(entry, { skipLiveSync: true, skipUndo: true });
+    }
+    if (syncStatus.url && isOnline) {
+      handleLiveSync(syncStatus.url, false);
+    }
+    addToast(
+      'success',
+      `Batch Complete (${entries.length} parts)`,
+      `Logged ${entries.length} part ${entries[0].action === 'Check In' ? 'returns' : 'check-outs'} for Team ${entries[0].team}.`
+    );
   };
 
   // Fast single return from Team view (Admin only)
@@ -648,11 +1019,13 @@ export default function App() {
     }
 
     const factory = generateDefaultInventory();
+    const availCount = factory.filter((i) => i.status === 'Available').length;
+    const outCount = factory.length - availCount;
     setItems(factory);
     saveCachedInventory(factory);
     setLogs(INITIAL_LOGS);
     saveCachedLogs(INITIAL_LOGS);
-    addToast('info', 'Inventory Reset', 'Restored original 279 parts: 238 Available, 41 Checked Out.');
+    addToast('info', 'Inventory Reset', `Restored ${factory.length} parts (${availCount} available, ${outCount} checked out).`);
   };
 
   // Kiosk-aware tab guard
@@ -690,220 +1063,274 @@ export default function App() {
     setActiveTab('teams');
   };
 
-  const handleOpenCheckoutModal = (
-    item?: InventoryItem,
-    defaultAction: 'Check Out' | 'Check In' = 'Check Out',
-    presetTeam = '654V'
-  ) => {
-    setCheckoutTargetItem(item);
-    setCheckoutDefaultAction(defaultAction);
-    setCheckoutPresetTeam(presetTeam);
-    setIsCheckoutModalOpen(true);
-  };
+  const handleManualSync = useCallback(async () => {
+    if (offlineQueue.length > 0 && isOnline && syncStatus.url) {
+      await flushOfflineQueue(true);
+    }
+    await handleLiveSync(syncStatus.url, true);
+  }, [offlineQueue.length, isOnline, syncStatus.url, flushOfflineQueue, handleLiveSync]);
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-red-500/25 selection:text-red-200">
-      {/* Top Header: Specialized Mobile Header or Desktop Header */}
-      {isMobile ? (
-        <MobileTopHeader
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          syncStatus={syncStatus}
-          adminSettings={adminSettings}
-          onOpenSettings={handleOpenSettingsProtected}
-          onSyncNow={() => handleLiveSync(syncStatus.url, true)}
-          onOpenAdminUnlock={handleOpenAdminUnlock}
-          onLockAdmin={handleLockAdmin}
-          isMobileModeForced={viewMode === 'mobile'}
-          onToggleViewMode={handleToggleViewMode}
-          onOpenAssetsModal={() => setIsAssetsModalOpen(true)}
-          soundEnabled={soundEnabled}
-          onToggleSound={handleToggleSound}
-          onOpenDiagnostics={() => setIsDiagnosticsModalOpen(true)}
+    <>
+      <div id="app-shell" className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-red-500/25 selection:text-red-200">
+        {/* Top Header: Specialized Mobile Header or Desktop Header */}
+        {isMobile ? (
+          <MobileTopHeader
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            syncStatus={syncStatus}
+            adminSettings={adminSettings}
+            onOpenSettings={handleOpenSettingsProtected}
+            onSyncNow={handleManualSync}
+            onOpenAdminUnlock={handleOpenAdminUnlock}
+            onLockAdmin={handleLockAdmin}
+            isMobileModeForced={viewMode === 'mobile'}
+            onToggleViewMode={handleToggleViewMode}
+            onOpenAssetsModal={() => setIsAssetsModalOpen(true)}
+            soundEnabled={soundEnabled}
+            onToggleSound={handleToggleSound}
+            onOpenDiagnostics={() => setIsDiagnosticsModalOpen(true)}
+            onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+            onOpenLabelPrinter={() => setIsLabelPrinterOpen(true)}
+            canInstallApp={canShowInstall}
+            onInstallApp={triggerInstall}
+          />
+        ) : (
+          <Header
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            syncStatus={syncStatus}
+            adminSettings={adminSettings}
+            onOpenSettings={handleOpenSettingsProtected}
+            onOpenCheckout={() => handleOpenCheckoutModal()}
+            onSyncNow={handleManualSync}
+            onOpenAdminUnlock={handleOpenAdminUnlock}
+            onLockAdmin={handleLockAdmin}
+            onToggleViewMode={handleToggleViewMode}
+            onOpenAssetsModal={() => setIsAssetsModalOpen(true)}
+            soundEnabled={soundEnabled}
+            onToggleSound={handleToggleSound}
+            onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
+            onOpenDiagnostics={() => setIsDiagnosticsModalOpen(true)}
+            onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+            onOpenLabelPrinter={() => setIsLabelPrinterOpen(true)}
+            canInstallApp={canShowInstall}
+            onInstallApp={triggerInstall}
+          />
+        )}
+
+        {/* Main Container Viewport */}
+        <main
+          className={`flex-1 w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 ${
+            viewMode === 'mobile' ? 'max-w-md' : 'max-w-7xl'
+          } ${isMobile ? 'pb-24' : ''}`}
+        >
+          <div key={activeTab} className="animate-tab-enter">
+            {activeTab === 'dashboard' && (
+              <CommandCenter
+                items={items}
+                logs={logs}
+                isAdmin={adminSettings.isUnlocked}
+                onOpenAdminUnlock={handleOpenAdminUnlock}
+                onNavigateToCategory={handleNavigateToCategory}
+                onNavigateToTeam={handleNavigateToTeam}
+                onNavigateTab={handleTabChange}
+                onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
+                isMobileMode={isMobile}
+              />
+            )}
+
+            {activeTab === 'inventory' && (
+              <InventoryBrowser
+                items={items}
+                logs={logs}
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+                onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
+                onBatchAction={handleBatchInventoryAction}
+                onToggleCondition={handleToggleItemCondition}
+                onOpenLabelPrinter={() => setIsLabelPrinterOpen(true)}
+                isAdmin={adminSettings.isUnlocked}
+                onOpenAdminUnlock={handleOpenAdminUnlock}
+                isMobileMode={isMobile}
+              />
+            )}
+
+            {activeTab === 'teams' && (
+              <TeamLookup
+                items={items}
+                selectedTeam={selectedTeam}
+                onSelectTeam={setSelectedTeam}
+                onOpenCheckout={(item, action, team) =>
+                  handleOpenCheckoutModal(item, action || 'Check Out', team || selectedTeam)
+                }
+                onReturnItem={handleReturnItem}
+                onReturnAllForTeam={handleReturnAllForTeam}
+                isAdmin={adminSettings.isUnlocked}
+                onOpenAdminUnlock={handleOpenAdminUnlock}
+                isMobileMode={isMobile}
+              />
+            )}
+
+            {activeTab === 'packlist' && <CompetitionPackList items={items} />}
+
+            {activeTab === 'logs' && <ActivityLogs logs={logs} isMobileMode={isMobile} />}
+          </div>
+        </main>
+
+        {/* Mobile Fixed Bottom Nav (Natural thumb zone) */}
+        {isMobile && (
+          <MobileBottomNav
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            onOpenCheckout={() => handleOpenCheckoutModal()}
+            availableCount={items.filter((i) => i.status === 'Available').length}
+            totalCount={items.length}
+            adminSettings={adminSettings}
+            onOpenAdminUnlock={handleOpenAdminUnlock}
+            onOpenAssetsModal={() => setIsAssetsModalOpen(true)}
+          />
+        )}
+
+        {/* Footer */}
+        <footer className={`mt-auto border-t border-[#27272d] bg-[#09090b] py-4 text-xs text-zinc-500 ${isMobile ? 'pb-24' : ''}`}>
+          <div className={`${viewMode === 'mobile' ? 'max-w-md' : 'max-w-7xl'} mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3`}>
+            <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+              <span className="font-semibold text-zinc-300">VEX Robotics Team 654</span>
+              <span>·</span>
+              <span>{items.length} Parts Tracked</span>
+              <span>·</span>
+              <span className="font-mono text-zinc-400">Club Teams ({CLUB_TEAMS.join(', ')})</span>
+            </div>
+            <div className="flex items-center gap-3 text-zinc-400 shrink-0 flex-wrap justify-center">
+              <span>Website made by <strong className="text-zinc-100 font-semibold">Trishanth Yakkala</strong></span>
+              <span>·</span>
+              <button
+                onClick={() => setIsLabelPrinterOpen(true)}
+                className="hover:text-zinc-100 transition-colors underline"
+              >
+                QR Bin Labels
+              </button>
+              <span>·</span>
+              <button
+                onClick={() => setIsAssetsModalOpen(true)}
+                className="hover:text-zinc-100 transition-colors underline"
+              >
+                Logos &amp; QR Badges
+              </button>
+              <span>·</span>
+              <button
+                onClick={handleToggleViewMode}
+                className="hover:text-red-400 transition-colors"
+              >
+                {isMobile ? 'Switch to Desktop View' : 'Switch to Phone View'}
+              </button>
+              <span>·</span>
+              <button
+                onClick={handleOpenSettingsProtected}
+                className="hover:text-zinc-100 transition-colors"
+              >
+                Google Sheet Settings
+              </button>
+            </div>
+          </div>
+        </footer>
+
+        {/* Check In / Out Action Modal (Bottom sheet on mobile, modal on desktop) */}
+        <CheckInOutModal
+          isOpen={isCheckoutModalOpen}
+          onClose={() => setIsCheckoutModalOpen(false)}
+          items={items}
+          preselectedItem={checkoutTargetItem}
+          defaultAction={checkoutDefaultAction}
+          presetTeam={checkoutPresetTeam}
+          defaultEmail={lastBorrowerEmail}
+          isAdmin={adminSettings.isUnlocked}
+          onSubmit={handleSubmitAction}
+          onBatchSubmit={handleBatchModalSubmit}
         />
-      ) : (
-        <Header
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          syncStatus={syncStatus}
-          adminSettings={adminSettings}
-          onOpenSettings={handleOpenSettingsProtected}
-          onOpenCheckout={() => handleOpenCheckoutModal()}
-          onSyncNow={() => handleLiveSync(syncStatus.url, true)}
-          onOpenAdminUnlock={handleOpenAdminUnlock}
-          onLockAdmin={handleLockAdmin}
-          onToggleViewMode={handleToggleViewMode}
-          onOpenAssetsModal={() => setIsAssetsModalOpen(true)}
-          soundEnabled={soundEnabled}
+
+        {/* Quick Command Palette (⌘K / Ctrl+K) */}
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          onClose={() => setIsCommandPaletteOpen(false)}
+          items={items}
+          onNavigateTab={handleTabChange}
+          onNavigateToTeam={handleNavigateToTeam}
+          onOpenCheckout={(item, action, presetTeam) =>
+            handleOpenCheckoutModal(item, action || 'Check Out', presetTeam || '654V')
+          }
+          onSyncNow={handleManualSync}
           onToggleSound={handleToggleSound}
+          soundEnabled={soundEnabled}
           onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
           onOpenDiagnostics={() => setIsDiagnosticsModalOpen(true)}
-        />
-      )}
-
-      {/* Main Container Viewport */}
-      <main
-        className={`flex-1 w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 ${
-          viewMode === 'mobile' ? 'max-w-md' : 'max-w-7xl'
-        } ${isMobile ? 'pb-24' : ''}`}
-      >
-        <div key={activeTab} className="animate-tab-enter">
-          {activeTab === 'dashboard' && (
-            <CommandCenter
-              items={items}
-              logs={logs}
-              isAdmin={adminSettings.isUnlocked}
-              onOpenAdminUnlock={handleOpenAdminUnlock}
-              onNavigateToCategory={handleNavigateToCategory}
-              onNavigateToTeam={handleNavigateToTeam}
-              onNavigateTab={handleTabChange}
-              onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
-              isMobileMode={isMobile}
-            />
-          )}
-
-          {activeTab === 'inventory' && (
-            <InventoryBrowser
-              items={items}
-              logs={logs}
-              selectedCategory={selectedCategory}
-              onSelectCategory={setSelectedCategory}
-              onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
-              onBatchAction={handleBatchInventoryAction}
-              isAdmin={adminSettings.isUnlocked}
-              onOpenAdminUnlock={handleOpenAdminUnlock}
-              isMobileMode={isMobile}
-            />
-          )}
-
-          {activeTab === 'teams' && (
-            <TeamLookup
-              items={items}
-              selectedTeam={selectedTeam}
-              onSelectTeam={setSelectedTeam}
-              onOpenCheckout={(item, action, team) =>
-                handleOpenCheckoutModal(item, action || 'Check Out', team || selectedTeam)
-              }
-              onReturnItem={handleReturnItem}
-              onReturnAllForTeam={handleReturnAllForTeam}
-              isAdmin={adminSettings.isUnlocked}
-              onOpenAdminUnlock={handleOpenAdminUnlock}
-              isMobileMode={isMobile}
-            />
-          )}
-
-          {activeTab === 'packlist' && <CompetitionPackList items={items} />}
-
-          {activeTab === 'logs' && <ActivityLogs logs={logs} isMobileMode={isMobile} />}
-        </div>
-      </main>
-
-      {/* Mobile Fixed Bottom Nav (Natural thumb zone) */}
-      {isMobile && (
-        <MobileBottomNav
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          onOpenCheckout={() => handleOpenCheckoutModal()}
-          availableCount={items.filter((i) => i.status === 'Available').length}
-          totalCount={items.length}
-          adminSettings={adminSettings}
-          onOpenAdminUnlock={handleOpenAdminUnlock}
           onOpenAssetsModal={() => setIsAssetsModalOpen(true)}
+          onOpenLabelPrinter={() => setIsLabelPrinterOpen(true)}
+          canInstallApp={canShowInstall}
+          onInstallApp={triggerInstall}
         />
-      )}
 
-      {/* Footer */}
-      <footer className={`mt-auto border-t border-[#27272d] bg-[#09090b] py-4 text-xs text-zinc-500 ${isMobile ? 'pb-24' : ''}`}>
-        <div className={`${viewMode === 'mobile' ? 'max-w-md' : 'max-w-7xl'} mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3`}>
-          <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-            <span className="font-semibold text-zinc-300">VEX Robotics Team 654</span>
-            <span>·</span>
-            <span>{items.length} Parts Tracked</span>
-            <span>·</span>
-            <span className="font-mono text-zinc-400">Club Teams ({CLUB_TEAMS.join(', ')})</span>
-          </div>
-          <div className="flex items-center gap-3 text-zinc-400 shrink-0 flex-wrap justify-center">
-            <span>Website made by <strong className="text-zinc-100 font-semibold">Trishanth Yakkala</strong></span>
-            <span>·</span>
-            <button
-              onClick={() => setIsAssetsModalOpen(true)}
-              className="hover:text-zinc-100 transition-colors underline"
-            >
-              Logos &amp; QR Badges
-            </button>
-            <span>·</span>
-            <button
-              onClick={handleToggleViewMode}
-              className="hover:text-red-400 transition-colors"
-            >
-              {isMobile ? 'Switch to Desktop View' : 'Switch to Phone View'}
-            </button>
-            <span>·</span>
-            <button
-              onClick={handleOpenSettingsProtected}
-              className="hover:text-zinc-100 transition-colors"
-            >
-              Google Sheet Settings
-            </button>
-          </div>
-        </div>
-      </footer>
+        {/* Settings / API Modal (Admin only) */}
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          syncStatus={syncStatus}
+          onSaveUrl={handleSaveApiUrl}
+          onResetFactoryData={handleResetFactoryData}
+          adminSettings={adminSettings}
+          onUpdateAdminSettings={setAdminSettings}
+        />
 
-      {/* Check In / Out Action Modal (Bottom sheet on mobile, modal on desktop) */}
-      <CheckInOutModal
-        isOpen={isCheckoutModalOpen}
-        onClose={() => setIsCheckoutModalOpen(false)}
+        {/* Admin Unlock Modal */}
+        <AdminUnlockModal
+          isOpen={isAdminUnlockModalOpen}
+          onClose={() => setIsAdminUnlockModalOpen(false)}
+          adminSettings={adminSettings}
+          onUnlockSuccess={handleUnlockAdminSuccess}
+        />
+
+        {/* Club Assets & QR Badges Download Modal */}
+        <ClubAssetsModal
+          isOpen={isAssetsModalOpen}
+          onClose={() => setIsAssetsModalOpen(false)}
+        />
+
+        {/* Keyboard Shortcuts Cheatsheet Modal */}
+        <KeyboardShortcutsModal
+          isOpen={isShortcutsModalOpen}
+          onClose={() => setIsShortcutsModalOpen(false)}
+        />
+
+        {/* App Status & Cache Modal */}
+        <SystemDiagnosticsModal
+          isOpen={isDiagnosticsModalOpen}
+          onClose={() => setIsDiagnosticsModalOpen(false)}
+          items={items}
+          logs={logs}
+          syncStatus={syncStatus}
+        />
+
+        {/* iOS Safari Add-to-Home-Screen Guide */}
+        <IOSInstallGuideModal isOpen={showIOSGuide} onClose={closeIOSGuide} />
+
+        {/* Offline / Pending Sync Queue Status Pill */}
+        <OfflineQueueBanner
+          pendingCount={offlineQueue.length}
+          onRetrySync={() => void flushOfflineQueue(true)}
+        />
+
+        {/* Toast Notification Container */}
+        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      </div>
+
+      {/* Printable Bin & QR Label Sheet Modal (renders #qr-label-print-sheet outside #app-shell for clean print isolation) */}
+      <LabelPrinterModal
+        isOpen={isLabelPrinterOpen}
+        onClose={() => setIsLabelPrinterOpen(false)}
         items={items}
-        preselectedItem={checkoutTargetItem}
-        defaultAction={checkoutDefaultAction}
-        presetTeam={checkoutPresetTeam}
-        defaultEmail={lastBorrowerEmail}
-        isAdmin={adminSettings.isUnlocked}
-        onSubmit={handleSubmitAction}
+        initialCategory={selectedCategory === 'All' ? 'Brain' : selectedCategory}
       />
-
-      {/* Settings / API Modal (Admin only) */}
-      <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-        syncStatus={syncStatus}
-        onSaveUrl={handleSaveApiUrl}
-        onResetFactoryData={handleResetFactoryData}
-        adminSettings={adminSettings}
-        onUpdateAdminSettings={setAdminSettings}
-      />
-
-      {/* Admin Unlock Modal */}
-      <AdminUnlockModal
-        isOpen={isAdminUnlockModalOpen}
-        onClose={() => setIsAdminUnlockModalOpen(false)}
-        adminSettings={adminSettings}
-        onUnlockSuccess={handleUnlockAdminSuccess}
-      />
-
-      {/* Club Assets & QR Badges Download Modal */}
-      <ClubAssetsModal
-        isOpen={isAssetsModalOpen}
-        onClose={() => setIsAssetsModalOpen(false)}
-      />
-
-      {/* Keyboard Shortcuts Cheatsheet Modal */}
-      <KeyboardShortcutsModal
-        isOpen={isShortcutsModalOpen}
-        onClose={() => setIsShortcutsModalOpen(false)}
-      />
-
-      {/* System Telemetry & Architecture Diagnostics Modal */}
-      <SystemDiagnosticsModal
-        isOpen={isDiagnosticsModalOpen}
-        onClose={() => setIsDiagnosticsModalOpen(false)}
-        items={items}
-        logs={logs}
-        syncStatus={syncStatus}
-      />
-
-      {/* Toast Notification Container */}
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-    </div>
+    </>
   );
 }

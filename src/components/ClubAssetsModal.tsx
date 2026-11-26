@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Download, QrCode, Image as ImageIcon, Sparkles, Check } from 'lucide-react';
+import { X, Download } from 'lucide-react';
 
 interface ClubAssetsModalProps {
   isOpen: boolean;
@@ -48,7 +48,12 @@ export const ClubAssetsModal: React.FC<ClubAssetsModalProps> = ({ isOpen, onClos
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter font-sans">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter font-sans"
+    >
       <div className="bg-[#111114] border-t sm:border border-[#27272d] rounded-t-3xl sm:rounded-2xl w-full max-w-xl max-h-[90vh] pb-[env(safe-area-inset-bottom,0px)] flex flex-col shadow-2xl overflow-hidden animate-modal-enter">
         {/* Mobile grab handle */}
         <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />

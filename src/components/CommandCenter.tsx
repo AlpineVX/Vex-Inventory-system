@@ -9,7 +9,7 @@ import {
   Wrench,
   Download,
   Filter,
-  Sparkles,
+  Zap,
   X,
   ExternalLink,
   Box,
@@ -105,6 +105,15 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
     return () => cancelAnimationFrame(id);
   }, []);
 
+  useEffect(() => {
+    if (activeDrilldown === 'none') return;
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActiveDrilldown('none');
+    };
+    window.addEventListener('keydown', onEsc);
+    return () => window.removeEventListener('keydown', onEsc);
+  }, [activeDrilldown]);
+
   const totalCount = items.length;
   const availableCount = items.filter((i) => i.status === 'Available').length;
   const checkedOutCount = items.filter((i) => i.status === 'Checked Out').length;
@@ -154,9 +163,13 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
     /(not work|broken|damage|crack|bent|dead|issue|fault|defect|fail|repair)/i.test(l.notes || '')
   );
 
-  const maintenanceItems = items.filter((i) =>
-    /(not work|broken|damage|crack|bent|dead|issue|fault|defect|fail|repair)/i.test(i.notes || '')
+  const maintenanceItems = items.filter(
+    (i) =>
+      i.condition === 'Needs Repair' ||
+      /(not work|broken|damage|crack|bent|dead|issue|fault|defect|fail|repair)/i.test(i.notes || '')
   );
+
+  const totalRepairFlagsCount = maintenanceItems.length + maintenanceLogs.length;
 
   // High-level category rollup matching Google Sheets & Screenshot
   const getItemCat = (i: InventoryItem) => classifyVexCategory(i.category, i.itemName, i.itemId);
@@ -223,7 +236,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
       percentAvail: brainItems.length > 0 ? Math.round((brainAvailable / brainItems.length) * 100) : 0,
     },
     {
-      name: 'Solonoid',
+      name: 'Solenoid',
       targetCategory: 'Solenoids' as VexCategory,
       total: solenoidItems.length,
       available: solenoidAvailable,
@@ -327,28 +340,28 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
       i.timesCheckedOut || 0,
       `"${(i.notes || '').replace(/"/g, '""')}"`,
     ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
+    link.setAttribute('href', url);
     link.setAttribute('download', `VEX_Inventory_Snapshot_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Strip: Command Center Title & Top Action Buttons */}
+      {/* 1. Header Strip: Overview Title & Top Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100 flex items-center gap-2.5">
             <span>VEX Robotics Inventory</span>
           </h1>
-          <p className="text-sm text-zinc-400 mt-1 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-500 radar-dot shrink-0" />
-            <span>Live stock overview across all 11 club teams</span>
+          <p className="text-sm text-zinc-400 mt-1">
+            Live parts count across all club teams
           </p>
         </div>
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
@@ -468,10 +481,10 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           <div className="flex items-center gap-2">
             <Search className="w-4 h-4 text-red-400 shrink-0" />
             <h3 className="text-xs font-bold tracking-wider text-zinc-100 uppercase">
-              QUICK PART FINDER &amp; CABINET LOOKUP
+              QUICK PART SEARCH
             </h3>
             <span className="text-[11px] text-zinc-500 hidden sm:inline">
-              · Search {items.length} parts across cabinets
+              · {items.length} tracked parts
             </span>
           </div>
 
@@ -547,8 +560,8 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         {!searchQuery && !activeCabinetFilter && categoryFilter === 'All' && (
           <div className="mt-3.5 pt-3 border-t border-[#1a1a1f] animate-fade-in-up">
             <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-red-400" />
-              <span>Quick Borrow (Pre-filled)</span>
+              <Zap className="w-3.5 h-3.5 text-red-400" />
+              <span>Quick Check Out</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               <button
@@ -661,7 +674,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           <div className="mt-3.5 pt-3 border-t border-[#1a1a1f] animate-fade-in-up">
             <div className="flex items-center justify-between text-xs text-zinc-400 mb-2.5">
               <span>
-                Matching Hardware ({searchResults.length}{' '}
+                Matching Parts ({searchResults.length}{' '}
                 {searchResults.length === 8 ? 'shown — refine search' : 'found'})
               </span>
               <button
@@ -677,7 +690,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
 
             {searchResults.length === 0 ? (
               <div className="py-6 text-center text-xs text-zinc-500 bg-[#09090b] rounded-lg border border-[#27272d]">
-                No components found matching &ldquo;{searchQuery}&rdquo;. Check spelling or clear filters.
+                No parts found matching &ldquo;{searchQuery}&rdquo;. Check spelling or clear filters.
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
@@ -857,7 +870,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           className="bg-[#111114] border border-[#27272d] rounded-xl p-3.5 sm:p-5 cursor-pointer group card-hover-lift shadow-sm animate-card-enter stagger-6"
         >
           <div className="flex items-center justify-between text-[11px] sm:text-xs font-semibold tracking-wider text-zinc-400 uppercase">
-            <span>AUDIT LOGS</span>
+            <span>ACTIVITY LOG</span>
             <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
           </div>
           <div className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-zinc-100 mt-1.5 sm:mt-2">
@@ -881,7 +894,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           <div className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-zinc-100 mt-1.5 sm:mt-2">
             <AnimatedNumber value={activeBorrowersCount} />
           </div>
-          <div className="text-[11px] sm:text-xs text-zinc-400 mt-1">{CLUB_TEAMS.length} teams in club</div>
+          <div className="text-[11px] sm:text-xs text-zinc-400 mt-1">{CLUB_TEAMS.length} club teams &amp; RECF</div>
         </SpotlightCard>
 
         <SpotlightCard
@@ -894,14 +907,14 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           className="bg-[#111114] border border-[#27272d] rounded-xl p-3.5 sm:p-5 cursor-pointer group card-hover-lift shadow-sm animate-card-enter stagger-8"
         >
           <div className="flex items-center justify-between text-[11px] sm:text-xs font-semibold tracking-wider text-zinc-400 uppercase">
-            <span>MAINTENANCE</span>
+            <span>REPAIR FLAGS</span>
             <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
           </div>
           <div className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-zinc-100 mt-1.5 sm:mt-2">
-            <AnimatedNumber value={maintenanceLogs.length} />
+            <AnimatedNumber value={totalRepairFlagsCount} />
           </div>
           <div className="text-[11px] sm:text-xs font-medium text-amber-400 mt-1">
-            {maintenanceLogs.length} flagged report(s)
+            {totalRepairFlagsCount} {totalRepairFlagsCount === 1 ? 'flagged item' : 'flagged items'}
           </div>
         </SpotlightCard>
       </div>
@@ -1228,7 +1241,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-zinc-100">{team}</span>
                       {hasParts && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                       )}
                     </div>
                     <div className="text-[10px] font-mono text-zinc-400 mt-1">
@@ -1242,19 +1255,25 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         </div>
       </div>
 
-      {/* 5. DRILLDOWN MODAL: Overdue / Long-Held Hardware */}
+      {/* 5. DRILLDOWN MODAL: Checked Out Parts */}
       {activeDrilldown === 'overdue' && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
-          <div className="bg-[#111114] border-t sm:border border-[#27272d] rounded-t-3xl sm:rounded-xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[88vh] pb-[env(safe-area-inset-bottom,16px)] flex flex-col animate-modal-enter">
+        <div
+          onClick={() => setActiveDrilldown('none')}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#111114] border-t sm:border border-[#27272d] rounded-t-3xl sm:rounded-xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[88vh] pb-[env(safe-area-inset-bottom,16px)] flex flex-col animate-modal-enter"
+          >
             <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto sm:hidden shrink-0" />
             <div className="flex items-center justify-between pb-3 border-b border-[#27272d]">
               <div>
                 <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
                   <Clock className="w-4 h-4 text-amber-400" />
-                  <span>Checked Out &amp; Long-Held Hardware ({checkedOutCount} items)</span>
+                  <span>Checked Out Parts ({checkedOutCount})</span>
                 </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Items currently in circulation across teams. Review for return before match day.
+                  Parts currently signed out by teams. Check these before tournament travel.
                 </p>
               </div>
               <button
@@ -1270,7 +1289,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 .filter((i) => i.status === 'Checked Out')
                 .map((item, idx) => {
                   const dateOutMs = item.dateOut ? new Date(item.dateOut).getTime() : 0;
-                  const daysOut = dateOutMs > 0 ? Math.floor((now - dateOutMs) / (1000 * 60 * 60 * 24)) : 0;
+                  const daysOut = dateOutMs > 0 ? Math.max(0, Math.floor((now - dateOutMs) / (1000 * 60 * 60 * 24))) : 0;
                   const isVeryLong = daysOut >= 14;
 
                   return (
@@ -1321,19 +1340,25 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         </div>
       )}
 
-      {/* 6. DRILLDOWN MODAL: Flagged Maintenance / Defect Reports */}
+      {/* 6. DRILLDOWN MODAL: Repair Flags */}
       {activeDrilldown === 'maintenance' && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
-          <div className="bg-[#111114] border-t sm:border border-[#27272d] rounded-t-3xl sm:rounded-xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[88vh] pb-[env(safe-area-inset-bottom,16px)] flex flex-col animate-modal-enter">
+        <div
+          onClick={() => setActiveDrilldown('none')}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#111114] border-t sm:border border-[#27272d] rounded-t-3xl sm:rounded-xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[88vh] pb-[env(safe-area-inset-bottom,16px)] flex flex-col animate-modal-enter"
+          >
             <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto sm:hidden shrink-0" />
             <div className="flex items-center justify-between pb-3 border-b border-[#27272d]">
               <div>
                 <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
                   <Wrench className="w-4 h-4 text-amber-400" />
-                  <span>Flagged Maintenance &amp; Defect Reports ({maintenanceLogs.length})</span>
+                  <span>Parts Flagged for Repair ({totalRepairFlagsCount})</span>
                 </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Items flagged in notes as broken, damaged, or needing repair. Do not field without inspection.
+                  Parts flagged as damaged or needing repair. Check hardware before mounting to a robot.
                 </p>
               </div>
               <button
@@ -1345,15 +1370,41 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {maintenanceLogs.length === 0 ? (
+              {maintenanceItems.map((item, idx) => (
+                <div
+                  key={`flag-${item.itemId}`}
+                  style={{ '--row-idx': idx } as React.CSSProperties}
+                  className="p-3.5 bg-[#09090b] border border-red-500/35 rounded-lg space-y-1.5 text-xs animate-row-enter"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-red-400">{item.itemId}</span>
+                      <span className="text-zinc-200 font-semibold">{item.itemName}</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/35 font-mono text-[10px] font-bold">
+                      NEEDS REPAIR
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-zinc-400 font-mono">
+                    {item.location || getCategoryDefaultLocation(item.category)} · {item.currentUser ? `Team ${item.currentUser}` : 'In Pit'}
+                  </div>
+                  {item.notes && (
+                    <div className="text-xs text-zinc-200 bg-[#1a1a1f] p-2 rounded border border-zinc-800">
+                      &ldquo;{item.notes}&rdquo;
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {totalRepairFlagsCount === 0 ? (
                 <div className="py-8 text-center text-xs text-zinc-500">
-                  No maintenance flags recorded in audit log notes.
+                  No damage flags or repair notes found.
                 </div>
               ) : (
                 maintenanceLogs.map((log, idx) => (
                   <div
                     key={log.id}
-                    style={{ '--row-idx': idx } as React.CSSProperties}
+                    style={{ '--row-idx': maintenanceItems.length + idx } as React.CSSProperties}
                     className="p-3.5 bg-[#09090b] border border-amber-500/20 rounded-lg space-y-1 text-xs animate-row-enter"
                   >
                     <div className="flex items-center justify-between">
@@ -1389,19 +1440,25 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         </div>
       )}
 
-      {/* 7. DRILLDOWN MODAL: 11-Team Readiness Radar */}
+      {/* 7. DRILLDOWN MODAL: Team Parts Summary */}
       {activeDrilldown === 'readiness' && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
-          <div className="bg-[#111114] border-t sm:border border-[#27272d] rounded-t-3xl sm:rounded-xl max-w-3xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[88vh] pb-[env(safe-area-inset-bottom,16px)] flex flex-col animate-modal-enter">
+        <div
+          onClick={() => setActiveDrilldown('none')}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#111114] border-t sm:border border-[#27272d] rounded-t-3xl sm:rounded-xl max-w-3xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[88vh] pb-[env(safe-area-inset-bottom,16px)] flex flex-col animate-modal-enter"
+          >
             <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto sm:hidden shrink-0" />
             <div className="flex items-center justify-between pb-3 border-b border-[#27272d]">
               <div>
                 <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-red-400" />
-                  <span>{CLUB_TEAMS.length}-Team Hardware Breakdown</span>
+                  <span>Team Parts Summary</span>
                 </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Brains, radios, solenoids, and sensors checked out across all {CLUB_TEAMS.length} teams.
+                  Brains, radios, solenoids, and sensors checked out across all {CLUB_TEAMS.length} club teams.
                 </p>
               </div>
               <button

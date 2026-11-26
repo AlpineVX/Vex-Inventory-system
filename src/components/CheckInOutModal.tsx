@@ -2,14 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Search,
-  Check,
   AlertCircle,
   ArrowUpRight,
   ArrowDownLeft,
   ArrowLeftRight,
   Loader2,
+  Plus,
   Wrench,
-  Hash,
 } from 'lucide-react';
 import {
   InventoryItem,
@@ -40,7 +39,19 @@ interface CheckInOutModalProps {
     notes: string;
     email: string;
     category?: string;
+    flagNeedsRepair?: boolean;
   }) => Promise<void>;
+  onBatchSubmit?: (
+    entries: Array<{
+      action: 'Check Out' | 'Check In';
+      itemId: string;
+      team: string;
+      notes: string;
+      email: string;
+      category?: string;
+      flagNeedsRepair?: boolean;
+    }>
+  ) => Promise<void>;
 }
 
 const CATEGORIES: VexCategory[] = [
@@ -73,6 +84,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
   defaultEmail = '',
   isAdmin = false,
   onSubmit,
+  onBatchSubmit,
 }) => {
   const [action, setAction] = useState<'Check Out' | 'Check In'>(defaultAction);
 
@@ -94,9 +106,15 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
   const [customTeam, setCustomTeam] = useState<string>('');
   const [isCustomTeam, setIsCustomTeam] = useState<boolean>(false);
 
-  // Notes & Email
+  // Notes, Health & Email
   const [notes, setNotes] = useState<string>('');
   const [email, setEmail] = useState<string>(defaultEmail);
+  const [flagNeedsRepair, setFlagNeedsRepair] = useState<boolean>(false);
+
+  // Batch queue state
+  const [queuedItems, setQueuedItems] = useState<
+    Array<{ itemId: string; category: string; itemName?: string }>
+  >([]);
 
   // Form states
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -226,19 +244,22 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
         setSelectionMode('assemble');
       }
 
-      const activeTeam = presetTeam || preselectedItem?.currentUser || '654V';
+      const activeTeam =
+        defaultAction === 'Check In' && preselectedItem?.currentUser
+          ? preselectedItem.currentUser
+          : presetTeam || preselectedItem?.currentUser || '654V';
       setTeam(activeTeam);
       const isClubTeam = CLUB_TEAMS.includes(activeTeam as any);
       setIsCustomTeam(!isClubTeam && Boolean(activeTeam));
-      if (!isClubTeam && activeTeam) {
-        setCustomTeam(activeTeam);
-      }
+      setCustomTeam(!isClubTeam && activeTeam ? activeTeam : '');
       setNotes(
         preselectedItem?.notes && defaultAction === 'Check In'
           ? 'Returned in good working order'
           : ''
       );
       setEmail(defaultEmail || '');
+      setFlagNeedsRepair(false);
+      setQueuedItems([]);
     }
   }, [isOpen, preselectedItem, defaultAction, presetTeam, defaultEmail]);
 
@@ -283,12 +304,44 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleAddCurrentToQueue = () => {
+    if (!effectiveItemId) return;
+    const normalizedFinalId = normalizeItemId(
+      effectiveItemId,
+      currentMatchedItem?.category || assembledType
+    );
+    const cat =
+      currentMatchedItem?.category ||
+      classifyVexCategory(undefined, undefined, normalizedFinalId) ||
+      assembledType;
+
+    setQueuedItems((prev) => {
+      if (prev.some((q) => q.itemId.toUpperCase() === normalizedFinalId.toUpperCase())) {
+        return prev;
+      }
+      return [
+        ...prev,
+        {
+          itemId: normalizedFinalId,
+          category: cat,
+          itemName: currentMatchedItem?.itemName,
+        },
+      ];
+    });
+    playClick();
+  };
+
+  const handleRemoveQueued = (itemId: string) => {
+    playClick();
+    setQueuedItems((prev) => prev.filter((q) => q.itemId !== itemId));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
     const finalItemId = effectiveItemId;
-    if (!finalItemId) {
+    if (queuedItems.length === 0 && !finalItemId) {
       setErrorMessage('Please specify a valid component Type and Part Number.');
       return;
     }
@@ -306,24 +359,53 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
       return;
     }
 
-    // Basic email format validation when an email is provided
     if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       setErrorMessage('Please enter a valid email address (e.g. s123456@ltisdschools.net or student@school.org).');
       return;
     }
 
-    const normalizedFinalId = normalizeItemId(finalItemId, currentMatchedItem?.category || assembledType);
+    const effectiveNotes =
+      flagNeedsRepair && action === 'Check In' && !/repair|broken|damage|issue/i.test(notes)
+        ? `${notes.trim() ? `${notes.trim()} · ` : ''}Needs repair check`
+        : notes.trim();
 
     setIsSubmitting(true);
     try {
-      await onSubmit({
-        action,
-        itemId: normalizedFinalId,
-        team: effectiveTeam,
-        notes: notes.trim(),
-        email: cleanEmail,
-        category: currentMatchedItem?.category || classifyVexCategory(undefined, undefined, normalizedFinalId) || assembledType,
-      });
+      if (queuedItems.length > 0) {
+        const entries = queuedItems.map((q) => ({
+          action,
+          itemId: q.itemId,
+          team: effectiveTeam,
+          notes: effectiveNotes,
+          email: cleanEmail,
+          category: q.category,
+          flagNeedsRepair: action === 'Check In' ? flagNeedsRepair : undefined,
+        }));
+        if (onBatchSubmit) {
+          await onBatchSubmit(entries);
+        } else {
+          for (const entry of entries) {
+            await onSubmit(entry);
+          }
+        }
+      } else {
+        const normalizedFinalId = normalizeItemId(
+          finalItemId,
+          currentMatchedItem?.category || assembledType
+        );
+        await onSubmit({
+          action,
+          itemId: normalizedFinalId,
+          team: effectiveTeam,
+          notes: effectiveNotes,
+          email: cleanEmail,
+          category:
+            currentMatchedItem?.category ||
+            classifyVexCategory(undefined, undefined, normalizedFinalId) ||
+            assembledType,
+          flagNeedsRepair: action === 'Check In' ? flagNeedsRepair : undefined,
+        });
+      }
       playSuccess();
       onClose();
     } catch (err: any) {
@@ -334,7 +416,15 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isSubmitting) {
+          playClick();
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter"
+    >
       <div className="bg-zinc-900 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[94vh] pb-[env(safe-area-inset-bottom,0px)] animate-modal-enter">
         {/* Mobile grab handle */}
         <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
@@ -495,7 +585,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                               isSelected ? 'text-zinc-700' : 'text-zinc-500'
                             }`}
                           >
-                            <span>[{prefix}]</span>
+                            <span>{prefix}</span>
                             <span>
                               {stat.avail}/{stat.total}
                             </span>
@@ -640,7 +730,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="sm:text-right shrink-0">
+                    <div className="sm:text-right flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
                       {currentMatchedItem ? (
                         <div>
                           <div className="flex items-center sm:justify-end gap-1.5">
@@ -670,8 +760,33 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                       ) : (
                         <span className="text-xs text-zinc-500">Not in list yet</span>
                       )}
+                      {effectiveItemId && (
+                        <button
+                          type="button"
+                          onClick={handleAddCurrentToQueue}
+                          className="px-2.5 py-1 text-[11px] font-mono font-semibold text-zinc-200 hover:text-white bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700 rounded-lg transition-colors flex items-center gap-1 btn-tactile"
+                          title="Queue multiple parts to check out or check in together"
+                        >
+                          <Plus className="w-3 h-3 text-red-400" />
+                          <span>
+                            {queuedItems.some((q) => q.itemId.toUpperCase() === effectiveItemId.toUpperCase())
+                              ? 'Queued'
+                              : 'Add to Batch'}
+                          </span>
+                        </button>
+                      )}
                     </div>
                   </div>
+
+                  {/* Needs Repair Health Warning */}
+                  {currentMatchedItem?.condition === 'Needs Repair' && (
+                    <div className="pt-2 border-t border-zinc-800/80 flex items-center gap-2 text-[11px] bg-rose-500/10 border border-rose-500/30 rounded-lg px-2.5 py-1.5 text-rose-300 font-medium">
+                      <Wrench className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                      <span>
+                        Flagged <strong>Needs Repair</strong> — test or inspect before competition use.
+                      </span>
+                    </div>
+                  )}
 
                   {/* Smart Status-Mismatch Helper */}
                   {currentMatchedItem && action === 'Check Out' && currentMatchedItem.status === 'Checked Out' && (
@@ -745,7 +860,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                 <div className="max-h-40 overflow-y-auto border border-zinc-800 rounded-lg divide-y divide-zinc-800/60 bg-zinc-950">
                   {eligibleItems.length === 0 ? (
                     <div className="py-6 px-4 text-center text-xs text-zinc-500">
-                      <p>No hardware matches &ldquo;{itemSearch}&rdquo;.</p>
+                      <p>No parts match &ldquo;{itemSearch}&rdquo;.</p>
                       {itemSearch && (
                         <button
                           type="button"
@@ -763,10 +878,16 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                         type="button"
                         onClick={() => {
                           setSelectedItemId(item.itemId);
-                          setAssembledType(item.category);
+                          const safeCat = classifyVexCategory(item.category, item.itemName, item.itemId);
+                          setAssembledType(safeCat === 'Sensors' ? 'Distance' : safeCat);
                           const num = item.itemId.match(/\d+$/);
                           if (num) setAssembledPartNum(num[0]);
-                          if (item.currentUser) setTeam(item.currentUser);
+                          if (item.currentUser) {
+                            setTeam(item.currentUser);
+                            const isClub = CLUB_TEAMS.includes(item.currentUser as any);
+                            setIsCustomTeam(!isClub);
+                            setCustomTeam(isClub ? '' : item.currentUser);
+                          }
                         }}
                         className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-800/50 flex items-center justify-between transition-colors ${
                           selectedItemId === item.itemId ? 'bg-zinc-800/60' : ''
@@ -803,16 +924,52 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                 </div>
               </div>
             )}
+
+            {/* Multi-Part Batch Queue Tray */}
+            {queuedItems.length > 0 && (
+              <div className="p-3 rounded-xl bg-zinc-950 border border-red-500/35 space-y-2 animate-fade-in-up">
+                <div className="flex items-center justify-between text-[11px] font-mono">
+                  <span className="text-zinc-200 font-bold">
+                    Batch Queue · {queuedItems.length} part{queuedItems.length === 1 ? '' : 's'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setQueuedItems([])}
+                    className="text-zinc-400 hover:text-zinc-200 text-[10px]"
+                  >
+                    Clear Queue
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {queuedItems.map((q) => (
+                    <span
+                      key={q.itemId}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-700 text-xs font-mono text-zinc-100"
+                    >
+                      <span>{q.itemId}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveQueued(q.itemId)}
+                        aria-label={`Remove ${q.itemId} from batch`}
+                        className="text-zinc-400 hover:text-rose-400"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* 2. Team Selector: All 11 Club Teams */}
+          {/* 2. Team Selector */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-semibold text-zinc-200">
                 2. {action === 'Check Out' ? 'Assign to Club Team' : 'Returning Team'}{' '}
                 <span className="text-rose-400">*</span>
               </label>
-              <span className="text-[11px] text-zinc-500">11 Club Teams</span>
+              <span className="text-[11px] text-zinc-500">{CLUB_TEAMS.length} Club &amp; Event Teams</span>
             </div>
 
             {/* Club Teams Grid */}
@@ -896,6 +1053,21 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                 </button>
               ))}
             </div>
+            {action === 'Check In' && (
+              <label className="mt-2.5 flex items-center gap-2 p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 hover:border-zinc-700 cursor-pointer text-xs text-zinc-300 select-none">
+                <input
+                  type="checkbox"
+                  checked={flagNeedsRepair}
+                  onChange={(e) => {
+                    playClick();
+                    setFlagNeedsRepair(e.target.checked);
+                  }}
+                  className="rounded border-zinc-700 bg-zinc-900 accent-red-600 cursor-pointer"
+                />
+                <Wrench className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                <span>Flag part as damaged / needs repair</span>
+              </label>
+            )}
           </div>
 
           {/* 4. Responsible Person Email (Required for regular members, optional for admins) */}
@@ -955,7 +1127,15 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
           {/* Modal Footer */}
           <div className="pt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-zinc-800">
             <div className="text-[11px] text-zinc-400 font-mono text-center sm:text-left">
-              Selected: <span className="text-zinc-100 font-semibold">{effectiveItemId}</span> &rarr;{' '}
+              {queuedItems.length > 0 ? (
+                <>
+                  Batch: <span className="text-zinc-100 font-semibold">{queuedItems.length} parts</span> &rarr;{' '}
+                </>
+              ) : (
+                <>
+                  Selected: <span className="text-zinc-100 font-semibold">{effectiveItemId}</span> &rarr;{' '}
+                </>
+              )}
               <span className="text-zinc-100 font-semibold">
                 Team {isCustomTeam ? customTeam || 'Custom' : team}
               </span>
@@ -983,6 +1163,10 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Saving...</span>
                   </>
+                ) : queuedItems.length > 0 ? (
+                  <span>
+                    {action} {queuedItems.length} Part{queuedItems.length === 1 ? '' : 's'}
+                  </span>
                 ) : (
                   <span>{action === 'Check Out' ? 'Check Out Part' : 'Check In Part'}</span>
                 )}

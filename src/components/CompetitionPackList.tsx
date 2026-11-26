@@ -4,16 +4,13 @@ import {
   Square,
   AlertTriangle,
   CheckCircle2,
-  Package,
   Plus,
-  RotateCcw,
-  Sliders,
   Trash2,
   X,
 } from 'lucide-react';
 import { CompetitionPackItem, InventoryItem, VexCategory, classifyVexCategory } from '../types';
 import { INITIAL_PACK_LIST } from '../data/mockInventory';
-import { playClick, playSuccess, playBeep } from '../services/soundFx';
+import { playClick, playSuccess } from '../services/soundFx';
 import { SpotlightCard, AnimatedNumber, AnimatedRingGauge, useSlidingIndicator } from './MotionPrimitives';
 
 interface CompetitionPackListProps {
@@ -364,7 +361,7 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
               filterState === 'all' ? 'text-zinc-100 font-bold' : 'text-zinc-400 hover:text-zinc-100'
             }`}
           >
-            ALL [{packList.length}]
+            All ({packList.length})
           </button>
           <button
             ref={setPackTabRef('unpacked')}
@@ -376,7 +373,7 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
               filterState === 'unpacked' ? 'text-amber-400 font-bold' : 'text-zinc-400 hover:text-zinc-100'
             }`}
           >
-            NEEDS PACKING [{packList.filter((i) => !i.isPacked).length}]
+            Needs Packing ({packList.filter((i) => !i.isPacked).length})
           </button>
           <button
             ref={setPackTabRef('packed')}
@@ -388,7 +385,7 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
               filterState === 'packed' ? 'text-zinc-100 font-bold' : 'text-zinc-400 hover:text-zinc-100'
             }`}
           >
-            PACKED [{packList.filter((i) => i.isPacked).length}]
+            Packed ({packList.filter((i) => i.isPacked).length})
           </button>
         </div>
       </div>
@@ -451,7 +448,7 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
                           {item.name}
                         </span>
                         <span className="text-[11px] text-zinc-400 font-mono">
-                          [{item.category}]
+                          · {item.category}
                         </span>
                         {item.priority === 'Critical' && (
                           <span className="text-[10px] text-rose-400 bg-rose-500/15 border border-rose-500/30 font-mono font-bold px-1.5 py-0.5 rounded">

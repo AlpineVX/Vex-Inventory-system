@@ -3,15 +3,11 @@ import {
   X,
   Activity,
   HardDrive,
-  Cpu,
   ShieldCheck,
   Zap,
   Download,
   RefreshCw,
-  Server,
-  Layers,
   Database,
-  CheckCircle2,
 } from 'lucide-react';
 import { InventoryItem, AuditLog, SyncStatus } from '../types';
 import { playClick, playBeep, playSuccess } from '../services/soundFx';
@@ -112,11 +108,11 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
     playBeep();
     const bundle = {
       timestamp: new Date().toISOString(),
-      schemaVersions: { inventory: 'v8', logs: 'v4', admin: 'v1' },
-      hardwareRecordCount: items.length,
+      schemaVersions: { inventory: 'v9', logs: 'v4', admin: 'v1' },
+      partsCount: items.length,
       availableCount: items.filter((i) => i.status === 'Available').length,
-      deployedCount: items.filter((i) => i.status === 'Checked Out').length,
-      auditLogCount: logs.length,
+      checkedOutCount: items.filter((i) => i.status === 'Checked Out').length,
+      activityLogCount: logs.length,
       storageMetrics: storageUsage,
       stateIntegrityChecksum: checksum,
       syncConfig: {
@@ -131,16 +127,25 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `vex_system_diagnostics_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `vex_status_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          playClick();
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter"
+    >
       <div className="bg-[#111114] border-t sm:border border-[#27272d] rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[92vh] pb-[env(safe-area-inset-bottom,0px)] animate-modal-enter">
         {/* Mobile grab handle */}
         <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
@@ -180,7 +185,7 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
                 <span>Data Version</span>
                 <Database className="w-3.5 h-3.5 text-red-400" />
               </div>
-              <div className="text-lg font-bold font-mono text-zinc-100 mt-1">v7.0</div>
+              <div className="text-lg font-bold font-mono text-zinc-100 mt-1">v9.0</div>
               <div className="text-[10px] text-zinc-500 font-mono">VEX V5 Inventory</div>
             </div>
 

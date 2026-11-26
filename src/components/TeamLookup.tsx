@@ -4,16 +4,14 @@ import {
   RotateCcw,
   Plus,
   Clock,
-  Layers,
   ArrowRight,
   CheckCircle2,
-  AlertCircle,
-  FileSpreadsheet,
   Printer,
+  Wrench,
 } from 'lucide-react';
 import { InventoryItem, CLUB_TEAMS, classifyVexCategory } from '../types';
-import { SpotlightCard, AnimatedNumber, useSlidingIndicator } from './MotionPrimitives';
-import { playClick } from '../services/soundFx';
+import { SpotlightCard, AnimatedNumber, SwipeableActionCard, useSlidingIndicator } from './MotionPrimitives';
+import { playClick, playBeep } from '../services/soundFx';
 
 function getDaysOut(dateOut?: string): number | null {
   if (!dateOut) return null;
@@ -43,7 +41,6 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
   onReturnItem,
   onReturnAllForTeam,
   isAdmin = false,
-  onOpenAdminUnlock,
   isMobileMode = false,
 }) => {
   const [customTeamInput, setCustomTeamInput] = useState('');
@@ -272,7 +269,7 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
                 </div>
                 <p className="text-xs text-zinc-400 mt-1">
                   {teamItems.length > 0
-                    ? `${teamItems.length} part(s) checked out to Team ${selectedTeam}. Click below to check out more.`
+                    ? `${teamItems.length} ${teamItems.length === 1 ? 'part' : 'parts'} checked out to Team ${selectedTeam}. Check out more below.`
                     : `Team ${selectedTeam} has no parts checked out right now.`}
                 </p>
               </div>
@@ -316,64 +313,85 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
             <div className={`${isMobileMode ? 'block' : 'block md:hidden'} divide-y divide-[#1a1a1f]`}>
               {teamItems.map((item) => {
                 const daysOut = getDaysOut(item.dateOut);
+                const needsRepair = item.condition === 'Needs Repair';
                 return (
-                  <div key={item.itemId} className="p-4 space-y-2.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-xs font-bold text-zinc-100 bg-[#1a1a1f] px-2 py-0.5 rounded border border-zinc-700">
-                            {item.itemId}
-                          </span>
-                          <span className="text-[11px] text-zinc-400 font-mono">
-                            · {item.category}
-                          </span>
-                          {daysOut !== null && daysOut >= 14 && (
-                            <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded">
-                              {daysOut}d out
+                  <SwipeableActionCard
+                    key={item.itemId}
+                    actionLabel={isAdmin ? 'Admin Return' : 'Check In'}
+                    actionTone="light"
+                    onSwipeAction={() => {
+                      playBeep();
+                      if (isAdmin) {
+                        onReturnItem(item);
+                      } else {
+                        onOpenCheckout(item, 'Check In', selectedTeam);
+                      }
+                    }}
+                  >
+                    <div className="p-4 space-y-2.5 bg-[#111114]">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-xs font-bold text-zinc-100 bg-[#1a1a1f] px-2 py-0.5 rounded border border-zinc-700">
+                              {item.itemId}
                             </span>
-                          )}
+                            <span className="text-[11px] text-zinc-400 font-mono">
+                              · {item.category}
+                            </span>
+                            {needsRepair && (
+                              <span className="text-[10px] font-mono font-bold text-red-400 bg-red-500/15 border border-red-500/35 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                                <Wrench className="w-2.5 h-2.5" />
+                                REPAIR
+                              </span>
+                            )}
+                            {daysOut !== null && daysOut >= 14 && (
+                              <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                                {daysOut}d out
+                              </span>
+                            )}
+                          </div>
+                          <h4 className="text-sm font-bold text-zinc-100 mt-1">
+                            {item.itemName}
+                          </h4>
                         </div>
-                        <h4 className="text-sm font-bold text-zinc-100 mt-1">
-                          {item.itemName}
-                        </h4>
+                      </div>
+
+                      <div className="text-xs text-zinc-300 space-y-1">
+                        {item.dateOut && (
+                          <div className="flex items-center gap-1.5 font-mono text-zinc-400">
+                            <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                            <span>OUT: {item.dateOut}</span>
+                          </div>
+                        )}
+                        {item.notes && (
+                          <div className="text-zinc-300 bg-[#09090b] p-2.5 rounded-lg border border-[#27272d] font-mono text-xs">
+                            <span className="text-zinc-500 uppercase">Subsystem: </span>
+                            {item.notes}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pt-1">
+                        {isAdmin ? (
+                          <button
+                            onClick={() => onReturnItem(item)}
+                            className="w-full min-h-[42px] py-2 px-3 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                            <span>Admin Check In</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onOpenCheckout(item, 'Check In', selectedTeam)}
+                            className="w-full min-h-[42px] py-2 px-3 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                            <span>Check In / Return</span>
+                          </button>
+                        )}
                       </div>
                     </div>
-
-                    <div className="text-xs text-zinc-300 space-y-1">
-                      {item.dateOut && (
-                        <div className="flex items-center gap-1.5 font-mono text-zinc-400">
-                          <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                          <span>OUT: {item.dateOut}</span>
-                        </div>
-                      )}
-                      {item.notes && (
-                        <div className="text-zinc-300 bg-[#09090b] p-2.5 rounded-lg border border-[#27272d] font-mono text-xs">
-                          <span className="text-zinc-500 uppercase">Subsystem: </span>
-                          {item.notes}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="pt-1">
-                      {isAdmin ? (
-                        <button
-                          onClick={() => onReturnItem(item)}
-                          className="w-full min-h-[42px] py-2 px-3 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                          <span>Admin Check In</span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => onOpenCheckout(item, 'Check In', selectedTeam)}
-                          className="w-full min-h-[42px] py-2 px-3 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                          <span>Check In / Return</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  </SwipeableActionCard>
                 );
               })}
             </div>
@@ -406,7 +424,15 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
                           </span>
                         </td>
                         <td className="py-3 px-4 font-medium text-zinc-100">
-                          {item.itemName}
+                          <div className="flex items-center gap-2">
+                            <span>{item.itemName}</span>
+                            {item.condition === 'Needs Repair' && (
+                              <span className="text-[9px] font-mono font-bold text-red-400 bg-red-500/15 border border-red-500/35 px-1.5 py-0.5 rounded inline-flex items-center gap-1">
+                                <Wrench className="w-2.5 h-2.5" />
+                                REPAIR
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-zinc-400 whitespace-nowrap font-mono text-[11px]">
                           {item.category}

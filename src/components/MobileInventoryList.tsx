@@ -19,6 +19,8 @@ import {
   Cpu,
   History,
   RotateCw,
+  Wrench,
+  QrCode,
 } from 'lucide-react';
 import {
   InventoryItem,
@@ -29,7 +31,7 @@ import {
   classifyVexCategory,
   normalizeItemId,
 } from '../types';
-import { useSlidingIndicator } from './MotionPrimitives';
+import { SwipeableActionCard, useSlidingIndicator } from './MotionPrimitives';
 import { playClick, playBeep } from '../services/soundFx';
 import { getVexHardwareSpec } from '../data/vexSpecs';
 
@@ -39,6 +41,8 @@ interface MobileInventoryListProps {
   selectedCategory: VexCategory | 'All';
   onSelectCategory: (cat: VexCategory | 'All') => void;
   onOpenCheckout: (item: InventoryItem, action?: 'Check Out' | 'Check In') => void;
+  onToggleCondition?: (item: InventoryItem) => void;
+  onOpenLabelPrinter?: () => void;
   isAdmin: boolean;
   onOpenAdminUnlock: () => void;
 }
@@ -61,11 +65,14 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
   selectedCategory,
   onSelectCategory,
   onOpenCheckout,
+  onToggleCondition,
+  onOpenLabelPrinter,
   isAdmin,
   onOpenAdminUnlock,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Available' | 'Checked Out'>('All');
+  const [repairOnly, setRepairOnly] = useState(false);
   const [teamFilter, setTeamFilter] = useState<string>('All');
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -104,6 +111,11 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
       result = result.filter((i) => i.status === statusFilter);
     }
 
+    // Needs Repair filter
+    if (repairOnly) {
+      result = result.filter((i) => i.condition === 'Needs Repair');
+    }
+
     // Team filter
     if (teamFilter !== 'All') {
       if (teamFilter === 'Unassigned') {
@@ -128,19 +140,21 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
     }
 
     return result;
-  }, [items, selectedCategory, statusFilter, teamFilter, searchQuery]);
+  }, [items, selectedCategory, statusFilter, repairOnly, teamFilter, searchQuery]);
 
   const availableCount = filteredItems.filter((i) => i.status === 'Available').length;
   const checkedOutCount = filteredItems.filter((i) => i.status === 'Checked Out').length;
+  const repairCount = items.filter((i) => i.condition === 'Needs Repair').length;
 
   const hasActiveFilters =
-    Boolean(searchQuery) || selectedCategory !== 'All' || statusFilter !== 'All' || teamFilter !== 'All';
+    Boolean(searchQuery) || selectedCategory !== 'All' || statusFilter !== 'All' || repairOnly || teamFilter !== 'All';
 
   const resetAllFilters = () => {
     playClick();
     setSearchQuery('');
     onSelectCategory('All');
     setStatusFilter('All');
+    setRepairOnly(false);
     setTeamFilter('All');
   };
 
@@ -155,6 +169,7 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
           <input
             type="text"
+            data-global-search="true"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search ID, part name, cabinet, team..."
@@ -229,7 +244,7 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
                   : 'text-zinc-400 hover:text-zinc-100'
               }`}
             >
-              ALL [{filteredItems.length}]
+              All ({filteredItems.length})
             </button>
             <button
               ref={setStatusTabRef('Available')}
@@ -243,7 +258,7 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
                   : 'text-zinc-400 hover:text-zinc-100'
               }`}
             >
-              READY [{availableCount}]
+              Ready ({availableCount})
             </button>
             <button
               ref={setStatusTabRef('Checked Out')}
@@ -257,7 +272,7 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
                   : 'text-zinc-400 hover:text-zinc-100'
               }`}
             >
-              OUT [{checkedOutCount}]
+              Out ({checkedOutCount})
             </button>
           </div>
 
@@ -281,18 +296,48 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
         </div>
       </div>
 
-      {/* Item count ticker */}
-      <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 px-1">
-        <span>SHOWING {filteredItems.length} OF {items.length} ITEMS</span>
-        {hasActiveFilters && (
+      {/* Item count ticker + Repair Filter & Label shortcut */}
+      <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-zinc-500 px-1 flex-wrap">
+        <span>Showing {filteredItems.length} of {items.length} parts · Swipe left for quick action</span>
+        <div className="flex items-center gap-2">
           <button
-            onClick={resetAllFilters}
-            className="text-red-400 hover:underline font-medium flex items-center gap-1"
+            type="button"
+            onClick={() => {
+              playClick();
+              setRepairOnly((prev) => !prev);
+            }}
+            className={`px-2 py-0.5 rounded-md border flex items-center gap-1 transition-colors ${
+              repairOnly
+                ? 'bg-red-500/20 text-red-300 border-red-500/40 font-bold'
+                : 'bg-[#111114] text-zinc-400 border-[#27272d]'
+            }`}
           >
-            <RotateCw className="w-3 h-3" />
-            <span>Reset Filters</span>
+            <Wrench className="w-3 h-3" />
+            <span>Repair ({repairCount})</span>
           </button>
-        )}
+          {onOpenLabelPrinter && (
+            <button
+              type="button"
+              onClick={() => {
+                playClick();
+                onOpenLabelPrinter();
+              }}
+              className="px-2 py-0.5 rounded-md border bg-[#111114] text-zinc-300 border-[#27272d] flex items-center gap-1"
+            >
+              <QrCode className="w-3 h-3 text-red-400" />
+              <span>Labels</span>
+            </button>
+          )}
+          {hasActiveFilters && (
+            <button
+              onClick={resetAllFilters}
+              className="text-red-400 hover:underline font-medium flex items-center gap-1"
+            >
+              <RotateCw className="w-3 h-3" />
+              <span>Reset</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Cards List */}
@@ -300,7 +345,7 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
         {filteredItems.length === 0 ? (
           <div className="p-8 text-center bg-[#111114] border border-[#27272d] rounded-xl animate-fade-in-up space-y-2.5">
             <Tag className="w-8 h-8 text-zinc-500 mx-auto" />
-            <p className="text-sm font-semibold text-zinc-100">No Hardware Found</p>
+            <p className="text-sm font-semibold text-zinc-100">No parts found</p>
             <p className="text-xs text-zinc-400">Try clearing filters or searching another part ID.</p>
             {hasActiveFilters && (
               <button
@@ -340,186 +385,233 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
                   .slice(0, 3)
               : [];
 
+            const needsRepair = item.condition === 'Needs Repair';
+
             return (
-              <div
+              <SwipeableActionCard
                 key={item.itemId}
-                style={{ '--row-idx': Math.min(idx, 10) } as React.CSSProperties}
-                className={`bg-[#111114] border rounded-2xl p-4 transition-colors animate-row-enter card-hover-lift ${
-                  isOverdue
-                    ? 'border-red-500/50 bg-red-950/20'
-                    : 'border-[#27272d]'
-                }`}
+                actionLabel={isAvailable ? 'Check Out' : 'Check In'}
+                actionTone={isAvailable ? 'red' : 'light'}
+                onSwipeAction={() => {
+                  playBeep();
+                  onOpenCheckout(item, isAvailable ? 'Check Out' : 'Check In');
+                }}
+                className="rounded-2xl animate-row-enter"
               >
-                {/* Tappable Header & Summary to toggle Specs/Logs */}
                 <div
-                  onClick={() => {
-                    playClick();
-                    setExpandedItemId(isExpanded ? null : item.itemId);
-                  }}
-                  className="cursor-pointer"
+                  style={{ '--row-idx': Math.min(idx, 10) } as React.CSSProperties}
+                  className={`bg-[#111114] border rounded-2xl p-4 transition-colors card-hover-lift ${
+                    needsRepair
+                      ? 'border-red-500/45 bg-[#151114]'
+                      : isOverdue
+                      ? 'border-red-500/50 bg-red-950/20'
+                      : 'border-[#27272d]'
+                  }`}
                 >
-                  {/* Header row: Item ID + Status */}
-                  <div className="flex items-center justify-between gap-2 font-mono">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-xs font-bold text-zinc-100 bg-[#1a1a1f] px-2.5 py-0.5 rounded-md border border-zinc-700 shrink-0">
-                        {item.itemId}
-                      </span>
-                      <span className="text-[11px] text-zinc-400 truncate">
-                        · {item.category}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-xs font-semibold shrink-0">
-                      {isAvailable ? (
-                        <span className="text-zinc-100 font-bold bg-zinc-200/10 px-2 py-0.5 rounded-md border border-zinc-400/25 text-[10px]">
-                          AVAILABLE
-                        </span>
-                      ) : (
-                        <span className="text-amber-400 font-bold bg-amber-500/15 px-2 py-0.5 rounded-md border border-amber-500/30 text-[10px]">
-                          {item.currentUser ? `TEAM ${item.currentUser}` : 'CHECKED OUT'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Name & Location */}
-                  <div className="mt-2">
-                    <h3 className="text-sm font-bold text-zinc-100 leading-snug font-sans">
-                      {item.itemName}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-zinc-400 flex-wrap font-mono">
-                      {item.location && (
-                        <span className="flex items-center gap-1 text-zinc-300">
-                          <MapPin className="w-3 h-3 text-zinc-500" />
-                          {item.location}
-                        </span>
-                      )}
-                      {!isAvailable && item.dateOut && (
-                        <span className="text-zinc-400">
-                          · OUT: {daysOut}d ago
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Overdue Warning Alert */}
-                {isOverdue && (
-                  <div className="mt-2.5 p-2.5 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-2 text-xs text-red-400 font-mono font-bold">
-                    <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                    <span>[OVERDUE ALERT] ({daysOut} days held &gt; 100d limit)</span>
-                  </div>
-                )}
-
-                {/* Smooth CSS Grid Expandable Specs & Custody History */}
-                <div className="accordion-grid" data-open={isExpanded ? 'true' : 'false'}>
-                  <div className="accordion-inner">
-                    <div className="mt-3 pt-3 border-t border-[#27272d] text-xs text-zinc-300 space-y-2.5 font-mono">
-                      {item.notes && (
-                        <div className="bg-[#09090b] p-2.5 rounded-xl border border-[#27272d] text-zinc-300 font-sans">
-                          <div className="text-[10px] font-mono text-zinc-500 uppercase mb-0.5">Active Notes</div>
-                          <span>{item.notes}</span>
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-2 text-[11px]">
-                        <div className="bg-[#09090b] p-2 rounded-lg border border-[#1a1a1f]">
-                          <div className="text-[10px] text-zinc-500">SEASON USES</div>
-                          <div className="text-zinc-100 font-bold mt-0.5">{item.timesCheckedOut || 0}x</div>
-                        </div>
-                        <div className="bg-[#09090b] p-2 rounded-lg border border-[#1a1a1f]">
-                          <div className="text-[10px] text-zinc-500">PART NUMBER</div>
-                          <div className="text-zinc-100 font-bold mt-0.5">{spec.officialPartNumber}</div>
-                        </div>
-                      </div>
-
-                      <div className="bg-[#09090b] p-2.5 rounded-xl border border-[#1a1a1f] space-y-1 text-[11px]">
-                        <div className="flex items-center gap-1.5 text-zinc-200 font-semibold">
-                          <Cpu className="w-3.5 h-3.5 text-red-400" />
-                          <span>{spec.interfaceProtocol}</span>
-                        </div>
-                        <div className="text-zinc-400">{spec.operatingRange}</div>
-                      </div>
-
-                      {recentItemLogs.length > 0 && (
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1 text-[10px] text-zinc-400 uppercase">
-                            <History className="w-3 h-3" />
-                            <span>Recent History</span>
-                          </div>
-                          <div className="bg-[#09090b] rounded-xl border border-[#1a1a1f] divide-y divide-[#1a1a1f]">
-                            {recentItemLogs.map((l) => (
-                              <div key={l.id} className="px-2.5 py-1.5 flex items-center justify-between text-[11px]">
-                                <span className={l.action === 'Check Out' ? 'text-amber-400' : 'text-zinc-200'}>
-                                  {l.action} · {l.team || '—'}
-                                </span>
-                                <span className="text-zinc-500">
-                                  {new Date(l.timestamp).toLocaleDateString()}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Touch Action Bar */}
-                <div className="mt-3 pt-2.5 border-t border-[#27272d] flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => {
+                  {/* Tappable Header & Summary to toggle Specs/Logs */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isExpanded}
+                    onClick={() => {
+                      playClick();
+                      setExpandedItemId(isExpanded ? null : item.itemId);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
                         playClick();
                         setExpandedItemId(isExpanded ? null : item.itemId);
-                      }}
-                      className="min-h-[38px] px-2.5 text-zinc-400 hover:text-zinc-100 text-xs font-medium flex items-center gap-1 rounded-lg hover:bg-[#1a1a1f] btn-tactile"
-                    >
-                      <span>{isExpanded ? 'Less' : 'Specs & History'}</span>
-                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-red-400' : ''}`} />
-                    </button>
+                      }
+                    }}
+                    className="cursor-pointer rounded-xl focus-visible:outline-none"
+                  >
+                    {/* Header row: Item ID + Status */}
+                    <div className="flex items-center justify-between gap-2 font-mono">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs font-bold text-zinc-100 bg-[#1a1a1f] px-2.5 py-0.5 rounded-md border border-zinc-700 shrink-0">
+                          {item.itemId}
+                        </span>
+                        <span className="text-[11px] text-zinc-400 truncate">
+                          · {item.category}
+                        </span>
+                      </div>
 
-                    <button
-                      onClick={() => {
-                        navigator.clipboard?.writeText(item.itemId);
-                        playClick();
-                        setCopiedId(item.itemId);
-                        setTimeout(() => setCopiedId(null), 1400);
-                      }}
-                      aria-label="Copy Part ID"
-                      className="min-h-[38px] min-w-[38px] flex items-center justify-center text-zinc-400 hover:text-zinc-100 rounded-lg hover:bg-[#1a1a1f] btn-tactile"
-                    >
-                      {copiedId === item.itemId ? <Check className="w-3.5 h-3.5 text-zinc-100" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
+                      <div className="flex items-center gap-1.5 text-xs font-semibold shrink-0">
+                        {needsRepair && (
+                          <span className="text-red-400 font-bold bg-red-500/15 px-1.5 py-0.5 rounded-md border border-red-500/35 text-[9px]">
+                            REPAIR
+                          </span>
+                        )}
+                        {isAvailable ? (
+                          <span className="text-zinc-100 font-bold bg-zinc-200/10 px-2 py-0.5 rounded-md border border-zinc-400/25 text-[10px]">
+                            AVAILABLE
+                          </span>
+                        ) : (
+                          <span className="text-amber-400 font-bold bg-amber-500/15 px-2 py-0.5 rounded-md border border-amber-500/30 text-[10px]">
+                            {item.currentUser ? `TEAM ${item.currentUser}` : 'CHECKED OUT'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Name & Location */}
+                    <div className="mt-2">
+                      <h3 className="text-sm font-bold text-zinc-100 leading-snug font-sans">
+                        {item.itemName}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-zinc-400 flex-wrap font-mono">
+                        {item.location && (
+                          <span className="flex items-center gap-1 text-zinc-300">
+                            <MapPin className="w-3 h-3 text-zinc-500" />
+                            {item.location}
+                          </span>
+                        )}
+                        {!isAvailable && item.dateOut && (
+                          <span className="text-zinc-400">
+                            · OUT: {daysOut}d ago
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    {isAvailable ? (
+                  {/* Overdue Warning Alert */}
+                  {isOverdue && (
+                    <div className="mt-2.5 p-2.5 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-2 text-xs text-red-400 font-mono font-bold">
+                      <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                      <span>Checked out {daysOut} days (over 100-day limit)</span>
+                    </div>
+                  )}
+
+                  {/* Smooth CSS Grid Expandable Specs & Custody History */}
+                  <div className="accordion-grid" data-open={isExpanded ? 'true' : 'false'}>
+                    <div className="accordion-inner">
+                      <div className="mt-3 pt-3 border-t border-[#27272d] text-xs text-zinc-300 space-y-2.5 font-mono">
+                        {item.notes && (
+                          <div className="bg-[#09090b] p-2.5 rounded-xl border border-[#27272d] text-zinc-300 font-sans">
+                            <div className="text-[10px] font-mono text-zinc-500 uppercase mb-0.5">Active Notes</div>
+                            <span>{item.notes}</span>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div className="bg-[#09090b] p-2 rounded-lg border border-[#1a1a1f]">
+                            <div className="text-[10px] text-zinc-500">SEASON USES</div>
+                            <div className="text-zinc-100 font-bold mt-0.5">{item.timesCheckedOut || 0}x</div>
+                          </div>
+                          <div className="bg-[#09090b] p-2 rounded-lg border border-[#1a1a1f]">
+                            <div className="text-[10px] text-zinc-500">PART NUMBER</div>
+                            <div className="text-zinc-100 font-bold mt-0.5">{spec.officialPartNumber}</div>
+                          </div>
+                        </div>
+
+                        <div className="bg-[#09090b] p-2.5 rounded-xl border border-[#1a1a1f] space-y-1 text-[11px]">
+                          <div className="flex items-center gap-1.5 text-zinc-200 font-semibold">
+                            <Cpu className="w-3.5 h-3.5 text-red-400" />
+                            <span>{spec.interfaceProtocol}</span>
+                          </div>
+                          <div className="text-zinc-400">{spec.operatingRange}</div>
+                        </div>
+
+                        {onToggleCondition && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              playClick();
+                              onToggleCondition(item);
+                            }}
+                            className={`w-full py-2 px-3 rounded-xl border text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                              needsRepair
+                                ? 'bg-zinc-100 text-zinc-950 border-zinc-200'
+                                : 'bg-[#09090b] text-red-400 border-red-500/35 hover:bg-red-500/10'
+                            }`}
+                          >
+                            <Wrench className="w-3.5 h-3.5" />
+                            <span>{needsRepair ? 'Mark Part Condition as Good' : 'Flag Part as Needs Repair'}</span>
+                          </button>
+                        )}
+
+                        {recentItemLogs.length > 0 && (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1 text-[10px] text-zinc-400 uppercase">
+                              <History className="w-3 h-3" />
+                              <span>Recent History</span>
+                            </div>
+                            <div className="bg-[#09090b] rounded-xl border border-[#1a1a1f] divide-y divide-[#1a1a1f]">
+                              {recentItemLogs.map((l) => (
+                                <div key={l.id} className="px-2.5 py-1.5 flex items-center justify-between text-[11px]">
+                                  <span className={l.action === 'Check Out' ? 'text-amber-400' : 'text-zinc-200'}>
+                                    {l.action} · {l.team || '—'}
+                                  </span>
+                                  <span className="text-zinc-500">
+                                    {new Date(l.timestamp).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Touch Action Bar */}
+                  <div className="mt-3 pt-2.5 border-t border-[#27272d] flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => {
-                          playBeep();
-                          onOpenCheckout(item, 'Check Out');
+                          playClick();
+                          setExpandedItemId(isExpanded ? null : item.itemId);
                         }}
-                        className="min-h-[40px] px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs rounded-xl flex items-center gap-1.5 shadow-sm btn-crimson-glow"
+                        className="min-h-[38px] px-2.5 text-zinc-400 hover:text-zinc-100 text-xs font-medium flex items-center gap-1 rounded-lg hover:bg-[#1a1a1f] btn-tactile"
                       >
-                        <ArrowUpRight className="w-4 h-4" />
-                        <span>Check Out</span>
+                        <span>{isExpanded ? 'Less' : 'Specs & History'}</span>
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-red-400' : ''}`} />
                       </button>
-                    ) : (
+
                       <button
                         onClick={() => {
-                          playBeep();
-                          onOpenCheckout(item, 'Check In');
+                          navigator.clipboard?.writeText(item.itemId).catch(() => {});
+                          playClick();
+                          setCopiedId(item.itemId);
+                          setTimeout(() => setCopiedId(null), 1400);
                         }}
-                        className="min-h-[40px] px-4 py-2 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] text-zinc-100 font-semibold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-sm btn-tactile"
+                        aria-label="Copy Part ID"
+                        className="min-h-[38px] min-w-[38px] flex items-center justify-center text-zinc-400 hover:text-zinc-100 rounded-lg hover:bg-[#1a1a1f] btn-tactile"
                       >
-                        <RotateCcw className="w-3.5 h-3.5 text-zinc-200" />
-                        <span>Check In</span>
+                        {copiedId === item.itemId ? <Check className="w-3.5 h-3.5 text-zinc-100 animate-pop" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
-                    )}
+                    </div>
+
+                    <div>
+                      {isAvailable ? (
+                        <button
+                          onClick={() => {
+                            playBeep();
+                            onOpenCheckout(item, 'Check Out');
+                          }}
+                          className="min-h-[40px] px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs rounded-xl flex items-center gap-1.5 shadow-sm btn-crimson-glow"
+                        >
+                          <ArrowUpRight className="w-4 h-4" />
+                          <span>Check Out</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            playBeep();
+                            onOpenCheckout(item, 'Check In');
+                          }}
+                          className="min-h-[40px] px-4 py-2 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] text-zinc-100 font-semibold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-sm btn-tactile"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-zinc-200" />
+                          <span>Check In</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </SwipeableActionCard>
             );
           })
         )}

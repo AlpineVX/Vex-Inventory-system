@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Lock, KeyRound, Mail, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, KeyRound, Mail, ShieldAlert } from 'lucide-react';
 import { AdminSettings } from '../types';
 import { useSlidingIndicator } from './MotionPrimitives';
 import { playClick } from '../services/soundFx';
@@ -23,6 +23,13 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const { containerRef: methodBarRef, setItemRef: setMethodRef, indicator: methodIndicator } =
     useSlidingIndicator<'pin' | 'email'>(method, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setError(null);
+      setPinInput('');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -59,7 +66,15 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter font-sans">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          playClick();
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter font-sans"
+    >
       <div className="bg-[#111114] border-t sm:border border-[#27272d] rounded-t-3xl sm:rounded-xl shadow-2xl max-w-sm w-full overflow-hidden pb-[env(safe-area-inset-bottom,0px)] animate-modal-enter">
         {/* Mobile grab handle */}
         <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
