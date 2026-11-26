@@ -56,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'inventory' as const, label: 'Inventory' },
     { id: 'teams' as const, label: 'Teams' },
     { id: 'packlist' as const, label: 'Pack List' },
-    { id: 'logs' as const, label: 'Audit Logs' },
+    { id: 'logs' as const, label: 'Activity Log' },
   ];
 
   const navRef = useRef<HTMLElement>(null);
@@ -90,6 +90,17 @@ export const Header: React.FC<HeaderProps> = ({
     return () => observer.disconnect();
   }, [activeTab]);
 
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 8);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const handleTabClick = (tabId: ActiveTab) => {
     playClick();
     onTabChange(tabId);
@@ -101,7 +112,14 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-[#09090b]/95 backdrop-blur-md border-b border-[#27272d] no-print">
+    <header
+      className={`sticky top-0 z-30 backdrop-blur-md border-b no-print transition-all duration-200 ${
+        isScrolled
+          ? 'bg-[#09090b]/98 border-zinc-800 shadow-[0_8px_30px_rgba(0,0,0,0.65)]'
+          : 'bg-[#09090b]/95 border-[#27272d]'
+      }`}
+    >
+      <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-red-600/50 to-transparent" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between gap-4 h-14">
           {/* Brand Wordmark & Club Emblem */}
@@ -151,6 +169,11 @@ export const Header: React.FC<HeaderProps> = ({
             )}
             {navTabs.map((tab) => {
               const isActive = activeTab === tab.id;
+              const isLockedInKiosk =
+                adminSettings.kioskOnly &&
+                !adminSettings.isUnlocked &&
+                tab.id !== 'dashboard' &&
+                tab.id !== 'inventory';
               return (
                 <button
                   key={tab.id}
@@ -158,13 +181,16 @@ export const Header: React.FC<HeaderProps> = ({
                     tabRefs.current[tab.id] = el;
                   }}
                   onClick={() => handleTabClick(tab.id)}
-                  className={`relative z-10 px-3.5 py-1.5 rounded-md transition-colors duration-150 whitespace-nowrap text-xs ${
+                  className={`relative z-10 px-3.5 py-1.5 rounded-md transition-colors duration-150 whitespace-nowrap text-xs flex items-center gap-1.5 ${
                     isActive
                       ? 'text-zinc-100 font-semibold'
+                      : isLockedInKiosk
+                      ? 'text-zinc-500 hover:text-zinc-300'
                       : 'text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
-                  {tab.label}
+                  <span>{tab.label}</span>
+                  {isLockedInKiosk && <Lock className="w-2.5 h-2.5 text-zinc-500" />}
                 </button>
               );
             })}
@@ -228,9 +254,9 @@ export const Header: React.FC<HeaderProps> = ({
               {onToggleSound && (
                 <button
                   onClick={onToggleSound}
-                  title={soundEnabled ? 'Tactile Web Audio Feedback: ON (Click to mute)' : 'Tactile Web Audio Feedback: MUTED (Click to unmute)'}
+                  title={soundEnabled ? 'Sound Effects: ON (Click to mute)' : 'Sound Effects: MUTED (Click to unmute)'}
                   aria-label="Toggle Sound Effects"
-                  className={`p-1.5 rounded-md transition-colors ${
+                  className={`p-1.5 rounded-md transition-colors btn-tactile ${
                     soundEnabled ? 'text-red-400 hover:text-red-300' : 'text-zinc-500 hover:text-zinc-300'
                   }`}
                 >
@@ -238,42 +264,42 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               )}
 
-              {/* Keyboard Shortcuts Cheatsheet */}
+              {/* Keyboard Shortcuts */}
               {onOpenShortcuts && (
                 <button
                   onClick={() => {
                     playClick();
                     onOpenShortcuts();
                   }}
-                  title="Keyboard Shortcuts Cheatsheet (?)"
+                  title="Keyboard Shortcuts (?)"
                   aria-label="Keyboard Shortcuts"
-                  className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors"
+                  className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors btn-tactile"
                 >
                   <Keyboard className="w-3.5 h-3.5" />
                 </button>
               )}
 
-              {/* System Diagnostics / Telemetry Inspector */}
+              {/* App Status & Cache */}
               {onOpenDiagnostics && (
                 <button
                   onClick={() => {
                     playClick();
                     onOpenDiagnostics();
                   }}
-                  title="System Telemetry & Architecture Diagnostics"
-                  aria-label="System Diagnostics"
-                  className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors"
+                  title="App Status & Cache"
+                  aria-label="App Status and Cache"
+                  className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors btn-tactile"
                 >
                   <Activity className="w-3.5 h-3.5" />
                 </button>
               )}
 
-              {/* Print Official Tournament Manifest */}
+              {/* Print Inventory Sheet */}
               <button
                 onClick={handlePrint}
-                title="Print Official Competition Custody Manifest (Ctrl+P)"
-                aria-label="Print Manifest"
-                className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors"
+                title="Print Inventory Sheet (Ctrl+P)"
+                aria-label="Print Inventory Sheet"
+                className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors btn-tactile"
               >
                 <Printer className="w-3.5 h-3.5" />
               </button>
@@ -287,7 +313,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   title="Download Club Logos & Custom QR Badges"
                   aria-label="Download Club Logos and QR Badges"
-                  className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors"
+                  className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors btn-tactile"
                 >
                   <Download className="w-3.5 h-3.5" />
                 </button>
@@ -302,7 +328,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   title="Preview / Switch to Phone View"
                   aria-label="Switch to Phone View"
-                  className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors"
+                  className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors btn-tactile"
                 >
                   <Smartphone className="w-3.5 h-3.5" />
                 </button>
@@ -316,9 +342,9 @@ export const Header: React.FC<HeaderProps> = ({
                 }}
                 title={adminSettings.isUnlocked ? 'Google Sheet API & System Settings' : 'Settings (Admin Authentication Required)'}
                 aria-label="Google Sheet & System Settings"
-                className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors relative"
+                className="p-1.5 hover:text-zinc-200 hover:bg-[#1a1a1f] rounded-md transition-colors relative btn-tactile group"
               >
-                <Settings className="w-3.5 h-3.5" />
+                <Settings className="w-3.5 h-3.5 group-hover:rotate-45 transition-transform duration-300" />
                 {syncStatus.url ? (
                   <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
                 ) : (
@@ -347,7 +373,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               key={tab.id}
               onClick={() => handleTabClick(tab.id)}
-              className={`px-2.5 py-1 text-xs rounded-md whitespace-nowrap transition-colors ${
+              className={`px-2.5 py-1 text-xs rounded-md whitespace-nowrap transition-all btn-tactile ${
                 activeTab === tab.id ? 'bg-[#1a1a1f] text-zinc-100 font-semibold border border-red-500/35' : 'text-zinc-400 border border-transparent'
               }`}
             >

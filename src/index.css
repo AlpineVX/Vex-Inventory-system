@@ -40,6 +40,9 @@
   --color-rose-800: #9f1239;
   --color-rose-950: #4c0519;
 
+  /* Mobile-first Extra Small Breakpoint (384px) */
+  --breakpoint-xs: 24rem;
+
   /* Natural Human-Crafted Typography Scale */
   --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-display: 'Plus Jakarta Sans', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -53,6 +56,15 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+  }
+
+  html, body {
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button, [role="button"], a {
+    touch-action: manipulation;
   }
 
   h1, h2, h3, h4 {
@@ -70,6 +82,15 @@
     outline: 2px solid #d9363c;
     outline-offset: 1px;
   }
+}
+
+/* Hide scrollbars cleanly for horizontal swipe rails on mobile */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Micro-interaction & tactile feedback utilities */
@@ -109,7 +130,41 @@
   transform: scale(0.965) translateY(1px);
 }
 
-/* Cursor-reactive surface spotlight */
+/* Crimson input focus halo */
+.crimson-focus-glow {
+  transition: border-color 180ms ease, box-shadow 200ms ease, background-color 180ms ease;
+}
+.crimson-focus-glow:focus {
+  border-color: #d9363c !important;
+  box-shadow: 0 0 0 3px rgba(197, 35, 41, 0.16);
+}
+
+/* Smooth CSS Grid accordion expansion */
+.accordion-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 240ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease;
+}
+.accordion-grid[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.accordion-inner {
+  overflow: hidden;
+}
+
+/* Cursor-reactive surface spotlight & optional subtle 3D tilt */
+.spotlight-card {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease, border-color 180ms ease;
+}
+.spotlight-card[data-tilt="true"] {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--lift, 0px));
+  will-change: transform;
+}
+.spotlight-card[data-tilt="true"]:hover {
+  transition: transform 90ms ease-out, box-shadow 200ms ease, border-color 180ms ease;
+}
 .spotlight-card::before {
   content: '';
   position: absolute;
@@ -142,6 +197,11 @@
 }
 .card-hover-lift:active {
   transform: translateY(-1px) scale(0.99);
+}
+
+/* Preserve smooth 3D tilt when combined with card-hover-lift */
+.spotlight-card[data-tilt="true"].card-hover-lift:hover {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--lift, -3px));
 }
 
 /* Smooth entry & view transitions */
@@ -251,6 +311,20 @@
   animation: toastIn 260ms cubic-bezier(0.34, 1.3, 0.64, 1) both;
 }
 
+@keyframes toastProgress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.animate-toast-progress {
+  transform-origin: left center;
+  animation: toastProgress 5500ms linear forwards;
+}
+
 @keyframes cardEnter {
   from {
     opacity: 0;
@@ -341,6 +415,7 @@
   .animate-backdrop-enter,
   .animate-modal-enter,
   .animate-toast-in,
+  .animate-toast-progress,
   .animate-card-enter,
   .animate-pop,
   .radar-dot,
@@ -353,7 +428,10 @@
   .card-hover-lift,
   .progress-fill,
   .ring-progress,
-  .spotlight-card::before {
+  .spotlight-card,
+  .spotlight-card::before,
+  .accordion-grid,
+  .crimson-focus-glow {
     transition: none !important;
   }
 }

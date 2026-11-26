@@ -8,17 +8,24 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Calendar,
+  X,
+  RotateCcw,
 } from 'lucide-react';
 import { AuditLog } from '../types';
+import { useSlidingIndicator } from './MotionPrimitives';
+import { playClick } from '../services/soundFx';
 
 interface ActivityLogsProps {
   logs: AuditLog[];
+  isMobileMode?: boolean;
 }
 
-export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
+export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, isMobileMode = false }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [actionFilter, setActionFilter] = useState<'All' | 'Check Out' | 'Check In'>('All');
   const [teamFilter, setTeamFilter] = useState<string>('All');
+  const { containerRef: actionNavRef, setItemRef: setActionTabRef, indicator: actionIndicator } =
+    useSlidingIndicator<'All' | 'Check Out' | 'Check In'>(actionFilter);
 
   // Discover all unique teams
   const uniqueTeams = useMemo(() => {
@@ -84,10 +91,10 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#27272d]">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-zinc-100 font-sans">
-              Activity &amp; Audit Logs
+              Activity Log
             </h1>
             <p className="text-xs text-zinc-400 mt-1">
-              Immutable historical record of every checkout, check-in, and equipment movement
+              History of every part checked out and returned
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -111,33 +118,74 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by Part ID, team, notes, email..."
-            className="w-full pl-9 pr-4 py-1.5 text-xs bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-500 font-mono"
+            className="w-full pl-9 pr-8 py-2.5 sm:py-1.5 text-xs bg-[#09090b] border border-[#27272d] rounded-xl sm:rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-500 crimson-focus-glow font-mono"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-100"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Action Filter */}
-          <div className="flex items-center bg-[#09090b] p-0.5 rounded-lg border border-[#27272d] text-xs font-mono">
+          {/* Action Filter with Spring Sliding Pill */}
+          <div
+            ref={actionNavRef}
+            className="relative flex items-center bg-[#09090b] p-0.5 rounded-lg border border-[#27272d] text-xs font-mono"
+          >
+            {actionIndicator.ready && (
+              <div
+                aria-hidden="true"
+                style={{
+                  transform: `translate3d(${actionIndicator.left}px, ${actionIndicator.top}px, 0)`,
+                  width: `${actionIndicator.width}px`,
+                  height: `${actionIndicator.height}px`,
+                }}
+                className={`absolute top-0 left-0 rounded-md pointer-events-none transition-[transform,width,height,background-color,border-color] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)] border ${
+                  actionFilter === 'Check Out'
+                    ? 'bg-amber-500/20 border-amber-500/40'
+                    : actionFilter === 'Check In'
+                    ? 'bg-zinc-200/15 border-zinc-400/40'
+                    : 'bg-[#1a1a1f] border-red-500/40'
+                }`}
+              />
+            )}
             <button
-              onClick={() => setActionFilter('All')}
-              className={`px-2.5 py-1 rounded-md transition-all btn-tactile ${
-                actionFilter === 'All' ? 'bg-[#1a1a1f] text-zinc-100 font-bold shadow-sm' : 'text-zinc-400 hover:text-zinc-100'
+              ref={setActionTabRef('All')}
+              onClick={() => {
+                playClick();
+                setActionFilter('All');
+              }}
+              className={`relative z-10 px-2.5 py-1 rounded-md transition-colors duration-150 ${
+                actionFilter === 'All' ? 'text-zinc-100 font-bold' : 'text-zinc-400 hover:text-zinc-100'
               }`}
             >
               ALL
             </button>
             <button
-              onClick={() => setActionFilter('Check Out')}
-              className={`px-2.5 py-1 rounded-md transition-all btn-tactile ${
-                actionFilter === 'Check Out' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 font-bold' : 'text-zinc-400 hover:text-white'
+              ref={setActionTabRef('Check Out')}
+              onClick={() => {
+                playClick();
+                setActionFilter('Check Out');
+              }}
+              className={`relative z-10 px-2.5 py-1 rounded-md transition-colors duration-150 ${
+                actionFilter === 'Check Out' ? 'text-amber-400 font-bold' : 'text-zinc-400 hover:text-white'
               }`}
             >
               CHECK OUT
             </button>
             <button
-              onClick={() => setActionFilter('Check In')}
-              className={`px-2.5 py-1 rounded-md transition-all btn-tactile ${
-                actionFilter === 'Check In' ? 'bg-zinc-200/15 text-zinc-100 border border-zinc-400/40 font-bold' : 'text-zinc-400 hover:text-white'
+              ref={setActionTabRef('Check In')}
+              onClick={() => {
+                playClick();
+                setActionFilter('Check In');
+              }}
+              className={`relative z-10 px-2.5 py-1 rounded-md transition-colors duration-150 ${
+                actionFilter === 'Check In' ? 'text-zinc-100 font-bold' : 'text-zinc-400 hover:text-white'
               }`}
             >
               CHECK IN
@@ -148,7 +196,7 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
           <select
             value={teamFilter}
             onChange={(e) => setTeamFilter(e.target.value)}
-            className="px-2.5 py-1.5 text-xs bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-300 font-mono focus:outline-none focus:border-red-500"
+            className="min-h-[38px] sm:min-h-0 px-2.5 py-1.5 text-xs bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-300 font-mono focus:outline-none focus:border-red-500"
           >
             <option value="All">All Teams</option>
             {uniqueTeams.map((team) => (
@@ -157,29 +205,136 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
               </option>
             ))}
           </select>
+
+          {(searchQuery || actionFilter !== 'All' || teamFilter !== 'All') && (
+            <button
+              onClick={() => {
+                playClick();
+                setSearchQuery('');
+                setActionFilter('All');
+                setTeamFilter('All');
+              }}
+              className="flex items-center gap-1 min-h-[38px] sm:min-h-0 px-2.5 py-1.5 text-xs text-zinc-400 hover:text-zinc-100 bg-[#1a1a1f] border border-[#27272d] rounded-lg transition-colors btn-tactile"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Logs Table */}
-      <div className="rounded-xl border border-[#27272d] bg-[#111114] overflow-hidden shadow-none">
+      {/* Mobile Audit Timeline Cards */}
+      <div className={`${isMobileMode ? 'block' : 'block md:hidden'} space-y-2.5`}>
+        {filteredLogs.length === 0 ? (
+          <div className="p-8 rounded-2xl border border-[#27272d] bg-[#111114] text-center space-y-2.5">
+            <p className="font-mono text-xs text-zinc-400">No entries match your filters.</p>
+            {(searchQuery || actionFilter !== 'All' || teamFilter !== 'All') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setActionFilter('All');
+                  setTeamFilter('All');
+                }}
+                className="px-3.5 py-2 text-xs font-medium text-zinc-200 bg-[#1a1a1f] border border-[#27272d] rounded-xl"
+              >
+                Reset All Filters
+              </button>
+            )}
+          </div>
+        ) : (
+          filteredLogs.map((log, idx) => {
+            const isCheckOut = log.action === 'Check Out';
+            const date = new Date(log.timestamp);
+            return (
+              <div
+                key={log.id}
+                style={{ '--row-idx': Math.min(idx, 10) } as React.CSSProperties}
+                className="p-3.5 rounded-2xl border border-[#27272d] bg-[#111114] space-y-2 animate-row-enter"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded border shrink-0 ${
+                        isCheckOut
+                          ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                          : 'bg-zinc-200/10 text-zinc-100 border-zinc-400/25'
+                      }`}
+                    >
+                      {isCheckOut ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
+                      {log.action}
+                    </span>
+                    <span className="font-mono text-xs font-bold text-zinc-100 bg-[#1a1a1f] px-2 py-0.5 rounded border border-zinc-700 truncate">
+                      {log.itemId}
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono text-zinc-400 shrink-0">
+                    {isNaN(date.getTime())
+                      ? log.timestamp || '—'
+                      : `${date.toLocaleDateString()} · ${date.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}`}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="font-semibold text-zinc-100 truncate">
+                    {log.itemName || log.category || 'VEX Hardware Item'}
+                  </span>
+                  {log.team && (
+                    <span className="font-mono text-[11px] font-bold text-amber-400 shrink-0">
+                      Team {log.team}
+                    </span>
+                  )}
+                </div>
+
+                {(log.notes || log.userEmail) && (
+                  <div className="pt-1.5 border-t border-[#1a1a1f] text-[11px] space-y-0.5">
+                    {log.notes && <p className="text-zinc-300">{log.notes}</p>}
+                    {log.userEmail && <div className="font-mono text-zinc-500 truncate">{log.userEmail}</div>}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+        <div className="px-2 py-1 text-[11px] text-zinc-500 font-mono text-center">
+          SHOWING {filteredLogs.length} OF {logs.length} ENTRIES
+        </div>
+      </div>
+
+      {/* Desktop Logs Table */}
+      <div className={`${isMobileMode ? 'hidden' : 'hidden md:block'} rounded-xl border border-[#27272d] bg-[#111114] overflow-hidden shadow-none`}>
         <div className="overflow-x-auto max-h-[600px]">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="sticky top-0 bg-[#09090b] border-b border-[#27272d] text-zinc-400 select-none font-medium">
               <tr>
-                <th className="py-3 px-4 font-semibold">TIMESTAMP</th>
+                <th className="py-3 px-4 font-semibold">TIME</th>
                 <th className="py-3 px-4 font-semibold">ACTION</th>
                 <th className="py-3 px-4 font-semibold">PART ID</th>
-                <th className="py-3 px-4 font-semibold">COMPONENT NAME</th>
+                <th className="py-3 px-4 font-semibold">PART NAME</th>
                 <th className="py-3 px-4 font-semibold">TEAM</th>
-                <th className="py-3 px-4 font-semibold">NOTES / PURPOSE</th>
-                <th className="py-3 px-4 font-semibold">OPERATOR EMAIL</th>
+                <th className="py-3 px-4 font-semibold">NOTES</th>
+                <th className="py-3 px-4 font-semibold">STUDENT EMAIL</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1a1a1f] font-sans">
               {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-zinc-400 font-mono">
-                    No transactions match the selected filters.
+                  <td colSpan={7} className="py-12 text-center text-zinc-400">
+                    <p className="font-mono text-xs">No entries match your filters.</p>
+                    {(searchQuery || actionFilter !== 'All' || teamFilter !== 'All') && (
+                      <button
+                        onClick={() => {
+                          setSearchQuery('');
+                          setActionFilter('All');
+                          setTeamFilter('All');
+                        }}
+                        className="mt-3 px-3 py-1.5 text-xs font-medium text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors"
+                      >
+                        Reset All Filters
+                      </button>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -250,6 +405,13 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs }) => {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="px-4 py-2.5 bg-[#09090b] border-t border-[#27272d] flex items-center justify-between text-xs text-zinc-400 font-mono">
+          <span>
+            SHOWING <strong className="text-zinc-100">{filteredLogs.length}</strong> OF{' '}
+            <strong className="text-zinc-100">{logs.length}</strong> ENTRIES
+          </span>
+          <span className="hidden sm:inline text-zinc-500">Newest first</span>
         </div>
       </div>
     </div>

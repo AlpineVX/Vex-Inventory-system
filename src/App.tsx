@@ -125,6 +125,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [selectedCategory, setSelectedCategory] = useState<VexCategory | 'All'>('All');
   const [selectedTeam, setSelectedTeam] = useState<string>('654V');
+  const [lastBorrowerEmail, setLastBorrowerEmail] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('vex_last_borrower_email') || '';
+    }
+    return '';
+  });
 
   // Modal states
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState<boolean>(false);
@@ -198,23 +204,23 @@ export default function App() {
       } else if (e.key === '1') {
         e.preventDefault();
         playClick();
-        setActiveTab('dashboard');
+        handleTabChange('dashboard');
       } else if (e.key === '2') {
         e.preventDefault();
         playClick();
-        setActiveTab('inventory');
+        handleTabChange('inventory');
       } else if (e.key === '3') {
         e.preventDefault();
         playClick();
-        setActiveTab('teams');
+        handleTabChange('teams');
       } else if (e.key === '4') {
         e.preventDefault();
         playClick();
-        setActiveTab('packlist');
+        handleTabChange('packlist');
       } else if (e.key === '5') {
         e.preventDefault();
         playClick();
-        setActiveTab('logs');
+        handleTabChange('logs');
       } else if (e.key === 'c' || e.key === 'C') {
         e.preventDefault();
         playClick();
@@ -238,7 +244,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleToggleSound]);
+  }, [handleToggleSound, adminSettings.kioskOnly, adminSettings.isUnlocked]);
 
   // Mobile viewport detection and manual layout mode switch
   const [viewMode, setViewMode] = useState<'auto' | 'mobile' | 'desktop'>(() => {
@@ -273,8 +279,8 @@ export default function App() {
     }
     addToast(
       'info',
-      next === 'mobile' ? 'Switched to Dedicated Phone UI' : 'Switched to Desktop UI',
-      'You can switch layouts anytime using the top bar switcher icon or footer link.'
+      next === 'mobile' ? 'Phone View On' : 'Desktop View On',
+      'You can switch views anytime from the top bar or footer.'
     );
   };
 
@@ -404,8 +410,8 @@ export default function App() {
     setAdminSettings((prev) => ({ ...prev, isUnlocked: true }));
     addToast(
       'success',
-      'Admin Privileges Unlocked',
-      'You now have full access to spreadsheet API settings, data reset, and admin functions.'
+      'Admin Mode Unlocked',
+      'You can now edit Google Sheet links, reset the parts list, and manage settings.'
     );
   };
 
@@ -413,8 +419,8 @@ export default function App() {
     setAdminSettings((prev) => ({ ...prev, isUnlocked: false }));
     addToast(
       'info',
-      'Member Mode Active',
-      'Admin privileges locked. Regular checkout and check-in station active.'
+      'Standard Mode',
+      'Admin mode locked. Regular check out and check in is active.'
     );
   };
 
@@ -423,8 +429,8 @@ export default function App() {
       setIsAdminUnlockModalOpen(true);
       addToast(
         'info',
-        'Admin Access Required',
-        'Please enter the Admin PIN or an authorized admin email to access settings.'
+        'Admin Sign In Needed',
+        'Enter the Admin PIN or an admin email to open settings.'
       );
     } else {
       setIsSettingsModalOpen(true);
@@ -456,6 +462,17 @@ export default function App() {
     });
 
     const determinedCategory: VexCategory = classifyVexCategory(matchedItem?.category || payload.category, undefined, normalizedId);
+
+    // Remember member's email for faster repeat pit checkouts
+    if (!skipLiveSync && payload.email && payload.email.trim()) {
+      const cleanedEmail = payload.email.trim();
+      setLastBorrowerEmail(cleanedEmail);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('vex_last_borrower_email', cleanedEmail);
+        } catch {}
+      }
+    }
 
     // 1. Add entry strictly to audit logs (LOGS sheet source of truth)
     const newLog: AuditLog = {
@@ -626,7 +643,7 @@ export default function App() {
   const handleResetFactoryData = () => {
     if (!adminSettings.isUnlocked) {
       handleOpenAdminUnlock();
-      addToast('info', 'Admin Access Required', 'Resetting benchmark data requires admin authorization.');
+      addToast('info', 'Admin Sign In Needed', 'Resetting the parts list requires admin sign in.');
       return;
     }
 
@@ -635,8 +652,27 @@ export default function App() {
     saveCachedInventory(factory);
     setLogs(INITIAL_LOGS);
     saveCachedLogs(INITIAL_LOGS);
-    addToast('info', 'Inventory Reset', 'Restored original 279 items: 238 Available, 41 Checked Out.');
+    addToast('info', 'Inventory Reset', 'Restored original 279 parts: 238 Available, 41 Checked Out.');
   };
+
+  // Kiosk-aware tab guard
+  const isKioskRestricted = adminSettings.kioskOnly && !adminSettings.isUnlocked;
+
+  const handleTabChange = useCallback(
+    (tab: ActiveTab) => {
+      if (isKioskRestricted && tab !== 'dashboard' && tab !== 'inventory') {
+        setIsAdminUnlockModalOpen(true);
+        addToast(
+          'info',
+          'Shared Computer Mode',
+          'Only Check Out/In and Parts Search are open unless an admin signs in.'
+        );
+        return;
+      }
+      setActiveTab(tab);
+    },
+    [isKioskRestricted, addToast]
+  );
 
   // Navigation callbacks
   const handleNavigateToCategory = (cat: VexCategory | 'All') => {
@@ -645,6 +681,11 @@ export default function App() {
   };
 
   const handleNavigateToTeam = (team: string) => {
+    if (isKioskRestricted) {
+      setIsAdminUnlockModalOpen(true);
+      addToast('info', 'Shared Computer Mode', 'Sign in as admin to view team pages.');
+      return;
+    }
     setSelectedTeam(team);
     setActiveTab('teams');
   };
@@ -665,6 +706,8 @@ export default function App() {
       {/* Top Header: Specialized Mobile Header or Desktop Header */}
       {isMobile ? (
         <MobileTopHeader
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
           syncStatus={syncStatus}
           adminSettings={adminSettings}
           onOpenSettings={handleOpenSettingsProtected}
@@ -681,7 +724,7 @@ export default function App() {
       ) : (
         <Header
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           syncStatus={syncStatus}
           adminSettings={adminSettings}
           onOpenSettings={handleOpenSettingsProtected}
@@ -699,7 +742,11 @@ export default function App() {
       )}
 
       {/* Main Container Viewport */}
-      <main className={`flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 ${isMobile ? 'pb-24' : ''}`}>
+      <main
+        className={`flex-1 w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 ${
+          viewMode === 'mobile' ? 'max-w-md' : 'max-w-7xl'
+        } ${isMobile ? 'pb-24' : ''}`}
+      >
         <div key={activeTab} className="animate-tab-enter">
           {activeTab === 'dashboard' && (
             <CommandCenter
@@ -709,14 +756,16 @@ export default function App() {
               onOpenAdminUnlock={handleOpenAdminUnlock}
               onNavigateToCategory={handleNavigateToCategory}
               onNavigateToTeam={handleNavigateToTeam}
-              onNavigateTab={setActiveTab}
+              onNavigateTab={handleTabChange}
               onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
+              isMobileMode={isMobile}
             />
           )}
 
           {activeTab === 'inventory' && (
             <InventoryBrowser
               items={items}
+              logs={logs}
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
               onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
@@ -739,12 +788,13 @@ export default function App() {
               onReturnAllForTeam={handleReturnAllForTeam}
               isAdmin={adminSettings.isUnlocked}
               onOpenAdminUnlock={handleOpenAdminUnlock}
+              isMobileMode={isMobile}
             />
           )}
 
           {activeTab === 'packlist' && <CompetitionPackList items={items} />}
 
-          {activeTab === 'logs' && <ActivityLogs logs={logs} />}
+          {activeTab === 'logs' && <ActivityLogs logs={logs} isMobileMode={isMobile} />}
         </div>
       </main>
 
@@ -752,7 +802,7 @@ export default function App() {
       {isMobile && (
         <MobileBottomNav
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onOpenCheckout={() => handleOpenCheckoutModal()}
           availableCount={items.filter((i) => i.status === 'Available').length}
           totalCount={items.length}
@@ -764,11 +814,11 @@ export default function App() {
 
       {/* Footer */}
       <footer className={`mt-auto border-t border-[#27272d] bg-[#09090b] py-4 text-xs text-zinc-500 ${isMobile ? 'pb-24' : ''}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className={`${viewMode === 'mobile' ? 'max-w-md' : 'max-w-7xl'} mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3`}>
           <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-            <span className="font-semibold text-zinc-300">VEX Robotics Inventory Control</span>
+            <span className="font-semibold text-zinc-300">VEX Robotics Team 654</span>
             <span>·</span>
-            <span>{items.length} Items System</span>
+            <span>{items.length} Parts Tracked</span>
             <span>·</span>
             <span className="font-mono text-zinc-400">Club Teams ({CLUB_TEAMS.join(', ')})</span>
           </div>
@@ -786,14 +836,14 @@ export default function App() {
               onClick={handleToggleViewMode}
               className="hover:text-red-400 transition-colors"
             >
-              {isMobile ? 'Switch to Desktop UI' : 'Switch to Phone UI'}
+              {isMobile ? 'Switch to Desktop View' : 'Switch to Phone View'}
             </button>
             <span>·</span>
             <button
               onClick={handleOpenSettingsProtected}
               className="hover:text-zinc-100 transition-colors"
             >
-              Spreadsheet API Settings
+              Google Sheet Settings
             </button>
           </div>
         </div>
@@ -807,7 +857,7 @@ export default function App() {
         preselectedItem={checkoutTargetItem}
         defaultAction={checkoutDefaultAction}
         presetTeam={checkoutPresetTeam}
-        defaultEmail=""
+        defaultEmail={lastBorrowerEmail}
         isAdmin={adminSettings.isUnlocked}
         onSubmit={handleSubmitAction}
       />

@@ -140,20 +140,23 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
-      <div className="bg-[#111114] border border-[#27272d] rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[92vh] animate-modal-enter">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter">
+      <div className="bg-[#111114] border-t sm:border border-[#27272d] rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[92vh] pb-[env(safe-area-inset-bottom,0px)] animate-modal-enter">
+        {/* Mobile grab handle */}
+        <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+
         {/* Header */}
-        <div className="px-5 py-4 bg-[#09090b] border-b border-[#27272d] flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
+        <div className="px-4 sm:px-5 py-3.5 sm:py-4 bg-[#09090b] border-b border-[#27272d] flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 shrink-0">
               <Activity className="w-4 h-4" />
             </div>
-            <div>
-              <h2 className="text-sm font-bold text-zinc-100 tracking-wide">
-                System Architecture &amp; Telemetry
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-zinc-100 tracking-wide truncate">
+                App Status &amp; Cache
               </h2>
-              <p className="text-[11px] text-zinc-400 font-mono">
-                Hardware pipeline, cache allocation &amp; cryptographic state verification
+              <p className="text-[11px] text-zinc-400 font-mono truncate">
+                Sync health, saved data &amp; connection check
               </p>
             </div>
           </div>
@@ -162,39 +165,39 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
               playClick();
               onClose();
             }}
-            className="text-zinc-400 hover:text-zinc-100 p-1 rounded-lg hover:bg-[#1a1a1f] transition-colors"
+            className="text-zinc-400 hover:text-zinc-100 p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg hover:bg-[#1a1a1f] transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-5 space-y-4 overflow-y-auto font-sans">
+        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto font-sans">
           {/* Top Metric Strip */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="p-3 rounded-xl bg-[#09090b] border border-[#27272d]">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
+            <div className="p-3 rounded-xl bg-[#09090b] border border-[#27272d] card-hover-lift animate-card-enter stagger-1">
               <div className="flex items-center justify-between text-zinc-500 text-[10px] font-mono uppercase">
-                <span>Schema Ver</span>
+                <span>Data Version</span>
                 <Database className="w-3.5 h-3.5 text-red-400" />
               </div>
-              <div className="text-lg font-bold font-mono text-zinc-100 mt-1">v7.0_PROD</div>
-              <div className="text-[10px] text-zinc-500 font-mono">VEX V5 Unified</div>
+              <div className="text-lg font-bold font-mono text-zinc-100 mt-1">v7.0</div>
+              <div className="text-[10px] text-zinc-500 font-mono">VEX V5 Inventory</div>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#09090b] border border-[#27272d]">
+            <div className="p-3 rounded-xl bg-[#09090b] border border-[#27272d] card-hover-lift animate-card-enter stagger-2">
               <div className="flex items-center justify-between text-zinc-500 text-[10px] font-mono uppercase">
-                <span>State Integrity</span>
+                <span>Data Check</span>
                 <ShieldCheck className="w-3.5 h-3.5 text-zinc-200" />
               </div>
               <div className="text-xs font-mono font-bold text-zinc-100 mt-2 truncate" title={checksum}>
                 {checksum}
               </div>
-              <div className="text-[10px] text-zinc-500 font-mono">SHA-256 Validated</div>
+              <div className="text-[10px] text-zinc-500 font-mono">Saved &amp; Verified</div>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#09090b] border border-[#27272d]">
+            <div className="p-3 rounded-xl bg-[#09090b] border border-[#27272d] card-hover-lift animate-card-enter stagger-3">
               <div className="flex items-center justify-between text-zinc-500 text-[10px] font-mono uppercase">
-                <span>Server RTT</span>
+                <span>Server Ping</span>
                 <Zap className="w-3.5 h-3.5 text-red-400" />
               </div>
               <div className="text-lg font-bold font-mono text-zinc-100 mt-1">
@@ -203,21 +206,21 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
               <button
                 onClick={testPing}
                 disabled={isPinging}
-                className="text-[10px] text-red-400 hover:underline font-mono inline-flex items-center gap-1 mt-0.5"
+                className="text-[10px] text-red-400 hover:underline font-mono inline-flex items-center gap-1 mt-0.5 btn-tactile"
               >
                 <RefreshCw className={`w-2.5 h-2.5 ${isPinging ? 'animate-spin' : ''}`} />
-                <span>{isPinging ? 'Pinging...' : 'Benchmark Ping'}</span>
+                <span>{isPinging ? 'Testing...' : 'Test Connection'}</span>
               </button>
             </div>
           </div>
 
           {/* LocalStorage Quota Allocation */}
-          <div className="p-4 rounded-xl bg-[#09090b] border border-[#27272d] space-y-2.5">
+          <div className="p-4 rounded-xl bg-[#09090b] border border-[#27272d] space-y-2.5 animate-card-enter stagger-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <HardDrive className="w-4 h-4 text-zinc-400" />
                 <span className="text-xs font-bold text-zinc-100 uppercase tracking-wider font-mono">
-                  Client Cache Memory Buffer
+                  Browser Storage Used
                 </span>
               </div>
               <span className="text-xs font-mono text-red-400 font-bold">
@@ -228,50 +231,52 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
             {/* Progress bar */}
             <div className="w-full h-2 bg-[#1a1a1f] rounded-full overflow-hidden border border-[#27272d]">
               <div
-                className="h-full bg-gradient-to-r from-red-700 to-red-500 rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-red-700 to-red-500 rounded-full progress-fill relative overflow-hidden"
                 style={{ width: `${Math.max(2, storageUsage.percentOf5MB)}%` }}
-              />
+              >
+                <div className="absolute inset-0 shimmer-active" />
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] font-mono text-zinc-400">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px] font-mono text-zinc-400">
               <div className="flex justify-between border-b border-[#27272d] pb-1">
-                <span>Inventory Catalog ({items.length} items):</span>
+                <span>Parts List ({items.length} parts):</span>
                 <span className="text-zinc-200">{(storageUsage.itemsBytes / 1024).toFixed(1)} KB</span>
               </div>
               <div className="flex justify-between border-b border-[#27272d] pb-1">
-                <span>Audit Logs ({logs.length} records):</span>
+                <span>Activity Log ({logs.length} entries):</span>
                 <span className="text-zinc-200">{(storageUsage.logsBytes / 1024).toFixed(1)} KB</span>
               </div>
             </div>
           </div>
 
-          {/* Pipeline Details */}
-          <div className="p-4 rounded-xl bg-[#09090b] border border-[#27272d] space-y-2 text-xs">
+          {/* Connection & App Info */}
+          <div className="p-4 rounded-xl bg-[#09090b] border border-[#27272d] space-y-2 text-xs animate-card-enter stagger-5">
             <span className="text-zinc-400 text-[10px] font-mono uppercase tracking-wider font-bold">
-              Integration Architecture
+              Connection Details
             </span>
-            <div className="space-y-1.5 text-zinc-300 font-mono text-[11px]">
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-500">Transport:</span>
-                <span className="text-zinc-100">Server Proxy (/api/sync &amp; /api/action) + CORS Tunnel</span>
+            <div className="space-y-2 sm:space-y-1.5 text-zinc-300 font-mono text-[11px]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5">
+                <span className="text-zinc-500">Sync Route:</span>
+                <span className="text-zinc-100">Built-in Server (/api/sync &amp; /api/action)</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-500">Google Sheet Target:</span>
-                <span className="text-zinc-100 truncate max-w-[280px]">
-                  {syncStatus.url ? 'Deployed Apps Script (/exec)' : 'Local High-Speed Cache Mode'}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5">
+                <span className="text-zinc-500">Google Sheet Link:</span>
+                <span className="text-zinc-100 truncate sm:max-w-[280px]">
+                  {syncStatus.url ? 'Connected via Apps Script' : 'Local Browser Cache Mode'}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-500">Sound Synthesizer:</span>
-                <span className="text-zinc-100">Web Audio API (Hardware Frequency Synthesizer)</span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5">
+                <span className="text-zinc-500">Sound Effects:</span>
+                <span className="text-zinc-100">Browser Web Audio</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-500">Print Engine:</span>
-                <span className="text-zinc-100">@media print Clean Competition Custody Manifest</span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5">
+                <span className="text-zinc-500">Print Layout:</span>
+                <span className="text-zinc-100">Clean Inventory Sheet</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-500">Source Repository:</span>
-                <span className="text-zinc-100">VEX Robotics Team 654 · MIT License</span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5">
+                <span className="text-zinc-500">Built For:</span>
+                <span className="text-zinc-100">VEX Robotics Team 654</span>
               </div>
             </div>
           </div>
@@ -281,19 +286,19 @@ export const SystemDiagnosticsModal: React.FC<SystemDiagnosticsModalProps> = ({
         <div className="px-5 py-3.5 bg-[#09090b] border-t border-[#27272d] flex items-center justify-between">
           <button
             onClick={handleExportDiagnostics}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors font-mono"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors font-mono btn-tactile"
           >
             <Download className="w-3.5 h-3.5 text-zinc-400" />
-            <span>Export Diagnostics JSON</span>
+            <span>Export Status JSON</span>
           </button>
           <button
             onClick={() => {
               playClick();
               onClose();
             }}
-            className="px-4 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors font-mono"
+            className="px-4 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors font-mono btn-crimson-glow"
           >
-            Dismiss
+            Close
           </button>
         </div>
       </div>

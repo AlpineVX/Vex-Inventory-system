@@ -288,7 +288,7 @@ export const INITIAL_PACK_LIST: CompetitionPackItem[] = [
   {
     id: 'pack-4',
     category: 'Optical',
-    name: 'AI Vision / Optical Sensor',
+    name: 'Optical / Vision Sensor',
     targetCount: 2,
     packedCount: 2,
     isPacked: true,

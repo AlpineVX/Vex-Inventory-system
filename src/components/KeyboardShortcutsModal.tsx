@@ -20,30 +20,30 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
 
   const SHORTCUTS = [
     {
-      category: 'Navigation & Views',
+      category: 'Pages',
       items: [
-        { keys: ['1'], description: 'Jump to Command Center Dashboard' },
-        { keys: ['2'], description: 'Jump to Master Inventory Catalog' },
-        { keys: ['3'], description: 'Jump to Team Hardware Lookup' },
-        { keys: ['4'], description: 'Jump to Competition Pack List' },
-        { keys: ['5'], description: 'Jump to Audit & Activity Logs' },
+        { keys: ['1'], description: 'Go to Overview' },
+        { keys: ['2'], description: 'Go to Full Parts Inventory' },
+        { keys: ['3'], description: 'Go to Team Parts' },
+        { keys: ['4'], description: 'Go to Competition Pack List' },
+        { keys: ['5'], description: 'Go to Activity Log' },
       ],
     },
     {
-      category: 'Search & Rapid Actions',
+      category: 'Quick Actions',
       items: [
-        { keys: ['/', '⌘K'], description: 'Focus instant inventory or dashboard search' },
-        { keys: ['C'], description: 'Open Hardware Check Out / Check In Station' },
-        { keys: ['P'], description: 'Print official hardware manifest sheet (Ctrl+P)' },
-        { keys: ['Esc'], description: 'Close any active dialog, modal or drawer' },
-        { keys: ['?'], description: 'Toggle this keyboard shortcuts cheatsheet' },
+        { keys: ['/', '⌘K'], description: 'Jump to search bar' },
+        { keys: ['C'], description: 'Open Check Out / Check In' },
+        { keys: ['P'], description: 'Print current inventory sheet (Ctrl+P)' },
+        { keys: ['Esc'], description: 'Close open window or popup' },
+        { keys: ['?'], description: 'Show or hide this shortcuts list' },
       ],
     },
     {
-      category: 'Kiosk & Sound Ergonomics',
+      category: 'Sound & Status',
       items: [
-        { keys: ['M'], description: 'Toggle industrial tactile Web Audio feedback' },
-        { keys: ['D'], description: 'Open System Telemetry & Diagnostics Inspector' },
+        { keys: ['M'], description: 'Turn sound effects on or off' },
+        { keys: ['D'], description: 'Open App Status & Cache info' },
       ],
     },
   ];
@@ -59,10 +59,10 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-bold text-zinc-100 tracking-wide">
-                Keyboard Shortcuts &amp; Ergonomics
+                Keyboard Shortcuts
               </h2>
               <p className="text-[11px] text-zinc-400 font-mono">
-                Power-user hotkeys for competition pit operations
+                Quick keys for getting around the app
               </p>
             </div>
           </div>
@@ -76,8 +76,12 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
 
         {/* Content */}
         <div className="p-5 space-y-5 overflow-y-auto">
-          {SHORTCUTS.map((section) => (
-            <div key={section.category} className="space-y-2">
+          {SHORTCUTS.map((section, sIdx) => (
+            <div
+              key={section.category}
+              style={{ '--row-idx': sIdx * 2 } as React.CSSProperties}
+              className="space-y-2 animate-row-enter"
+            >
               <span className="text-[11px] font-bold uppercase tracking-wider text-red-400/90 font-mono">
                 {section.category}
               </span>
@@ -85,14 +89,14 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                 {section.items.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between px-3.5 py-2 text-xs hover:bg-[#1a1a1f]/50 transition-colors"
+                    className="flex items-center justify-between px-3.5 py-2 text-xs hover:bg-[#1a1a1f]/50 transition-colors group"
                   >
-                    <span className="text-zinc-300">{item.description}</span>
+                    <span className="text-zinc-300 group-hover:text-zinc-100 transition-colors">{item.description}</span>
                     <div className="flex items-center gap-1 shrink-0 ml-3">
                       {item.keys.map((k, ki) => (
                         <kbd
                           key={ki}
-                          className="px-2 py-0.5 rounded bg-[#1a1a1f] border border-zinc-700 text-zinc-200 font-mono text-[11px] font-bold shadow-sm"
+                          className="px-2 py-0.5 rounded bg-[#1a1a1f] border border-zinc-700 text-zinc-200 font-mono text-[11px] font-bold shadow-sm group-hover:border-red-500/40 transition-colors"
                         >
                           {k}
                         </kbd>
@@ -105,7 +109,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
           ))}
 
           <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl text-[11px] text-zinc-400 font-mono flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping" />
+            <span className="w-1.5 h-1.5 rounded-full bg-red-400 radar-dot" />
             <span>Tip: Press <kbd className="px-1.5 py-0.5 bg-[#1a1a1f] rounded border border-zinc-700 text-zinc-200">?</kbd> anywhere in the app to open this guide.</span>
           </div>
         </div>
@@ -114,7 +118,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
         <div className="px-5 py-3 bg-[#09090b] border-t border-[#27272d] flex items-center justify-end">
           <button
             onClick={handleClose}
-            className="px-4 py-1.5 text-xs font-semibold text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors font-mono"
+            className="px-4 py-1.5 text-xs font-semibold text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors font-mono btn-tactile"
           >
             Got it (Esc)
           </button>

@@ -14,15 +14,28 @@ import {
   ChevronDown,
   Lock,
   X,
+  Copy,
+  History,
+  Cpu,
+  ShieldAlert,
 } from 'lucide-react';
-import { InventoryItem, VexCategory, CLUB_TEAMS, SENSOR_CATEGORIES, classifyVexCategory } from '../types';
+import {
+  InventoryItem,
+  AuditLog,
+  VexCategory,
+  CLUB_TEAMS,
+  SENSOR_CATEGORIES,
+  classifyVexCategory,
+  normalizeItemId,
+} from '../types';
 import { MobileInventoryList } from './MobileInventoryList';
 import { playClick, playBeep } from '../services/soundFx';
 import { getVexHardwareSpec } from '../data/vexSpecs';
-import { SpotlightCard } from './MotionPrimitives';
+import { SpotlightCard, useSlidingIndicator } from './MotionPrimitives';
 
 interface InventoryBrowserProps {
   items: InventoryItem[];
+  logs?: AuditLog[];
   selectedCategory: VexCategory | 'All';
   onSelectCategory: (cat: VexCategory | 'All') => void;
   onOpenCheckout: (item: InventoryItem, defaultAction?: 'Check Out' | 'Check In') => void;
@@ -46,6 +59,7 @@ const CATEGORIES: (VexCategory | 'All')[] = [
 
 export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
   items,
+  logs = [],
   selectedCategory,
   onSelectCategory,
   onOpenCheckout,
@@ -60,8 +74,42 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
   const [sortField, setSortField] = useState<'itemId' | 'itemName' | 'category' | 'status' | 'dateOut'>('itemId');
   const [sortAsc, setSortAsc] = useState<boolean>(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [inspectedItemId, setInspectedItemId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<boolean>(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const inspectedItem = useMemo(() => {
+    if (!inspectedItemId) return null;
+    return items.find((i) => i.itemId === inspectedItemId) || null;
+  }, [items, inspectedItemId]);
+
+  const inspectedItemLogs = useMemo(() => {
+    if (!inspectedItem) return [];
+    const targetNorm = normalizeItemId(inspectedItem.itemId, inspectedItem.category).toUpperCase();
+    return logs
+      .filter((l) => {
+        const logNorm = normalizeItemId(l.itemId, l.category).toUpperCase();
+        return logNorm === targetNorm || l.itemId.toUpperCase() === inspectedItem.itemId.toUpperCase();
+      })
+      .sort((a, b) => (new Date(b.timestamp).getTime() || 0) - (new Date(a.timestamp).getTime() || 0))
+      .slice(0, 6);
+  }, [inspectedItem, logs]);
+
+  useEffect(() => {
+    if (!inspectedItemId) return;
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setInspectedItemId(null);
+    };
+    window.addEventListener('keydown', onEsc);
+    return () => window.removeEventListener('keydown', onEsc);
+  }, [inspectedItemId]);
+
+  const { containerRef: catBarRef, setItemRef: setCatTabRef, indicator: catIndicator } =
+    useSlidingIndicator<VexCategory | 'All'>(selectedCategory);
+
+  const { containerRef: statusBarRef, setItemRef: setStatusTabRef, indicator: statusIndicator } =
+    useSlidingIndicator<'All' | 'Available' | 'Checked Out'>(statusFilter);
 
   // Keyboard shortcut '/' to search
   useEffect(() => {
@@ -243,6 +291,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
     return (
       <MobileInventoryList
         items={items}
+        logs={logs}
         selectedCategory={selectedCategory}
         onSelectCategory={onSelectCategory}
         onOpenCheckout={onOpenCheckout}
@@ -258,6 +307,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
       <div className="block md:hidden">
         <MobileInventoryList
           items={items}
+          logs={logs}
           selectedCategory={selectedCategory}
           onSelectCategory={onSelectCategory}
           onOpenCheckout={onOpenCheckout}
@@ -273,16 +323,16 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#27272d]">
             <div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-100 mt-0.5">
-                Universal Inventory Master Catalog
+                Full Parts Inventory
               </h1>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Search, audit, and batch process {items.length} registered hardware items.
+                Search, sort, and update all {items.length} club parts.
               </p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={exportToCSV}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors btn-tactile"
               >
                 <Download className="w-3.5 h-3.5 text-zinc-400" />
                 <span>Export CSV</span>
@@ -290,19 +340,37 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
             </div>
           </div>
 
-          {/* Category Segmented Filter Tabs */}
-          <div className="flex items-center gap-1.5 mt-3.5 overflow-x-auto pb-1 scrollbar-none">
+          {/* Category Segmented Filter Tabs with Spring Sliding Pill */}
+          <div
+            ref={catBarRef}
+            className="relative flex items-center gap-1 mt-3.5 overflow-x-auto p-1 bg-[#111114] border border-[#27272d] rounded-xl scrollbar-none"
+          >
+            {catIndicator.ready && (
+              <div
+                aria-hidden="true"
+                style={{
+                  transform: `translate3d(${catIndicator.left}px, ${catIndicator.top}px, 0)`,
+                  width: `${catIndicator.width}px`,
+                  height: `${catIndicator.height}px`,
+                }}
+                className="absolute top-0 left-0 rounded-lg bg-[#1a1a1f] border border-red-500/45 shadow-sm pointer-events-none transition-[transform,width,height] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)]"
+              />
+            )}
             {CATEGORIES.map((cat) => {
               const isActive = selectedCategory === cat;
               const count = categoryCounts[cat] || 0;
               return (
                 <button
                   key={cat}
-                  onClick={() => onSelectCategory(cat)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap shrink-0 border btn-tactile ${
+                  ref={setCatTabRef(cat)}
+                  onClick={() => {
+                    playClick();
+                    onSelectCategory(cat);
+                  }}
+                  className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors duration-150 whitespace-nowrap shrink-0 ${
                     isActive
-                      ? 'bg-[#1a1a1f] text-zinc-100 font-semibold border-red-500/45 shadow-sm'
-                      : 'bg-[#111114] text-zinc-400 hover:text-zinc-100 hover:bg-[#1a1a1f] border-[#27272d]'
+                      ? 'text-zinc-100 font-semibold'
+                      : 'text-zinc-400 hover:text-zinc-100'
                   }`}
                 >
                   <span>{cat}</span>
@@ -330,12 +398,12 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search item ID, specs, team... (Press '/' to focus)"
-              className="w-full pl-9 pr-8 py-1.5 text-xs bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-500 font-sans"
+              className="w-full pl-9 pr-8 py-1.5 text-xs bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-500 crimson-focus-glow font-sans"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-100"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-100 btn-tactile"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -344,32 +412,60 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
 
           {/* Secondary Filter Buttons */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Status Segmented Control */}
-            <div className="flex items-center bg-[#09090b] p-0.5 rounded-lg border border-[#27272d] text-xs font-medium">
+            {/* Status Segmented Control with Spring Sliding Pill */}
+            <div
+              ref={statusBarRef}
+              className="relative flex items-center bg-[#09090b] p-0.5 rounded-lg border border-[#27272d] text-xs font-medium"
+            >
+              {statusIndicator.ready && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    transform: `translate3d(${statusIndicator.left}px, ${statusIndicator.top}px, 0)`,
+                    width: `${statusIndicator.width}px`,
+                    height: `${statusIndicator.height}px`,
+                  }}
+                  className={`absolute top-0 left-0 rounded-md pointer-events-none transition-[transform,width,height,background-color,border-color] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)] border ${
+                    statusFilter === 'Checked Out'
+                      ? 'bg-amber-500/20 border-amber-500/40'
+                      : statusFilter === 'Available'
+                      ? 'bg-zinc-200/15 border-zinc-400/40'
+                      : 'bg-[#1a1a1f] border-red-500/40'
+                  }`}
+                />
+              )}
               <button
-                onClick={() => setStatusFilter('All')}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
-                  statusFilter === 'All' ? 'bg-[#1a1a1f] text-zinc-100 font-semibold' : 'text-zinc-400 hover:text-zinc-100'
+                ref={setStatusTabRef('All')}
+                onClick={() => {
+                  playClick();
+                  setStatusFilter('All');
+                }}
+                className={`relative z-10 px-2.5 py-1 rounded-md transition-colors duration-150 ${
+                  statusFilter === 'All' ? 'text-zinc-100 font-semibold' : 'text-zinc-400 hover:text-zinc-100'
                 }`}
               >
                 All
               </button>
               <button
-                onClick={() => setStatusFilter('Available')}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
-                  statusFilter === 'Available'
-                    ? 'bg-zinc-200/15 text-zinc-100 border border-zinc-400/40 font-semibold'
-                    : 'text-zinc-400 hover:text-zinc-100'
+                ref={setStatusTabRef('Available')}
+                onClick={() => {
+                  playClick();
+                  setStatusFilter('Available');
+                }}
+                className={`relative z-10 px-2.5 py-1 rounded-md transition-colors duration-150 ${
+                  statusFilter === 'Available' ? 'text-zinc-100 font-semibold' : 'text-zinc-400 hover:text-zinc-100'
                 }`}
               >
                 Available
               </button>
               <button
-                onClick={() => setStatusFilter('Checked Out')}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
-                  statusFilter === 'Checked Out'
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 font-semibold'
-                    : 'text-zinc-400 hover:text-zinc-100'
+                ref={setStatusTabRef('Checked Out')}
+                onClick={() => {
+                  playClick();
+                  setStatusFilter('Checked Out');
+                }}
+                className={`relative z-10 px-2.5 py-1 rounded-md transition-colors duration-150 ${
+                  statusFilter === 'Checked Out' ? 'text-amber-400 font-semibold' : 'text-zinc-400 hover:text-zinc-100'
                 }`}
               >
                 Checked Out
@@ -394,7 +490,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
             {(searchQuery || selectedCategory !== 'All' || statusFilter !== 'All' || teamFilter !== 'All') && (
               <button
                 onClick={resetFilters}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-100 bg-[#1a1a1f] border border-[#27272d] rounded-lg transition-colors"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-100 bg-[#1a1a1f] border border-[#27272d] rounded-lg transition-colors btn-tactile"
               >
                 <RotateCcw className="w-3 h-3" />
                 <span>Reset</span>
@@ -405,7 +501,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
 
         {/* Instant Item Profile & Scan Tool */}
         {matchedExactItem && (
-          <SpotlightCard className="p-4 bg-[#1a1a1f] border border-red-500/35 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in-up">
+          <SpotlightCard tilt className="p-4 bg-[#1a1a1f] border border-red-500/35 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in-up">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-red-400 font-mono">
@@ -435,7 +531,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                   <strong className="text-zinc-200">
                     {matchedExactItem.currentUser
                       ? `Team ${matchedExactItem.currentUser}`
-                      : 'In Pit Warehouse'}
+                      : 'In Storage'}
                   </strong>
                 </span>
                 <span>·</span>
@@ -525,48 +621,68 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                   </th>
                   <th
                     onClick={() => toggleSort('itemId')}
-                    className="py-3 px-3 w-32 font-semibold hover:text-zinc-100 cursor-pointer transition-colors"
+                    className={`py-3 px-3 w-32 font-semibold hover:text-zinc-100 cursor-pointer transition-colors ${sortField === 'itemId' ? 'text-zinc-100' : ''}`}
                   >
                     <div className="flex items-center gap-1.5">
                       <span>PART ID</span>
-                      <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                      {sortField === 'itemId' ? (
+                        <ChevronDown className={`w-3.5 h-3.5 text-red-400 transition-transform duration-200 ${sortAsc ? '' : 'rotate-180'}`} />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                      )}
                     </div>
                   </th>
                   <th
                     onClick={() => toggleSort('itemName')}
-                    className="py-3 px-3 w-64 font-semibold hover:text-zinc-100 cursor-pointer transition-colors"
+                    className={`py-3 px-3 w-64 font-semibold hover:text-zinc-100 cursor-pointer transition-colors ${sortField === 'itemName' ? 'text-zinc-100' : ''}`}
                   >
                     <div className="flex items-center gap-1.5">
                       <span>ITEM NAME &amp; SPECS</span>
-                      <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                      {sortField === 'itemName' ? (
+                        <ChevronDown className={`w-3.5 h-3.5 text-red-400 transition-transform duration-200 ${sortAsc ? '' : 'rotate-180'}`} />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                      )}
                     </div>
                   </th>
                   <th
                     onClick={() => toggleSort('category')}
-                    className="py-3 px-3 w-32 font-semibold hover:text-zinc-100 cursor-pointer transition-colors"
+                    className={`py-3 px-3 w-32 font-semibold hover:text-zinc-100 cursor-pointer transition-colors ${sortField === 'category' ? 'text-zinc-100' : ''}`}
                   >
                     <div className="flex items-center gap-1.5">
                       <span>CATEGORY</span>
-                      <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                      {sortField === 'category' ? (
+                        <ChevronDown className={`w-3.5 h-3.5 text-red-400 transition-transform duration-200 ${sortAsc ? '' : 'rotate-180'}`} />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                      )}
                     </div>
                   </th>
                   <th
                     onClick={() => toggleSort('status')}
-                    className="py-3 px-3 w-28 font-semibold hover:text-zinc-100 cursor-pointer transition-colors"
+                    className={`py-3 px-3 w-28 font-semibold hover:text-zinc-100 cursor-pointer transition-colors ${sortField === 'status' ? 'text-zinc-100' : ''}`}
                   >
                     <div className="flex items-center gap-1.5">
                       <span>STATUS</span>
-                      <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                      {sortField === 'status' ? (
+                        <ChevronDown className={`w-3.5 h-3.5 text-red-400 transition-transform duration-200 ${sortAsc ? '' : 'rotate-180'}`} />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                      )}
                     </div>
                   </th>
                   <th className="py-3 px-3 w-36 font-semibold">CURRENT HOLDER</th>
                   <th
                     onClick={() => toggleSort('dateOut')}
-                    className="py-3 px-3 w-28 font-semibold hover:text-zinc-100 cursor-pointer transition-colors"
+                    className={`py-3 px-3 w-28 font-semibold hover:text-zinc-100 cursor-pointer transition-colors ${sortField === 'dateOut' ? 'text-zinc-100' : ''}`}
                   >
                     <div className="flex items-center gap-1.5">
                       <span>DATE OUT</span>
-                      <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                      {sortField === 'dateOut' ? (
+                        <ChevronDown className={`w-3.5 h-3.5 text-red-400 transition-transform duration-200 ${sortAsc ? '' : 'rotate-180'}`} />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                      )}
                     </div>
                   </th>
                   <th className="py-3 px-3 min-w-[180px] font-semibold">LOCATION &amp; NOTES</th>
@@ -604,13 +720,24 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                     return (
                       <tr
                         key={item.itemId}
+                        onClick={() => {
+                          playClick();
+                          setInspectedItemId(item.itemId);
+                        }}
                         style={{ '--row-idx': idx } as React.CSSProperties}
-                        className={`group hover:bg-[#1a1a1f] transition-colors animate-row-enter ${
-                          isChecked ? 'bg-amber-500/10' : ''
+                        className={`group cursor-pointer hover:bg-[#1a1a1f] transition-colors animate-row-enter ${
+                          inspectedItemId === item.itemId
+                            ? 'bg-red-500/10'
+                            : isChecked
+                            ? 'bg-amber-500/10'
+                            : ''
                         }`}
                       >
                         {/* Checkbox */}
-                        <td className="py-2.5 px-3.5 text-center">
+                        <td
+                          className="py-2.5 px-3.5 text-center"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <input
                             type="checkbox"
                             checked={isChecked}
@@ -690,7 +817,10 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                         </td>
 
                         {/* Action Button */}
-                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                        <td
+                          className="py-2.5 px-3 text-right whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {isAvailable ? (
                             <button
                               onClick={() => {
@@ -729,6 +859,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                 <span className="font-bold text-zinc-100">{items.length}</span> ITEMS
               </span>
               {selectedCategory !== 'All' && <span>IN [{selectedCategory.toUpperCase()}]</span>}
+              <span className="hidden lg:inline text-zinc-600">· Click any row to inspect specs &amp; history</span>
             </div>
             <div className="flex items-center gap-3">
               <span>
@@ -736,12 +867,234 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
               </span>
               <span>·</span>
               <span>
-                <strong className="text-amber-400 font-bold">{filteredItems.filter((i) => i.status === 'Checked Out').length}</strong> DEPLOYED
+                <strong className="text-amber-400 font-bold">{filteredItems.filter((i) => i.status === 'Checked Out').length}</strong> CHECKED OUT
               </span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Hardware Inspector Slide-Over Drawer */}
+      {inspectedItem && (
+        <div
+          className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-xs animate-backdrop-enter"
+          onClick={() => setInspectedItemId(null)}
+        >
+          <aside
+            aria-label="Hardware Inspector"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-[#111114] border-l border-[#27272d] h-full flex flex-col shadow-2xl animate-modal-enter"
+          >
+            {(() => {
+              const spec = getVexHardwareSpec(inspectedItem.category);
+              const isAvail = inspectedItem.status === 'Available';
+              return (
+                <>
+                  {/* Drawer Header */}
+                  <div className="px-5 py-4 bg-[#09090b] border-b border-[#27272d] flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-xs font-mono font-bold text-zinc-100 bg-[#1a1a1f] border border-zinc-700 rounded">
+                          {inspectedItem.itemId}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(inspectedItem.itemId);
+                            playClick();
+                            setCopiedId(true);
+                            setTimeout(() => setCopiedId(false), 1600);
+                          }}
+                          className="text-[11px] font-mono text-zinc-400 hover:text-zinc-100 flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#1a1a1f] border border-[#27272d]"
+                          title="Copy Part ID"
+                        >
+                          {copiedId ? <Check className="w-3 h-3 text-zinc-100" /> : <Copy className="w-3 h-3" />}
+                          <span>{copiedId ? 'Copied' : 'Copy'}</span>
+                        </button>
+                      </div>
+                      <h2 className="text-base font-bold text-zinc-100 mt-2 truncate">
+                        {inspectedItem.itemName}
+                      </h2>
+                      <p className="text-xs text-zinc-400 font-mono mt-0.5">
+                        {inspectedItem.category} · {inspectedItem.location || 'Warehouse Storage'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setInspectedItemId(null)}
+                      aria-label="Close Inspector"
+                      className="p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-[#1a1a1f] rounded-lg transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Drawer Body */}
+                  <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                    {/* Status Card */}
+                    <div className="p-4 rounded-xl bg-[#09090b] border border-[#27272d] space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
+                          Current Status
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded border ${
+                            isAvail
+                              ? 'bg-zinc-200/10 text-zinc-200 border-zinc-400/25'
+                              : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                          }`}
+                        >
+                          {inspectedItem.status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-xs pt-1">
+                        <div>
+                          <div className="text-[10px] text-zinc-500 font-mono uppercase">Holder</div>
+                          <div className="font-semibold text-zinc-100 font-mono mt-0.5">
+                            {inspectedItem.currentUser ? `Team ${inspectedItem.currentUser}` : 'In Pit Storage'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-zinc-500 font-mono uppercase">Date Out</div>
+                          <div className="font-semibold text-zinc-200 font-mono mt-0.5">
+                            {inspectedItem.dateOut || '—'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-zinc-500 font-mono uppercase">Season Uses</div>
+                          <div className="font-semibold text-zinc-200 font-mono mt-0.5">
+                            {inspectedItem.timesCheckedOut || 0} checkouts
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-zinc-500 font-mono uppercase">Location</div>
+                          <div className="font-semibold text-zinc-200 font-mono mt-0.5 truncate">
+                            {inspectedItem.location || 'Main Pit'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {inspectedItem.notes && (
+                        <div className="pt-2 border-t border-[#1a1a1f] text-xs text-zinc-300">
+                          <div className="text-[10px] text-zinc-500 font-mono uppercase mb-0.5">Active Notes</div>
+                          <p className="font-sans leading-relaxed">{inspectedItem.notes}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* VEX Technical Specifications */}
+                    <div className="p-4 rounded-xl bg-[#09090b] border border-[#27272d] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-zinc-200">
+                          <Cpu className="w-3.5 h-3.5 text-red-400" />
+                          <span>VEX V5 Technical Spec</span>
+                        </div>
+                        <span className="text-[11px] font-mono text-zinc-400">
+                          PN {spec.officialPartNumber}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5 text-[11px] font-mono">
+                        <div className="p-2 rounded bg-[#111114] border border-[#1a1a1f]">
+                          <div className="text-zinc-500 text-[10px]">INTERFACE</div>
+                          <div className="text-zinc-200 mt-0.5">{spec.interfaceProtocol}</div>
+                        </div>
+                        <div className="p-2 rounded bg-[#111114] border border-[#1a1a1f]">
+                          <div className="text-zinc-500 text-[10px]">OPERATING RANGE</div>
+                          <div className="text-zinc-200 mt-0.5">{spec.operatingRange}</div>
+                        </div>
+                      </div>
+
+                      <ul className="space-y-1.5 text-xs text-zinc-300">
+                        {spec.keySpecs.map((s, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="w-1 h-1 rounded-full bg-red-500 mt-1.5 shrink-0" />
+                            <span>{s}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <div className="p-2.5 rounded-lg bg-[#111114] border border-zinc-800 text-[11px] text-amber-300/90 font-mono flex items-start gap-2">
+                        <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-400" />
+                        <span>{spec.gameManualRule}</span>
+                      </div>
+                    </div>
+
+                    {/* Recent History */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-zinc-200">
+                          <History className="w-3.5 h-3.5 text-zinc-400" />
+                          <span>Recent History</span>
+                        </div>
+                        <span className="text-[11px] font-mono text-zinc-500">
+                          {inspectedItemLogs.length} entries
+                        </span>
+                      </div>
+
+                      {inspectedItemLogs.length === 0 ? (
+                        <div className="p-4 rounded-xl bg-[#09090b] border border-[#27272d] text-xs text-zinc-500 text-center font-mono">
+                          No checkout history yet for {inspectedItem.itemId}.
+                        </div>
+                      ) : (
+                        <div className="rounded-xl bg-[#09090b] border border-[#27272d] divide-y divide-[#1a1a1f]">
+                          {inspectedItemLogs.map((log) => (
+                            <div key={log.id} className="p-3 text-xs space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span
+                                  className={`font-mono font-semibold text-[11px] ${
+                                    log.action === 'Check Out' ? 'text-amber-400' : 'text-zinc-200'
+                                  }`}
+                                >
+                                  {log.action} · Team {log.team || '—'}
+                                </span>
+                                <span className="text-[10px] font-mono text-zinc-500">
+                                  {new Date(log.timestamp).toLocaleDateString()}
+                                </span>
+                              </div>
+                              {log.notes && (
+                                <p className="text-[11px] text-zinc-400">{log.notes}</p>
+                              )}
+                              {log.userEmail && (
+                                <div className="text-[10px] font-mono text-zinc-500">{log.userEmail}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Drawer Sticky Footer CTA */}
+                  <div className="p-4 bg-[#09090b] border-t border-[#27272d] flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setInspectedItemId(null)}
+                      className="px-4 py-2.5 text-xs font-medium text-zinc-300 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-xl transition-colors btn-tactile"
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playBeep();
+                        onOpenCheckout(inspectedItem, isAvail ? 'Check Out' : 'Check In');
+                      }}
+                      className={`flex-1 py-2.5 text-xs font-semibold rounded-xl transition-colors shadow-sm ${
+                        isAvail
+                          ? 'bg-red-600 hover:bg-red-700 text-white btn-crimson-glow'
+                          : 'bg-zinc-100 hover:bg-white text-zinc-950 btn-tactile'
+                      }`}
+                    >
+                      {isAvail ? `Check Out ${inspectedItem.itemId}` : `Check In ${inspectedItem.itemId}`}
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </aside>
+        </div>
+      )}
   </>
 );
 };
