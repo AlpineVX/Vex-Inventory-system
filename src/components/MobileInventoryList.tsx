@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   X,
@@ -76,6 +76,12 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
   const [teamFilter, setTeamFilter] = useState<string>('All');
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [visibleLimit, setVisibleLimit] = useState<number>(35);
+
+  useEffect(() => {
+    setVisibleLimit(35);
+  }, [selectedCategory, statusFilter, repairOnly, teamFilter, searchQuery]);
+
   const { containerRef: statusBarRef, setItemRef: setStatusTabRef, indicator: statusIndicator } =
     useSlidingIndicator<'All' | 'Available' | 'Checked Out'>(statusFilter, [items.length, selectedCategory, searchQuery]);
 
@@ -87,11 +93,10 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
     return Array.from(teams);
   }, [items]);
 
-  // Filter items
-  const filteredItems = useMemo(() => {
+  // Pre-status filtered items so tab badge counts stay accurate when switching Ready / Out
+  const preStatusItems = useMemo(() => {
     let result = items;
 
-    // Category filter
     if (selectedCategory !== 'All') {
       if (selectedCategory === 'Sensors') {
         result = result.filter(
@@ -106,17 +111,10 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
       }
     }
 
-    // Status filter
-    if (statusFilter !== 'All') {
-      result = result.filter((i) => i.status === statusFilter);
-    }
-
-    // Needs Repair filter
     if (repairOnly) {
       result = result.filter((i) => i.condition === 'Needs Repair');
     }
 
-    // Team filter
     if (teamFilter !== 'All') {
       if (teamFilter === 'Unassigned') {
         result = result.filter((i) => !i.currentUser);
@@ -125,7 +123,6 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
       }
     }
 
-    // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       result = result.filter(
@@ -140,10 +137,16 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
     }
 
     return result;
-  }, [items, selectedCategory, statusFilter, repairOnly, teamFilter, searchQuery]);
+  }, [items, selectedCategory, repairOnly, teamFilter, searchQuery]);
 
-  const availableCount = filteredItems.filter((i) => i.status === 'Available').length;
-  const checkedOutCount = filteredItems.filter((i) => i.status === 'Checked Out').length;
+  // Apply active status tab filter
+  const filteredItems = useMemo(() => {
+    if (statusFilter === 'All') return preStatusItems;
+    return preStatusItems.filter((i) => i.status === statusFilter);
+  }, [preStatusItems, statusFilter]);
+
+  const availableCount = preStatusItems.filter((i) => i.status === 'Available').length;
+  const checkedOutCount = preStatusItems.filter((i) => i.status === 'Checked Out').length;
   const repairCount = items.filter((i) => i.condition === 'Needs Repair').length;
 
   const hasActiveFilters =
@@ -158,12 +161,17 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
     setTeamFilter('All');
   };
 
+  const displayedItems = useMemo(
+    () => filteredItems.slice(0, visibleLimit),
+    [filteredItems, visibleLimit]
+  );
+
   const now = Date.now();
 
   return (
     <div className="space-y-3 pb-24">
       {/* Sticky Thumb-Friendly Search & Filter Controls */}
-      <div className="sticky top-14 z-20 -mx-3 px-3 pt-2 pb-2.5 bg-[#09090b]/95 backdrop-blur-md border-b border-[#1a1a1f] space-y-2.5">
+      <div className="sticky top-14 z-20 -mx-3 px-3 pt-2 pb-2.5 bg-[#09090b]/98 border-b border-[#1a1a1f] space-y-2.5">
         {/* Search Bar */}
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
@@ -357,7 +365,7 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
             )}
           </div>
         ) : (
-          filteredItems.map((item, idx) => {
+          displayedItems.map((item, idx) => {
             const isAvailable = item.status === 'Available';
             const isExpanded = expandedItemId === item.itemId;
 
@@ -373,13 +381,14 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
             }
 
             const spec = getVexHardwareSpec(item.category);
-            const itemNorm = normalizeItemId(item.itemId, item.category).toUpperCase();
+            const itemNorm = normalizeItemId(String(item.itemId || ''), item.category).toUpperCase();
+            const rawItemUpper = String(item.itemId || '').toUpperCase();
             const recentItemLogs = isExpanded
               ? logs
                   .filter(
                     (l) =>
-                      normalizeItemId(l.itemId, l.category).toUpperCase() === itemNorm ||
-                      l.itemId.toUpperCase() === item.itemId.toUpperCase()
+                      normalizeItemId(String(l.itemId || ''), l.category).toUpperCase() === itemNorm ||
+                      String(l.itemId || '').toUpperCase() === rawItemUpper
                   )
                   .sort((a, b) => (new Date(b.timestamp).getTime() || 0) - (new Date(a.timestamp).getTime() || 0))
                   .slice(0, 3)
@@ -389,18 +398,18 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
 
             return (
               <SwipeableActionCard
-                key={item.itemId}
+                key={`${item.itemId}-${idx}`}
                 actionLabel={isAvailable ? 'Check Out' : 'Check In'}
                 actionTone={isAvailable ? 'red' : 'light'}
                 onSwipeAction={() => {
                   playBeep();
                   onOpenCheckout(item, isAvailable ? 'Check Out' : 'Check In');
                 }}
-                className="rounded-2xl animate-row-enter"
+                className={`rounded-2xl ${idx < 10 ? 'animate-row-enter' : ''}`}
               >
                 <div
-                  style={{ '--row-idx': Math.min(idx, 10) } as React.CSSProperties}
-                  className={`bg-[#111114] border rounded-2xl p-4 transition-colors card-hover-lift ${
+                  style={idx < 10 ? ({ '--row-idx': idx } as React.CSSProperties) : undefined}
+                  className={`bg-[#111114] border rounded-2xl p-4 transition-colors ${
                     needsRepair
                       ? 'border-red-500/45 bg-[#151114]'
                       : isOverdue
@@ -614,6 +623,31 @@ export const MobileInventoryList: React.FC<MobileInventoryListProps> = ({
               </SwipeableActionCard>
             );
           })
+        )}
+
+        {filteredItems.length > visibleLimit && (
+          <div className="pt-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                playClick();
+                setVisibleLimit((prev) => prev + 40);
+              }}
+              className="flex-1 min-h-[42px] px-4 py-2.5 rounded-xl bg-[#111114] hover:bg-[#1a1a1f] border border-[#27272d] text-xs font-semibold text-zinc-100 btn-tactile"
+            >
+              Show More ({filteredItems.length - visibleLimit} remaining)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                playClick();
+                setVisibleLimit(filteredItems.length);
+              }}
+              className="min-h-[42px] px-3.5 py-2.5 rounded-xl bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] text-xs font-mono text-zinc-300 btn-tactile"
+            >
+              All ({filteredItems.length})
+            </button>
+          </div>
         )}
       </div>
     </div>

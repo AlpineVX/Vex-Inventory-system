@@ -1,5 +1,5 @@
 name: Feature Request
-description: Suggest an improvement for part tracking, mobile layout, pack lists, or Google Sheets sync
+description: Suggest an improvement for part tracking, QR bin labels, mobile layout, pack lists, or Google Sheets sync
 title: "[Feature]: "
 labels: ["enhancement"]
 body:
@@ -15,7 +15,7 @@ body:
     id: solution
     attributes:
       label: Suggested Improvement
-      description: Describe how you want it to work for students, drivers, or coaches.
+      description: Describe how you want it to work for students, drivers, coaches, QR label printing, or offline pit use.
     validations:
       required: true
 
@@ -23,7 +23,7 @@ body:
     id: vex-context
     attributes:
       label: VEX Rule or Part Category (Optional)
-      description: Example: V5 Brains, Solenoids, or Game Manual rule <R11> / <R12> / <R13>
+      description: "Example: V5 Brains, Solenoids, QR Bin Labels, or Game Manual rule <R11> / <R12> / <R13>"
       placeholder: VEXS-DIST / <R13>
 
   - type: textarea

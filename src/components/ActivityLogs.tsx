@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Download,
   Search,
@@ -20,8 +20,13 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, isMobileMode =
   const [searchQuery, setSearchQuery] = useState('');
   const [actionFilter, setActionFilter] = useState<'All' | 'Check Out' | 'Check In'>('All');
   const [teamFilter, setTeamFilter] = useState<string>('All');
+  const [visibleLimit, setVisibleLimit] = useState<number>(50);
   const { containerRef: actionNavRef, setItemRef: setActionTabRef, indicator: actionIndicator } =
     useSlidingIndicator<'All' | 'Check Out' | 'Check In'>(actionFilter);
+
+  useEffect(() => {
+    setVisibleLimit(50);
+  }, [searchQuery, actionFilter, teamFilter]);
 
   // Discover all unique teams
   const uniqueTeams = useMemo(() => {
@@ -57,16 +62,20 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, isMobileMode =
       });
   }, [logs, actionFilter, teamFilter, searchQuery]);
 
+  const displayedLogs = useMemo(() => {
+    return filteredLogs.slice(0, visibleLimit);
+  }, [filteredLogs, visibleLimit]);
+
   const exportLogsCSV = () => {
     const headers = ['Timestamp', 'Item ID', 'Action', 'Team', 'Item Name', 'Notes', 'User Email'];
     const rows = filteredLogs.map((l) => [
-      l.timestamp,
-      l.itemId,
-      l.action,
-      l.team || '',
-      `"${(l.itemName || '').replace(/"/g, '""')}"`,
-      `"${(l.notes || '').replace(/"/g, '""')}"`,
-      l.userEmail || '',
+      String(l.timestamp || ''),
+      String(l.itemId || ''),
+      String(l.action || ''),
+      String(l.team || ''),
+      `"${String(l.itemName || '').replace(/"/g, '""')}"`,
+      `"${String(l.notes || '').replace(/"/g, '""')}"`,
+      String(l.userEmail || ''),
     ]);
 
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
@@ -220,197 +229,252 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, isMobileMode =
         </div>
       </div>
 
-      {/* Mobile Audit Timeline Cards */}
-      <div className={`${isMobileMode ? 'block' : 'block md:hidden'} space-y-2.5`}>
-        {filteredLogs.length === 0 ? (
-          <div className="p-8 rounded-2xl border border-[#27272d] bg-[#111114] text-center space-y-2.5">
-            <p className="font-mono text-xs text-zinc-400">No entries match your filters.</p>
-            {(searchQuery || actionFilter !== 'All' || teamFilter !== 'All') && (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setActionFilter('All');
-                  setTeamFilter('All');
-                }}
-                className="px-3.5 py-2 text-xs font-medium text-zinc-200 bg-[#1a1a1f] border border-[#27272d] rounded-xl"
-              >
-                Reset All Filters
-              </button>
-            )}
-          </div>
-        ) : (
-          filteredLogs.map((log, idx) => {
-            const isCheckOut = log.action === 'Check Out';
-            const date = new Date(log.timestamp);
-            return (
-              <div
-                key={log.id}
-                style={{ '--row-idx': Math.min(idx, 10) } as React.CSSProperties}
-                className="p-3.5 rounded-2xl border border-[#27272d] bg-[#111114] space-y-2 animate-row-enter"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded border shrink-0 ${
-                        isCheckOut
-                          ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                          : 'bg-zinc-200/10 text-zinc-100 border-zinc-400/25'
-                      }`}
-                    >
-                      {isCheckOut ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
-                      {log.action}
-                    </span>
-                    <span className="font-mono text-xs font-bold text-zinc-100 bg-[#1a1a1f] px-2 py-0.5 rounded border border-zinc-700 truncate">
-                      {log.itemId}
+      {isMobileMode ? (
+        /* Mobile Audit Timeline Cards */
+        <div className="space-y-2.5">
+          {filteredLogs.length === 0 ? (
+            <div className="p-8 rounded-2xl border border-[#27272d] bg-[#111114] text-center space-y-2.5">
+              <p className="font-mono text-xs text-zinc-400">No entries match your filters.</p>
+              {(searchQuery || actionFilter !== 'All' || teamFilter !== 'All') && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setActionFilter('All');
+                    setTeamFilter('All');
+                  }}
+                  className="px-3.5 py-2 text-xs font-medium text-zinc-200 bg-[#1a1a1f] border border-[#27272d] rounded-xl"
+                >
+                  Reset All Filters
+                </button>
+              )}
+            </div>
+          ) : (
+            displayedLogs.map((log, idx) => {
+              const isCheckOut = log.action === 'Check Out';
+              const date = new Date(log.timestamp);
+              return (
+                <div
+                  key={`${log.id}-${idx}`}
+                  style={idx < 12 ? ({ '--row-idx': idx } as React.CSSProperties) : undefined}
+                  className={`p-3.5 rounded-2xl border border-[#27272d] bg-[#111114] space-y-2 ${idx < 12 ? 'animate-row-enter' : ''}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded border shrink-0 ${
+                          isCheckOut
+                            ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                            : 'bg-zinc-200/10 text-zinc-100 border-zinc-400/25'
+                        }`}
+                      >
+                        {isCheckOut ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
+                        {log.action}
+                      </span>
+                      <span className="font-mono text-xs font-bold text-zinc-100 bg-[#1a1a1f] px-2 py-0.5 rounded border border-zinc-700 truncate">
+                        {log.itemId}
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-mono text-zinc-400 shrink-0">
+                      {isNaN(date.getTime())
+                        ? log.timestamp || '—'
+                        : `${date.toLocaleDateString()} · ${date.toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}`}
                     </span>
                   </div>
-                  <span className="text-[11px] font-mono text-zinc-400 shrink-0">
-                    {isNaN(date.getTime())
-                      ? log.timestamp || '—'
-                      : `${date.toLocaleDateString()} · ${date.toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}`}
-                  </span>
-                </div>
 
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="font-semibold text-zinc-100 truncate">
-                    {log.itemName || log.category || 'VEX Part'}
-                  </span>
-                  {log.team && (
-                    <span className="font-mono text-[11px] font-bold text-amber-400 shrink-0">
-                      Team {log.team}
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-semibold text-zinc-100 truncate">
+                      {log.itemName || log.category || 'VEX Part'}
                     </span>
+                    {log.team && (
+                      <span className="font-mono text-[11px] font-bold text-amber-400 shrink-0">
+                        Team {log.team}
+                      </span>
+                    )}
+                  </div>
+
+                  {(log.notes || log.userEmail) && (
+                    <div className="pt-1.5 border-t border-[#1a1a1f] text-[11px] space-y-0.5">
+                      {log.notes && <p className="text-zinc-300">{log.notes}</p>}
+                      {log.userEmail && <div className="font-mono text-zinc-500 truncate">{log.userEmail}</div>}
+                    </div>
                   )}
                 </div>
-
-                {(log.notes || log.userEmail) && (
-                  <div className="pt-1.5 border-t border-[#1a1a1f] text-[11px] space-y-0.5">
-                    {log.notes && <p className="text-zinc-300">{log.notes}</p>}
-                    {log.userEmail && <div className="font-mono text-zinc-500 truncate">{log.userEmail}</div>}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-        <div className="px-2 py-1 text-[11px] text-zinc-500 font-mono text-center">
-          SHOWING {filteredLogs.length} OF {logs.length} ENTRIES
+              );
+            })
+          )}
+          {filteredLogs.length > visibleLimit && (
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  playClick();
+                  setVisibleLimit((prev) => prev + 50);
+                }}
+                className="flex-1 min-h-[40px] px-4 py-2 rounded-xl bg-[#111114] hover:bg-[#1a1a1f] border border-[#27272d] text-xs font-semibold text-zinc-100 btn-tactile"
+              >
+                Show 50 More ({filteredLogs.length - visibleLimit} remaining)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playClick();
+                  setVisibleLimit(filteredLogs.length);
+                }}
+                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] text-xs font-mono text-zinc-300 btn-tactile"
+              >
+                All ({filteredLogs.length})
+              </button>
+            </div>
+          )}
+          <div className="px-2 py-1 text-[11px] text-zinc-500 font-mono text-center">
+            SHOWING {displayedLogs.length} OF {filteredLogs.length} ENTRIES
+          </div>
         </div>
-      </div>
-
-      {/* Desktop Logs Table */}
-      <div className={`${isMobileMode ? 'hidden' : 'hidden md:block'} rounded-xl border border-[#27272d] bg-[#111114] overflow-hidden shadow-none`}>
-        <div className="overflow-x-auto max-h-[600px]">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead className="sticky top-0 bg-[#09090b] border-b border-[#27272d] text-zinc-400 select-none font-medium">
-              <tr>
-                <th className="py-3 px-4 font-semibold">TIME</th>
-                <th className="py-3 px-4 font-semibold">ACTION</th>
-                <th className="py-3 px-4 font-semibold">PART ID</th>
-                <th className="py-3 px-4 font-semibold">PART NAME</th>
-                <th className="py-3 px-4 font-semibold">TEAM</th>
-                <th className="py-3 px-4 font-semibold">NOTES</th>
-                <th className="py-3 px-4 font-semibold">STUDENT EMAIL</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1a1a1f] font-sans">
-              {filteredLogs.length === 0 ? (
+      ) : (
+        /* Desktop Logs Table */
+        <div className="rounded-xl border border-[#27272d] bg-[#111114] overflow-hidden shadow-none">
+          <div className="overflow-x-auto max-h-[600px]">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="sticky top-0 bg-[#09090b] border-b border-[#27272d] text-zinc-400 select-none font-medium">
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-zinc-400">
-                    <p className="font-mono text-xs">No entries match your filters.</p>
-                    {(searchQuery || actionFilter !== 'All' || teamFilter !== 'All') && (
-                      <button
-                        onClick={() => {
-                          setSearchQuery('');
-                          setActionFilter('All');
-                          setTeamFilter('All');
-                        }}
-                        className="mt-3 px-3 py-1.5 text-xs font-medium text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors"
-                      >
-                        Reset All Filters
-                      </button>
-                    )}
-                  </td>
+                  <th className="py-3 px-4 font-semibold">TIME</th>
+                  <th className="py-3 px-4 font-semibold">ACTION</th>
+                  <th className="py-3 px-4 font-semibold">PART ID</th>
+                  <th className="py-3 px-4 font-semibold">PART NAME</th>
+                  <th className="py-3 px-4 font-semibold">TEAM</th>
+                  <th className="py-3 px-4 font-semibold">NOTES</th>
+                  <th className="py-3 px-4 font-semibold">STUDENT EMAIL</th>
                 </tr>
-              ) : (
-                filteredLogs.map((log, idx) => {
-                  const isCheckOut = log.action === 'Check Out';
-                  const date = new Date(log.timestamp);
-                  return (
-                    <tr
-                      key={log.id}
-                      style={{ '--row-idx': idx } as React.CSSProperties}
-                      className="hover:bg-[#1a1a1f] transition-colors animate-row-enter"
-                    >
-                      {/* Timestamp */}
-                      <td className="py-2.5 px-4 text-zinc-400 font-mono tabular-nums whitespace-nowrap">
-                        <div className="font-semibold text-zinc-100">
-                          {isNaN(date.getTime()) ? log.timestamp || '—' : date.toLocaleDateString()}
-                        </div>
-                        <div className="text-[11px] text-zinc-500">
-                          {isNaN(date.getTime())
-                            ? ''
-                            : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                        </div>
-                      </td>
-
-                      {/* Action */}
-                      <td className="py-2.5 px-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded border ${
-                            isCheckOut
-                              ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                              : 'bg-zinc-200/10 text-zinc-100 border-zinc-400/25'
-                          }`}
+              </thead>
+              <tbody className="divide-y divide-[#1a1a1f] font-sans">
+                {filteredLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-zinc-400">
+                      <p className="font-mono text-xs">No entries match your filters.</p>
+                      {(searchQuery || actionFilter !== 'All' || teamFilter !== 'All') && (
+                        <button
+                          onClick={() => {
+                            setSearchQuery('');
+                            setActionFilter('All');
+                            setTeamFilter('All');
+                          }}
+                          className="mt-3 px-3 py-1.5 text-xs font-medium text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors"
                         >
-                          {isCheckOut ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
-                          {log.action}
-                        </span>
-                      </td>
+                          Reset All Filters
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ) : (
+                  displayedLogs.map((log, idx) => {
+                    const isCheckOut = log.action === 'Check Out';
+                    const date = new Date(log.timestamp);
+                    return (
+                      <tr
+                        key={`${log.id}-${idx}`}
+                        style={idx < 12 ? ({ '--row-idx': idx } as React.CSSProperties) : undefined}
+                        className={`hover:bg-[#1a1a1f] transition-colors ${idx < 12 ? 'animate-row-enter' : ''}`}
+                      >
+                        {/* Timestamp */}
+                        <td className="py-2.5 px-4 text-zinc-400 font-mono tabular-nums whitespace-nowrap">
+                          <div className="font-semibold text-zinc-100">
+                            {isNaN(date.getTime()) ? log.timestamp || '—' : date.toLocaleDateString()}
+                          </div>
+                          <div className="text-[11px] text-zinc-500">
+                            {isNaN(date.getTime())
+                              ? ''
+                              : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </div>
+                        </td>
 
-                      {/* Item ID */}
-                      <td className="py-2.5 px-4 font-mono font-bold text-zinc-100 whitespace-nowrap">
-                        <span className="bg-[#1a1a1f] px-2 py-0.5 rounded border border-zinc-700">
-                          {log.itemId}
-                        </span>
-                      </td>
+                        {/* Action */}
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded border ${
+                              isCheckOut
+                                ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                                : 'bg-zinc-200/10 text-zinc-100 border-zinc-400/25'
+                            }`}
+                          >
+                            {isCheckOut ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
+                            {log.action}
+                          </span>
+                        </td>
 
-                      {/* Component Name */}
-                      <td className="py-2.5 px-4 text-zinc-100 font-medium">
-                        {log.itemName || log.category || 'VEX Part'}
-                      </td>
+                        {/* Item ID */}
+                        <td className="py-2.5 px-4 font-mono font-bold text-zinc-100 whitespace-nowrap">
+                          <span className="bg-[#1a1a1f] px-2 py-0.5 rounded border border-zinc-700">
+                            {log.itemId}
+                          </span>
+                        </td>
 
-                      {/* Team */}
-                      <td className="py-2.5 px-4 font-mono font-bold text-zinc-200 whitespace-nowrap">
-                        {log.team ? `Team ${log.team}` : '—'}
-                      </td>
+                        {/* Component Name */}
+                        <td className="py-2.5 px-4 text-zinc-100 font-medium">
+                          {log.itemName || log.category || 'VEX Part'}
+                        </td>
 
-                      {/* Notes */}
-                      <td className="py-2.5 px-4 text-zinc-300 font-mono text-xs max-w-sm truncate" title={log.notes}>
-                        {log.notes || '—'}
-                      </td>
+                        {/* Team */}
+                        <td className="py-2.5 px-4 font-mono font-bold text-zinc-200 whitespace-nowrap">
+                          {log.team ? `Team ${log.team}` : '—'}
+                        </td>
 
-                      {/* User Email */}
-                      <td className="py-2.5 px-4 text-zinc-400 font-mono text-xs whitespace-nowrap">
-                        {log.userEmail || '—'}
-                      </td>
-                    </tr>
-                  );
-                })
+                        {/* Notes */}
+                        <td className="py-2.5 px-4 text-zinc-300 font-mono text-xs max-w-sm truncate" title={log.notes}>
+                          {log.notes || '—'}
+                        </td>
+
+                        {/* User Email */}
+                        <td className="py-2.5 px-4 text-zinc-400 font-mono text-xs whitespace-nowrap">
+                          {log.userEmail || '—'}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-4 py-2.5 bg-[#09090b] border-t border-[#27272d] flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400 font-mono">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span>
+                SHOWING <strong className="text-zinc-100">{displayedLogs.length}</strong> OF{' '}
+                <strong className="text-zinc-100">{filteredLogs.length}</strong> ENTRIES
+                {filteredLogs.length !== logs.length && (
+                  <span className="text-zinc-500"> ({logs.length} total)</span>
+                )}
+              </span>
+              {filteredLogs.length > visibleLimit && (
+                <div className="flex items-center gap-1.5 ml-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick();
+                      setVisibleLimit((prev) => prev + 50);
+                    }}
+                    className="px-2 py-0.5 rounded bg-[#1a1a1f] hover:bg-[#27272d] text-zinc-200 border border-[#27272d] text-[11px]"
+                  >
+                    + Show 50 More
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick();
+                      setVisibleLimit(filteredLogs.length);
+                    }}
+                    className="px-2 py-0.5 rounded bg-[#1a1a1f] hover:bg-[#27272d] text-zinc-400 border border-[#27272d] text-[11px]"
+                  >
+                    Show All
+                  </button>
+                </div>
               )}
-            </tbody>
-          </table>
+            </div>
+            <span className="hidden sm:inline text-zinc-500">Newest first</span>
+          </div>
         </div>
-        <div className="px-4 py-2.5 bg-[#09090b] border-t border-[#27272d] flex items-center justify-between text-xs text-zinc-400 font-mono">
-          <span>
-            SHOWING <strong className="text-zinc-100">{filteredLogs.length}</strong> OF{' '}
-            <strong className="text-zinc-100">{logs.length}</strong> ENTRIES
-          </span>
-          <span className="hidden sm:inline text-zinc-500">Newest first</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

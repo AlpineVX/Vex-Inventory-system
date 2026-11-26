@@ -56,7 +56,8 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
   const allTeamsInSystem = useMemo(() => {
     const set = new Set<string>(CLUB_TEAMS);
     items.forEach((item) => {
-      if (item.currentUser) set.add(item.currentUser);
+      const u = String(item.currentUser || '').trim();
+      if (u) set.add(u);
     });
     return Array.from(set);
   }, [items]);
@@ -307,16 +308,15 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
               Check Out Parts to {selectedTeam}
             </button>
           </div>
-        ) : (
-          <>
-            {/* Mobile Touch Cards View (phones or forced Phone UI) */}
-            <div className={`${isMobileMode ? 'block' : 'block md:hidden'} divide-y divide-[#1a1a1f]`}>
-              {teamItems.map((item) => {
+        ) : isMobileMode ? (
+            /* Mobile Touch Cards View */
+            <div className="divide-y divide-[#1a1a1f]">
+              {teamItems.map((item, idx) => {
                 const daysOut = getDaysOut(item.dateOut);
                 const needsRepair = item.condition === 'Needs Repair';
                 return (
                   <SwipeableActionCard
-                    key={item.itemId}
+                    key={`${item.itemId}-${idx}`}
                     actionLabel={isAdmin ? 'Admin Return' : 'Check In'}
                     actionTone="light"
                     onSwipeAction={() => {
@@ -395,9 +395,9 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
                 );
               })}
             </div>
-
-            {/* Desktop Table View */}
-            <div className={`${isMobileMode ? 'hidden' : 'hidden md:block'} overflow-x-auto`}>
+        ) : (
+            /* Desktop Table View */
+            <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#09090b] text-zinc-400 border-b border-[#27272d] select-none font-medium">
                   <tr>
@@ -414,9 +414,9 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
                     const daysOut = getDaysOut(item.dateOut);
                     return (
                       <tr
-                        key={item.itemId}
-                        style={{ '--row-idx': idx } as React.CSSProperties}
-                        className="hover:bg-[#1a1a1f] transition-colors animate-row-enter"
+                        key={`${item.itemId}-${idx}`}
+                        style={idx < 12 ? ({ '--row-idx': idx } as React.CSSProperties) : undefined}
+                        className={`hover:bg-[#1a1a1f] transition-colors ${idx < 12 ? 'animate-row-enter' : ''}`}
                       >
                         <td className="py-3 px-4 font-mono font-bold text-zinc-100 whitespace-nowrap">
                           <span className="bg-[#1a1a1f] px-2 py-0.5 rounded border border-zinc-700">
@@ -476,7 +476,6 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
                 </tbody>
               </table>
             </div>
-          </>
         )}
         </div>
       </div>

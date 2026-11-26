@@ -22,9 +22,14 @@ export interface PostActionPayload {
 export const DEFAULT_GAS_URL =
   'https://script.google.com/macros/s/AKfycbwjICL8-PwBQO9uXkpvE9RjoAygAKiG5JTizLE5e6yGE2KPMKYlal1w0qCj-75pK63qpQ/exec';
 
+const DISCONNECTED_MARKER = '__DISCONNECTED__';
+
 export function getStoredApiUrl(): string {
   if (typeof window === 'undefined') return DEFAULT_GAS_URL;
   const stored = localStorage.getItem(STORAGE_KEY_URL);
+  if (stored === DISCONNECTED_MARKER) {
+    return '';
+  }
   if (stored && stored.trim() && stored.startsWith('http')) {
     // If the stored URL is the old deployment, automatically upgrade to the new one
     if (stored.includes('AKfycbydr8VCH0RMcfAWa4-rvip22cMkbnpXuKWH1I9mOhf3mJL-ZF9OYjKQStVkkaL0jdPjFw')) {
@@ -39,7 +44,7 @@ export function getStoredApiUrl(): string {
 export function saveStoredApiUrl(url: string): void {
   if (typeof window === 'undefined') return;
   const trimmed = url.trim();
-  localStorage.setItem(STORAGE_KEY_URL, trimmed || DEFAULT_GAS_URL);
+  localStorage.setItem(STORAGE_KEY_URL, trimmed || DISCONNECTED_MARKER);
 }
 
 export function getCachedInventory(): InventoryItem[] | null {

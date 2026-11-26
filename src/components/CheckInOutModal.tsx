@@ -152,10 +152,11 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
     // 2. Check if normalized ID matches any catalog item
     const normUpper = normalized.toUpperCase();
     const catalogMatch = items.find((i) => {
-      const curNorm = normalizeItemId(i.itemId, i.category).toUpperCase();
+      const curId = String(i.itemId || '');
+      const curNorm = normalizeItemId(curId, i.category).toUpperCase();
       return (
         curNorm === normUpper ||
-        i.itemId.toUpperCase() === normUpper ||
+        curId.toUpperCase() === normUpper ||
         curNorm.replace(/[-\s]/g, '') === normUpper.replace(/[-\s]/g, '')
       );
     });
@@ -191,10 +192,11 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
       const normSearch = normalizeItemId(itemSearch.trim());
       const normUpper = normSearch.toUpperCase();
       const found = items.find((i) => {
-        const curNorm = normalizeItemId(i.itemId, i.category).toUpperCase();
+        const curId = String(i.itemId || '');
+        const curNorm = normalizeItemId(curId, i.category).toUpperCase();
         return (
           curNorm === normUpper ||
-          i.itemId.toUpperCase() === normUpper ||
+          curId.toUpperCase() === normUpper ||
           curNorm.replace(/[-\s]/g, '') === normUpper.replace(/[-\s]/g, '')
         );
       });
@@ -208,8 +210,9 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
     if (!effectiveItemId) return undefined;
     const normEff = normalizeItemId(effectiveItemId).toUpperCase();
     return items.find((i) => {
-      const cur = normalizeItemId(i.itemId, i.category).toUpperCase();
-      return cur === normEff || i.itemId.toUpperCase() === effectiveItemId.toUpperCase();
+      const curId = String(i.itemId || '');
+      const cur = normalizeItemId(curId, i.category).toUpperCase();
+      return cur === normEff || curId.toUpperCase() === effectiveItemId.toUpperCase();
     });
   }, [items, effectiveItemId]);
 
@@ -665,8 +668,9 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5 max-h-48 overflow-y-auto pr-0.5">
-                      {categoryItems.map((item) => {
-                        const numStr = item.itemId.split('-').pop() || item.itemId;
+                      {categoryItems.map((item, idx) => {
+                        const rawId = String(item.itemId || '');
+                        const numStr = rawId.split('-').pop() || rawId;
                         const parsedInput = parseInt(assembledPartNum.replace(/\D+/g, ''), 10);
                         const parsedNumStr = parseInt(numStr.replace(/\D+/g, ''), 10);
                         const isCurrent =
@@ -676,7 +680,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
 
                         return (
                           <button
-                            key={item.itemId}
+                            key={`${rawId}-${idx}`}
                             type="button"
                             onClick={() => {
                               playClick();
@@ -702,142 +706,6 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                       })}
                     </div>
                   </div>
-                </div>
-
-                {/* Selected Part Preview & VEX Spec Strip */}
-                <div className="mt-3 p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800 flex flex-col gap-2.5 shadow-sm">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center font-mono text-sm font-bold text-zinc-300 shrink-0">
-                        #
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                          Selected Part ID
-                        </div>
-                        <div className="text-sm font-bold font-mono text-zinc-100 flex items-center gap-2 mt-0.5">
-                          <span className="text-zinc-100">{effectiveItemId}</span>
-                          {currentMatchedItem ? (
-                            <span className="text-xs font-sans text-zinc-300 font-normal truncate max-w-[200px]">
-                              · {currentMatchedItem.itemName}
-                            </span>
-                          ) : (
-                            <span className="text-xs font-sans text-zinc-500 font-normal">
-                              · Custom Part
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="sm:text-right flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
-                      {currentMatchedItem ? (
-                        <div>
-                          <div className="flex items-center sm:justify-end gap-1.5">
-                            <span
-                              className={`w-2 h-2 rounded-full ${
-                                currentMatchedItem.status === 'Available'
-                                  ? 'bg-zinc-200'
-                                  : 'bg-amber-400'
-                              }`}
-                            />
-                            <span
-                              className={`text-xs font-semibold ${
-                                currentMatchedItem.status === 'Available'
-                                  ? 'text-zinc-100'
-                                  : 'text-amber-400'
-                              }`}
-                            >
-                              {currentMatchedItem.status}
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-zinc-400 font-mono mt-0.5">
-                            {currentMatchedItem.currentUser
-                              ? `With Team ${currentMatchedItem.currentUser}`
-                              : 'Ready in Storage'}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-zinc-500">Not in list yet</span>
-                      )}
-                      {effectiveItemId && (
-                        <button
-                          type="button"
-                          onClick={handleAddCurrentToQueue}
-                          className="px-2.5 py-1 text-[11px] font-mono font-semibold text-zinc-200 hover:text-white bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700 rounded-lg transition-colors flex items-center gap-1 btn-tactile"
-                          title="Queue multiple parts to check out or check in together"
-                        >
-                          <Plus className="w-3 h-3 text-red-400" />
-                          <span>
-                            {queuedItems.some((q) => q.itemId.toUpperCase() === effectiveItemId.toUpperCase())
-                              ? 'Queued'
-                              : 'Add to Batch'}
-                          </span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Needs Repair Health Warning */}
-                  {currentMatchedItem?.condition === 'Needs Repair' && (
-                    <div className="pt-2 border-t border-zinc-800/80 flex items-center gap-2 text-[11px] bg-rose-500/10 border border-rose-500/30 rounded-lg px-2.5 py-1.5 text-rose-300 font-medium">
-                      <Wrench className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                      <span>
-                        Flagged <strong>Needs Repair</strong> — test or inspect before competition use.
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Smart Status-Mismatch Helper */}
-                  {currentMatchedItem && action === 'Check Out' && currentMatchedItem.status === 'Checked Out' && (
-                    <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2 text-[11px] bg-amber-500/10 border border-amber-500/25 rounded-lg px-2.5 py-1.5">
-                      <span className="text-amber-300 font-medium">
-                        Already checked out{currentMatchedItem.currentUser ? ` to Team ${currentMatchedItem.currentUser}` : ''}.
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          playClick();
-                          setAction('Check In');
-                        }}
-                        className="px-2 py-1 rounded bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-[10px] flex items-center gap-1 shrink-0 btn-tactile"
-                      >
-                        <ArrowLeftRight className="w-3 h-3" />
-                        <span>Switch to Check In</span>
-                      </button>
-                    </div>
-                  )}
-                  {currentMatchedItem && action === 'Check In' && currentMatchedItem.status === 'Available' && (
-                    <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2 text-[11px] bg-zinc-800/40 border border-zinc-700/60 rounded-lg px-2.5 py-1.5">
-                      <span className="text-zinc-300">
-                        This part is already available in pit storage.
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          playClick();
-                          setAction('Check Out');
-                        }}
-                        className="px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white font-semibold text-[10px] flex items-center gap-1 shrink-0 btn-tactile"
-                      >
-                        <ArrowLeftRight className="w-3 h-3" />
-                        <span>Switch to Check Out</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* VEX Part Spec Strip */}
-                  {activeSpec && (
-                    <div className="pt-2 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-400 font-mono">
-                      <span className="text-zinc-300">
-                        <span className="text-zinc-500">PN:</span> {activeSpec.officialPartNumber} ·{' '}
-                        <span className="text-zinc-500">Port:</span> {activeSpec.interfaceProtocol}
-                      </span>
-                      <span className="text-amber-400/90 font-medium truncate">
-                        {activeSpec.operatingRange}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
             ) : (
@@ -872,15 +740,16 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                       )}
                     </div>
                   ) : (
-                    eligibleItems.map((item) => (
+                    eligibleItems.map((item, idx) => (
                       <button
-                        key={item.itemId}
+                        key={`${item.itemId}-${idx}`}
                         type="button"
                         onClick={() => {
+                          playClick();
                           setSelectedItemId(item.itemId);
                           const safeCat = classifyVexCategory(item.category, item.itemName, item.itemId);
                           setAssembledType(safeCat === 'Sensors' ? 'Distance' : safeCat);
-                          const num = item.itemId.match(/\d+$/);
+                          const num = String(item.itemId || '').match(/\d+$/);
                           if (num) setAssembledPartNum(num[0]);
                           if (item.currentUser) {
                             setTeam(item.currentUser);
@@ -922,6 +791,142 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                     ))
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Shared Selected Part Preview, Batch Action & VEX Spec Strip */}
+            {effectiveItemId && (
+              <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 flex flex-col gap-2.5 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center font-mono text-sm font-bold text-zinc-300 shrink-0">
+                      #
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                        Selected Part ID
+                      </div>
+                      <div className="text-sm font-bold font-mono text-zinc-100 flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-zinc-100">{effectiveItemId}</span>
+                        {currentMatchedItem ? (
+                          <span className="text-xs font-sans text-zinc-300 font-normal truncate max-w-[200px]">
+                            · {currentMatchedItem.itemName}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-sans text-zinc-500 font-normal">
+                            · Custom Part
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sm:text-right flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
+                    {currentMatchedItem ? (
+                      <div>
+                        <div className="flex items-center sm:justify-end gap-1.5">
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              currentMatchedItem.status === 'Available'
+                                ? 'bg-zinc-200'
+                                : 'bg-amber-400'
+                            }`}
+                          />
+                          <span
+                            className={`text-xs font-semibold ${
+                              currentMatchedItem.status === 'Available'
+                                ? 'text-zinc-100'
+                                : 'text-amber-400'
+                            }`}
+                          >
+                            {currentMatchedItem.status}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-zinc-400 font-mono mt-0.5">
+                          {currentMatchedItem.currentUser
+                            ? `With Team ${currentMatchedItem.currentUser}`
+                            : 'Ready in Storage'}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-zinc-500">Not in list yet</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleAddCurrentToQueue}
+                      className="px-2.5 py-1 text-[11px] font-mono font-semibold text-zinc-200 hover:text-white bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700 rounded-lg transition-colors flex items-center gap-1 btn-tactile"
+                      title="Queue multiple parts to check out or check in together"
+                    >
+                      <Plus className="w-3 h-3 text-red-400" />
+                      <span>
+                        {queuedItems.some((q) => q.itemId.toUpperCase() === effectiveItemId.toUpperCase())
+                          ? 'Queued'
+                          : 'Add to Batch'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Needs Repair Health Warning */}
+                {currentMatchedItem?.condition === 'Needs Repair' && (
+                  <div className="pt-2 border-t border-zinc-800/80 flex items-center gap-2 text-[11px] bg-rose-500/10 border border-rose-500/30 rounded-lg px-2.5 py-1.5 text-rose-300 font-medium">
+                    <Wrench className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                    <span>
+                      Flagged <strong>Needs Repair</strong> — test or inspect before competition use.
+                    </span>
+                  </div>
+                )}
+
+                {/* Smart Status-Mismatch Helper */}
+                {currentMatchedItem && action === 'Check Out' && currentMatchedItem.status === 'Checked Out' && (
+                  <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2 text-[11px] bg-amber-500/10 border border-amber-500/25 rounded-lg px-2.5 py-1.5">
+                    <span className="text-amber-300 font-medium">
+                      Already checked out{currentMatchedItem.currentUser ? ` to Team ${currentMatchedItem.currentUser}` : ''}.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClick();
+                        setAction('Check In');
+                      }}
+                      className="px-2 py-1 rounded bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-[10px] flex items-center gap-1 shrink-0 btn-tactile"
+                    >
+                      <ArrowLeftRight className="w-3 h-3" />
+                      <span>Switch to Check In</span>
+                    </button>
+                  </div>
+                )}
+                {currentMatchedItem && action === 'Check In' && currentMatchedItem.status === 'Available' && (
+                  <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2 text-[11px] bg-zinc-800/40 border border-zinc-700/60 rounded-lg px-2.5 py-1.5">
+                    <span className="text-zinc-300">
+                      This part is already available in pit storage.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClick();
+                        setAction('Check Out');
+                      }}
+                      className="px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white font-semibold text-[10px] flex items-center gap-1 shrink-0 btn-tactile"
+                    >
+                      <ArrowLeftRight className="w-3 h-3" />
+                      <span>Switch to Check Out</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* VEX Part Spec Strip */}
+                {activeSpec && (
+                  <div className="pt-2 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-400 font-mono">
+                    <span className="text-zinc-300">
+                      <span className="text-zinc-500">PN:</span> {activeSpec.officialPartNumber} ·{' '}
+                      <span className="text-zinc-500">Port:</span> {activeSpec.interfaceProtocol}
+                    </span>
+                    <span className="text-amber-400/90 font-medium truncate">
+                      {activeSpec.operatingRange}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1133,7 +1138,7 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
                 </>
               ) : (
                 <>
-                  Selected: <span className="text-zinc-100 font-semibold">{effectiveItemId}</span> &rarr;{' '}
+                  Selected: <span className="text-zinc-100 font-semibold">{effectiveItemId || 'None yet'}</span> &rarr;{' '}
                 </>
               )}
               <span className="text-zinc-100 font-semibold">

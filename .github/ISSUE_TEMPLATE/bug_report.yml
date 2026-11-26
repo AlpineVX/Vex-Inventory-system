@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a checkout bug, part ID issue, mobile layout problem, or Google Sheets sync error
+description: Report a checkout bug, part ID issue, mobile layout problem, label printing glitch, or Google Sheets sync error
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -18,12 +18,16 @@ body:
       label: Area of the App
       options:
         - Overview Dashboard
-        - Check Out / Check In Modal
-        - Full Parts Inventory
+        - Check Out / Check In Modal (Type + Part # or Search Catalog)
+        - Full Parts Inventory & Part Inspector
         - Team Parts
         - Competition Pack List
         - Activity Log
+        - Command Palette (⌘K / Ctrl+K)
+        - QR Bin Labels Printer
+        - Part Health & Repair Flags
         - Phone View / Mobile Layout
+        - PWA / Offline Sync Queue
         - Google Sheets Sync (/api/sync or /api/action)
         - Admin Sign In / Settings
         - Sound Effects or Print Sheet
@@ -53,7 +57,7 @@ body:
     id: part-id
     attributes:
       label: Part ID or Search Text (Optional)
-      description: Example: VEXSOL-1, sol 1, VEXS-DIST-4, or 4
+      description: "Example: VEXSOL-1, sol 1, VEXS-DIST-4, or 4"
       placeholder: VEXSOL-1
 
   - type: textarea
@@ -79,6 +83,7 @@ body:
         - Desktop - Firefox / Edge
         - Phone - iOS Safari
         - Phone - Android Chrome
+        - Mobile / Tablet - Installed PWA
         - Other
     validations:
       required: true
@@ -87,4 +92,4 @@ body:
     id: diagnostics
     attributes:
       label: Screenshots or Status Details (Optional)
-      description: Press D in the app to open App Status & Cache if sync info helps.
+      description: Press D in the app to open App Status & Cache if sync or offline queue info helps.

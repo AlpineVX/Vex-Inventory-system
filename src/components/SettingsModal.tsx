@@ -13,7 +13,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { SyncStatus, AdminSettings } from '../types';
-import { APPS_SCRIPT_SOURCE } from '../services/sheetApi';
+import { APPS_SCRIPT_SOURCE, DEFAULT_GAS_URL } from '../services/sheetApi';
 import { useSlidingIndicator } from './MotionPrimitives';
 import { playClick } from '../services/soundFx';
 
@@ -275,13 +275,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2 font-mono">
-                    {urlInput && (
+                  <div className="flex items-center gap-2 font-mono flex-wrap">
+                    {!urlInput.trim() && (
                       <button
                         type="button"
                         onClick={() => {
+                          playClick();
+                          setUrlInput(DEFAULT_GAS_URL);
+                          setTestResult(null);
+                        }}
+                        className="px-3 py-1.5 text-xs text-zinc-300 hover:text-zinc-100 bg-[#1a1a1f] border border-[#27272d] rounded-lg transition-colors btn-tactile"
+                      >
+                        Use Club Sheet
+                      </button>
+                    )}
+                    {(urlInput || syncStatus.url) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClick();
                           setUrlInput('');
-                          onSaveUrl('');
+                          setTestResult(null);
+                          void onSaveUrl('');
                         }}
                         className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-100 bg-[#1a1a1f] border border-[#27272d] rounded-lg transition-colors btn-tactile"
                       >

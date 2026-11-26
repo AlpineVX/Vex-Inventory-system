@@ -253,11 +253,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       };
     });
 
-    const parts: PaletteEntry[] = items.map((item) => {
+    const parts: PaletteEntry[] = items.map((item, idx) => {
       const isAvail = item.status === 'Available';
       const needsRepair = item.condition === 'Needs Repair';
       return {
-        id: `part-${item.itemId}`,
+        id: `part-${item.itemId || 'item'}-${idx}`,
         group: 'Parts',
         title: `${item.itemId} — ${item.itemName}`,
         subtitle: `${item.category}${item.location ? ` · ${item.location}` : ''}${

@@ -13,8 +13,10 @@ The latest commit on the default branch (`main`) is actively maintained with sec
   - No private API keys or database credentials are shipped in frontend code.
 - **Role-Based Access**:
   - Regular students must enter a valid email address when checking parts out or back in.
-  - Admin actions (changing Google Sheet links, resetting the parts list, editing the PIN or admin emails, batch returns, and email-optional checkouts) require signing into **Admin Mode**.
+  - Admin actions (changing Google Sheet links, resetting the parts list, editing the PIN or admin emails, batch returns, repair flag overrides, and email-optional checkouts) require signing into **Admin Mode**.
   - Clubs hosting a public instance should update the default Admin PIN and authorized email list in **Settings > Admin Security** right after setup.
+- **Automated CI Guardrails (`scripts/verify.ts`)**:
+  - Continuous Integration runs automated checks blocking unsafe native dialogs (`window.alert`, `window.confirm`, `window.open`) and confirming safe local storage handling across every build.
 
 ## Reporting a Vulnerability
 

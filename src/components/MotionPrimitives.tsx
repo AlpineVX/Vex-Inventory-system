@@ -105,12 +105,24 @@ export function useSlidingIndicator<T extends string>(
     const activeEl = itemRefs.current[activeKey];
     const container = containerRef.current;
     if (!activeEl || !container) return;
-    setIndicator({
-      left: activeEl.offsetLeft,
-      top: activeEl.offsetTop,
-      width: activeEl.offsetWidth,
-      height: activeEl.offsetHeight,
-      ready: true,
+    if (activeEl.offsetWidth === 0 && activeEl.offsetHeight === 0) return;
+
+    const left = activeEl.offsetLeft;
+    const top = activeEl.offsetTop;
+    const width = activeEl.offsetWidth;
+    const height = activeEl.offsetHeight;
+
+    setIndicator((prev) => {
+      if (
+        prev.ready &&
+        prev.left === left &&
+        prev.top === top &&
+        prev.width === width &&
+        prev.height === height
+      ) {
+        return prev;
+      }
+      return { left, top, width, height, ready: true };
     });
   };
 
@@ -328,28 +340,32 @@ export const SwipeableActionCard: React.FC<SwipeableActionCardProps> = ({
     }
   };
 
+  const isRevealed = isDragging || offsetX !== 0;
+
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      {/* Revealed Right Swipe Action Tray */}
-      <div
-        aria-hidden={offsetX === 0}
-        className="absolute inset-y-0 right-0 w-[104px] flex items-center justify-center p-1.5"
-      >
-        <button
-          type="button"
-          onClick={() => {
-            setOffsetX(0);
-            onSwipeAction();
-          }}
-          className={`w-full h-full rounded-xl font-semibold text-xs flex flex-col items-center justify-center gap-1 px-2 text-center shadow-sm transition-transform active:scale-95 ${
-            actionTone === 'red'
-              ? 'bg-red-600 hover:bg-red-700 text-white'
-              : 'bg-zinc-100 hover:bg-white text-zinc-950'
-          }`}
+      {/* Revealed Right Swipe Action Tray (only mounted when swiped/dragging) */}
+      {isRevealed && (
+        <div
+          aria-hidden={offsetX === 0}
+          className="absolute inset-y-0 right-0 w-[104px] flex items-center justify-center p-1.5"
         >
-          <span>{actionLabel}</span>
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => {
+              setOffsetX(0);
+              onSwipeAction();
+            }}
+            className={`w-full h-full rounded-xl font-semibold text-xs flex flex-col items-center justify-center gap-1 px-2 text-center shadow-sm transition-transform active:scale-95 ${
+              actionTone === 'red'
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : 'bg-zinc-100 hover:bg-white text-zinc-950'
+            }`}
+          >
+            <span>{actionLabel}</span>
+          </button>
+        </div>
+      )}
 
       {/* Sliding Foreground Card */}
       <div
@@ -357,11 +373,15 @@ export const SwipeableActionCard: React.FC<SwipeableActionCardProps> = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
-        style={{
-          transform: `translate3d(${offsetX}px, 0, 0)`,
-          transition: isDragging ? 'none' : 'transform 220ms cubic-bezier(0.16, 1, 0.3, 1)',
-        }}
-        className="relative z-10 will-change-transform"
+        style={
+          isRevealed
+            ? {
+                transform: `translate3d(${offsetX}px, 0, 0)`,
+                transition: isDragging ? 'none' : 'transform 220ms cubic-bezier(0.16, 1, 0.3, 1)',
+              }
+            : undefined
+        }
+        className={`relative z-10 ${isDragging ? 'will-change-transform' : ''}`}
       >
         {children}
       </div>

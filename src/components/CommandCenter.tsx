@@ -76,12 +76,14 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
   const updateFilterPill = () => {
     const activeBtn = filterBtnRefs.current[categoryFilter];
     const container = filterNavRef.current;
-    if (!activeBtn || !container) return;
-    setFilterPill({
-      left: activeBtn.offsetLeft,
-      width: activeBtn.offsetWidth,
-      ready: true,
-    });
+    if (!activeBtn || !container || activeBtn.offsetWidth === 0) return;
+    const left = activeBtn.offsetLeft;
+    const width = activeBtn.offsetWidth;
+    setFilterPill((prev) =>
+      prev.ready && prev.left === left && prev.width === width
+        ? prev
+        : { left, width, ready: true }
+    );
   };
 
   useLayoutEffect(() => {
@@ -330,15 +332,15 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
       'Notes',
     ];
     const rows = items.map((i) => [
-      `"${i.itemId}"`,
-      `"${i.itemName.replace(/"/g, '""')}"`,
-      `"${i.category}"`,
-      `"${i.status}"`,
-      `"${i.currentUser || ''}"`,
-      `"${i.dateOut || ''}"`,
-      `"${i.location || getCategoryDefaultLocation(i.category)}"`,
+      `"${String(i.itemId || '').replace(/"/g, '""')}"`,
+      `"${String(i.itemName || '').replace(/"/g, '""')}"`,
+      `"${String(i.category || '')}"`,
+      `"${String(i.status || '')}"`,
+      `"${String(i.currentUser || '')}"`,
+      `"${String(i.dateOut || '')}"`,
+      `"${String(i.location || getCategoryDefaultLocation(i.category)).replace(/"/g, '""')}"`,
       i.timesCheckedOut || 0,
-      `"${(i.notes || '').replace(/"/g, '""')}"`,
+      `"${String(i.notes || '').replace(/"/g, '""')}"`,
     ]);
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -701,7 +703,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
 
                   return (
                     <div
-                      key={item.itemId}
+                      key={`${item.itemId}-${idx}`}
                       style={{ '--row-idx': idx } as React.CSSProperties}
                       className="p-3 bg-[#09090b] border border-[#27272d] rounded-lg flex flex-col justify-between card-hover-lift animate-row-enter"
                     >

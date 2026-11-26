@@ -82,8 +82,13 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [inspectedItemId, setInspectedItemId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<boolean>(false);
+  const [visibleLimit, setVisibleLimit] = useState<number>(60);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setVisibleLimit(60);
+  }, [selectedCategory, statusFilter, teamFilter, searchQuery, sortField, sortAsc]);
 
   const inspectedItem = useMemo(() => {
     if (!inspectedItemId) return null;
@@ -92,11 +97,12 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
 
   const inspectedItemLogs = useMemo(() => {
     if (!inspectedItem) return [];
-    const targetNorm = normalizeItemId(inspectedItem.itemId, inspectedItem.category).toUpperCase();
+    const targetNorm = normalizeItemId(String(inspectedItem.itemId || ''), inspectedItem.category).toUpperCase();
+    const rawTarget = String(inspectedItem.itemId || '').toUpperCase();
     return logs
       .filter((l) => {
-        const logNorm = normalizeItemId(l.itemId, l.category).toUpperCase();
-        return logNorm === targetNorm || l.itemId.toUpperCase() === inspectedItem.itemId.toUpperCase();
+        const logNorm = normalizeItemId(String(l.itemId || ''), l.category).toUpperCase();
+        return logNorm === targetNorm || String(l.itemId || '').toUpperCase() === rawTarget;
       })
       .sort((a, b) => (new Date(b.timestamp).getTime() || 0) - (new Date(a.timestamp).getTime() || 0))
       .slice(0, 6);
@@ -218,8 +224,13 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
   const matchedExactItem = useMemo(() => {
     if (!searchQuery.trim()) return null;
     const q = searchQuery.trim().toUpperCase();
-    return items.find((i) => i.itemId.toUpperCase() === q);
+    return items.find((i) => String(i.itemId || '').toUpperCase() === q);
   }, [searchQuery, items]);
+
+  const displayedItems = useMemo(
+    () => filteredItems.slice(0, visibleLimit),
+    [filteredItems, visibleLimit]
+  );
 
   const toggleSort = (field: typeof sortField) => {
     if (sortField === field) {
@@ -251,14 +262,14 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
   const exportToCSV = () => {
     const headers = ['Item ID', 'Item Name', 'Category', 'Status', 'Current Team/User', 'Date Out', 'Notes', 'Location'];
     const rows = filteredItems.map((i) => [
-      i.itemId,
-      `"${i.itemName.replace(/"/g, '""')}"`,
-      i.category,
-      i.status,
-      i.currentUser || '',
-      i.dateOut || '',
-      `"${(i.notes || '').replace(/"/g, '""')}"`,
-      `"${(i.location || '').replace(/"/g, '""')}"`,
+      String(i.itemId || ''),
+      `"${String(i.itemName || '').replace(/"/g, '""')}"`,
+      String(i.category || ''),
+      String(i.status || ''),
+      String(i.currentUser || ''),
+      String(i.dateOut || ''),
+      `"${String(i.notes || '').replace(/"/g, '""')}"`,
+      `"${String(i.location || '').replace(/"/g, '""')}"`,
     ]);
 
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
@@ -302,23 +313,8 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
 
   return (
     <>
-      {/* Dedicated Mobile View for phones */}
-      <div className="block md:hidden">
-        <MobileInventoryList
-          items={items}
-          logs={logs}
-          selectedCategory={selectedCategory}
-          onSelectCategory={onSelectCategory}
-          onOpenCheckout={onOpenCheckout}
-          onToggleCondition={onToggleCondition}
-          onOpenLabelPrinter={onOpenLabelPrinter}
-          isAdmin={isAdmin}
-          onOpenAdminUnlock={onOpenAdminUnlock || (() => {})}
-        />
-      </div>
-
-      {/* Desktop Rich Table View */}
-      <div className="hidden md:block space-y-4">
+      {/* Desktop Rich Table View (Mobile view is already routed via isMobileMode) */}
+      <div className="space-y-4">
         {/* Top Header & Fast Filter Bar */}
         <div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#27272d]">
@@ -732,7 +728,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                     </td>
                   </tr>
                 ) : (
-                  filteredItems.map((item, idx) => {
+                  displayedItems.map((item, idx) => {
                     const isChecked = selectedIds.has(item.itemId);
                     const isAvailable = item.status === 'Available';
                     const cleanItemName =
@@ -747,13 +743,13 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
 
                     return (
                       <tr
-                        key={item.itemId}
+                        key={`${item.itemId}-${idx}`}
                         onClick={() => {
                           playClick();
                           setInspectedItemId(item.itemId);
                         }}
-                        style={{ '--row-idx': idx } as React.CSSProperties}
-                        className={`group cursor-pointer hover:bg-[#1a1a1f] transition-colors animate-row-enter ${
+                        style={idx < 14 ? ({ '--row-idx': idx } as React.CSSProperties) : undefined}
+                        className={`group cursor-pointer hover:bg-[#1a1a1f] transition-colors ${idx < 14 ? 'animate-row-enter' : ''} ${
                           inspectedItemId === item.itemId
                             ? 'bg-red-500/10'
                             : isChecked
@@ -889,12 +885,36 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
 
           {/* Table Footer Summary */}
           <div className="px-4 py-3 bg-[#09090b] border-t border-[#27272d] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-zinc-400 font-mono">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span>
-                SHOWING <span className="font-bold text-zinc-100">{filteredItems.length}</span> OF{' '}
-                <span className="font-bold text-zinc-100">{items.length}</span> PARTS
+                SHOWING <span className="font-bold text-zinc-100">{displayedItems.length}</span> OF{' '}
+                <span className="font-bold text-zinc-100">{filteredItems.length}</span> PARTS
               </span>
               {selectedCategory !== 'All' && <span>in {selectedCategory}</span>}
+              {filteredItems.length > visibleLimit && (
+                <div className="flex items-center gap-1.5 ml-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick();
+                      setVisibleLimit((prev) => prev + 60);
+                    }}
+                    className="px-2 py-0.5 rounded bg-[#1a1a1f] hover:bg-[#27272d] text-zinc-200 border border-[#27272d] text-[11px]"
+                  >
+                    + Show 60 More
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick();
+                      setVisibleLimit(filteredItems.length);
+                    }}
+                    className="px-2 py-0.5 rounded bg-[#1a1a1f] hover:bg-[#27272d] text-zinc-400 border border-[#27272d] text-[11px]"
+                  >
+                    Show All
+                  </button>
+                </div>
+              )}
               <span className="hidden lg:inline text-zinc-600">· Click any row for specs &amp; history</span>
             </div>
             <div className="flex items-center gap-3">

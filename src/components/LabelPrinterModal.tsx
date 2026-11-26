@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
 import { X, Printer, QrCode, Check, Search } from 'lucide-react';
 import { InventoryItem, VexCategory, SENSOR_CATEGORIES } from '../types';
@@ -56,18 +56,24 @@ export const LabelPrinterModal: React.FC<LabelPrinterModalProps> = ({
     return pool;
   }, [items, category, search]);
 
-  // Pre-select first 12 visible parts when opened
-  useEffect(() => {
-    if (isOpen) {
-      setCategory(initialCategory === 'All' ? 'Brain' : initialCategory);
-      setSearch('');
-    }
-  }, [isOpen, initialCategory]);
+  const prevOpenRef = useRef(false);
 
+  // Pre-select first 12 visible parts only when the modal transitions from closed to open
   useEffect(() => {
-    if (!isOpen) return;
-    setSelectedIds(new Set(visibleItems.slice(0, 12).map((i) => i.itemId)));
-  }, [isOpen, category, visibleItems]);
+    const justOpened = isOpen && !prevOpenRef.current;
+    prevOpenRef.current = isOpen;
+    if (!justOpened) return;
+
+    const startCat = initialCategory === 'All' ? 'Brain' : initialCategory;
+    setCategory(startCat);
+    setSearch('');
+
+    const pool =
+      startCat === 'Sensors'
+        ? items.filter((i) => SENSOR_CATEGORIES.includes(i.category) || i.category === 'Sensors')
+        : items.filter((i) => i.category === startCat);
+    setSelectedIds(new Set(pool.slice(0, 12).map((i) => i.itemId)));
+  }, [isOpen, initialCategory, items]);
 
   const labelsToPrint = useMemo(() => {
     return items.filter((i) => selectedIds.has(i.itemId));
@@ -267,11 +273,11 @@ export const LabelPrinterModal: React.FC<LabelPrinterModalProps> = ({
 
             {/* Part Toggle Chips */}
             <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pt-1">
-              {visibleItems.map((item) => {
+              {visibleItems.map((item, idx) => {
                 const isPicked = selectedIds.has(item.itemId);
                 return (
                   <button
-                    key={item.itemId}
+                    key={`${item.itemId}-${idx}`}
                     type="button"
                     onClick={() => toggleId(item.itemId)}
                     className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-mono rounded-lg border transition-colors ${

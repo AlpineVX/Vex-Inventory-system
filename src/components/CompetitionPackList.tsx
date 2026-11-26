@@ -25,7 +25,10 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
       const cached = localStorage.getItem(STORAGE_KEY_PACKLIST);
       if (cached) {
         try {
-          return JSON.parse(cached);
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
         } catch {}
       }
     }
@@ -39,7 +42,7 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
   const [customTarget, setCustomTarget] = useState(2);
   const [customDesc, setCustomDesc] = useState('');
   const { containerRef: packNavRef, setItemRef: setPackTabRef, indicator: packIndicator } =
-    useSlidingIndicator<'all' | 'packed' | 'unpacked'>(filterState, [packList]);
+    useSlidingIndicator<'all' | 'packed' | 'unpacked'>(filterState, [packList.length]);
 
   // Persist packlist
   useEffect(() => {
@@ -417,8 +420,8 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
             return (
               <div
                 key={item.id}
-                style={{ '--row-idx': idx } as React.CSSProperties}
-                className={`p-4 rounded-xl border transition-all animate-row-enter card-hover-lift ${
+                style={idx < 12 ? ({ '--row-idx': idx } as React.CSSProperties) : undefined}
+                className={`p-4 rounded-xl border transition-all card-hover-lift ${idx < 12 ? 'animate-row-enter' : ''} ${
                   item.isPacked
                     ? 'bg-[#111114]/60 border-[#27272d]'
                     : 'bg-[#111114] border-[#27272d] hover:border-zinc-700'

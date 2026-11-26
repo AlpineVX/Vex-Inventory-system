@@ -82,11 +82,12 @@ export const Header: React.FC<HeaderProps> = ({
     const activeEl = tabRefs.current[activeTab];
     const navEl = navRef.current;
     if (!activeEl || !navEl) return;
-    setPillStyle({
-      left: activeEl.offsetLeft,
-      width: activeEl.offsetWidth,
-      ready: true,
-    });
+    if (activeEl.offsetWidth === 0) return;
+    const left = activeEl.offsetLeft;
+    const width = activeEl.offsetWidth;
+    setPillStyle((prev) =>
+      prev.ready && prev.left === left && prev.width === width ? prev : { left, width, ready: true }
+    );
   };
 
   useLayoutEffect(() => {

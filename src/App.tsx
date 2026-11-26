@@ -78,8 +78,9 @@ function saveConditionMap(map: Record<string, ItemCondition>) {
 
 function applyConditionMap(list: InventoryItem[], map: Record<string, ItemCondition>): InventoryItem[] {
   return list.map((item) => {
-    const norm = normalizeItemId(item.itemId, item.category).toUpperCase();
-    const raw = item.itemId.toUpperCase();
+    const rawId = String(item.itemId || '');
+    const norm = normalizeItemId(rawId, item.category).toUpperCase();
+    const raw = rawId.toUpperCase();
     const cond = map[norm] || map[raw] || item.condition || 'Good';
     return cond === item.condition ? item : { ...item, condition: cond };
   });
@@ -101,6 +102,45 @@ function saveOfflineQueue(queue: OfflineQueueAction[]) {
   try {
     localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
   } catch {}
+}
+
+class TabErrorBoundary extends React.Component<
+  { resetKey: string; children: React.ReactNode },
+  { hasError: boolean; errorMsg: string }
+> {
+  constructor(props: { resetKey: string; children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorMsg: '' };
+  }
+
+  static getDerivedStateFromError(err: Error) {
+    return { hasError: true, errorMsg: err?.message || 'Unexpected display error' };
+  }
+
+  componentDidUpdate(prevProps: { resetKey: string }) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false, errorMsg: '' });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-6 rounded-2xl bg-[#111114] border border-red-500/40 text-center space-y-3 my-4">
+          <h2 className="text-sm font-bold text-zinc-100">Something went wrong loading this view</h2>
+          <p className="text-xs text-zinc-400 font-mono">{this.state.errorMsg}</p>
+          <button
+            type="button"
+            onClick={() => this.setState({ hasError: false, errorMsg: '' })}
+            className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 export default function App() {
@@ -207,6 +247,8 @@ export default function App() {
   const { canShowInstall, triggerInstall, showIOSGuide, closeIOSGuide } = usePWAInstallTrigger();
   const [offlineQueue, setOfflineQueue] = useState<OfflineQueueAction[]>(() => loadOfflineQueue());
   const isFlushingQueueRef = useRef<boolean>(false);
+  const isSyncingRef = useRef<boolean>(false);
+  isSyncingRef.current = syncStatus.isSyncing;
 
   const handleToggleSound = useCallback(() => {
     const next = !soundEnabled;
@@ -259,6 +301,9 @@ export default function App() {
         return;
       }
       setActiveTab(tab);
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -431,10 +476,10 @@ export default function App() {
 
   // Live Sync execution (preserves locally flagged Needs Repair conditions)
   const handleLiveSync = useCallback(
-    async (apiUrl: string, showToastOnSuccess = true) => {
+    async (apiUrl: string, showToastOnSuccess = true): Promise<{ ok: boolean; error?: string }> => {
       if (!apiUrl) {
         addToast('info', 'Offline Mode Active', 'Using local inventory cache. Configure Google Sheet URL in Settings.');
-        return;
+        return { ok: true };
       }
 
       setSyncStatus((prev) => ({ ...prev, isSyncing: true, error: null }));
@@ -488,15 +533,18 @@ export default function App() {
             `Successfully refreshed ${data.inventory.length} items from live spreadsheet.`
           );
         }
+        return { ok: true };
       } catch (err: any) {
+        const errMsg = err?.message || 'Sync failed';
         setSyncStatus((prev) => ({
           ...prev,
           isSyncing: false,
-          error: err.message,
+          error: errMsg,
         }));
         if (showToastOnSuccess) {
-          addToast('error', 'Sync Failed', err.message);
+          addToast('error', 'Sync Failed', errMsg);
         }
+        return { ok: false, error: errMsg };
       }
     },
     [addToast]
@@ -564,20 +612,23 @@ export default function App() {
       if (
         document.visibilityState === 'visible' &&
         navigator.onLine &&
-        !syncStatus.isSyncing
+        !isSyncingRef.current
       ) {
         handleLiveSync(syncStatus.url, false);
       }
     }, 45000);
     return () => window.clearInterval(timer);
-  }, [syncStatus.url, syncStatus.isSyncing, handleLiveSync]);
+  }, [syncStatus.url, handleLiveSync]);
 
   // URL save from Settings Modal
   const handleSaveApiUrl = async (newUrl: string) => {
     saveStoredApiUrl(newUrl);
-    setSyncStatus((prev) => ({ ...prev, url: newUrl, mode: newUrl ? 'live' : 'mock' }));
+    setSyncStatus((prev) => ({ ...prev, url: newUrl, mode: newUrl ? 'live' : 'mock', error: null }));
     if (newUrl) {
-      await handleLiveSync(newUrl, true);
+      const result = await handleLiveSync(newUrl, true);
+      if (!result.ok) {
+        throw new Error(result.error || 'Connection test failed.');
+      }
     } else {
       addToast('info', 'Disconnected from Google Sheet', 'Switched back to local inventory storage.');
     }
@@ -623,20 +674,22 @@ export default function App() {
   const handleToggleItemCondition = useCallback(
     (item: InventoryItem) => {
       const nextCondition: ItemCondition = item.condition === 'Needs Repair' ? 'Good' : 'Needs Repair';
-      const normKey = normalizeItemId(item.itemId, item.category).toUpperCase();
+      const rawTargetUpper = String(item.itemId || '').toUpperCase();
+      const normKey = normalizeItemId(String(item.itemId || ''), item.category).toUpperCase();
       const map = loadConditionMap();
       if (nextCondition === 'Needs Repair') {
         map[normKey] = 'Needs Repair';
       } else {
         delete map[normKey];
-        delete map[item.itemId.toUpperCase()];
+        delete map[rawTargetUpper];
       }
       saveConditionMap(map);
 
       setItems((prev) => {
         const next = prev.map((it) => {
-          const itNorm = normalizeItemId(it.itemId, it.category).toUpperCase();
-          return itNorm === normKey || it.itemId.toUpperCase() === item.itemId.toUpperCase()
+          const itRaw = String(it.itemId || '');
+          const itNorm = normalizeItemId(itRaw, it.category).toUpperCase();
+          return itNorm === normKey || itRaw.toUpperCase() === rawTargetUpper
             ? { ...it, condition: nextCondition }
             : it;
         });
@@ -1043,6 +1096,9 @@ export default function App() {
         return;
       }
       setActiveTab(tab);
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      }
     },
     [isKioskRestricted, addToast]
   );
@@ -1051,6 +1107,9 @@ export default function App() {
   const handleNavigateToCategory = (cat: VexCategory | 'All') => {
     setSelectedCategory(cat);
     setActiveTab('inventory');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
   };
 
   const handleNavigateToTeam = (team: string) => {
@@ -1061,6 +1120,9 @@ export default function App() {
     }
     setSelectedTeam(team);
     setActiveTab('teams');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
   };
 
   const handleManualSync = useCallback(async () => {
@@ -1125,57 +1187,59 @@ export default function App() {
             viewMode === 'mobile' ? 'max-w-md' : 'max-w-7xl'
           } ${isMobile ? 'pb-24' : ''}`}
         >
-          <div key={activeTab} className="animate-tab-enter">
-            {activeTab === 'dashboard' && (
-              <CommandCenter
-                items={items}
-                logs={logs}
-                isAdmin={adminSettings.isUnlocked}
-                onOpenAdminUnlock={handleOpenAdminUnlock}
-                onNavigateToCategory={handleNavigateToCategory}
-                onNavigateToTeam={handleNavigateToTeam}
-                onNavigateTab={handleTabChange}
-                onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
-                isMobileMode={isMobile}
-              />
-            )}
+          <TabErrorBoundary resetKey={activeTab}>
+            <div key={activeTab} className="animate-tab-enter">
+              {activeTab === 'dashboard' && (
+                <CommandCenter
+                  items={items}
+                  logs={logs}
+                  isAdmin={adminSettings.isUnlocked}
+                  onOpenAdminUnlock={handleOpenAdminUnlock}
+                  onNavigateToCategory={handleNavigateToCategory}
+                  onNavigateToTeam={handleNavigateToTeam}
+                  onNavigateTab={handleTabChange}
+                  onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
+                  isMobileMode={isMobile}
+                />
+              )}
 
-            {activeTab === 'inventory' && (
-              <InventoryBrowser
-                items={items}
-                logs={logs}
-                selectedCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
-                onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
-                onBatchAction={handleBatchInventoryAction}
-                onToggleCondition={handleToggleItemCondition}
-                onOpenLabelPrinter={() => setIsLabelPrinterOpen(true)}
-                isAdmin={adminSettings.isUnlocked}
-                onOpenAdminUnlock={handleOpenAdminUnlock}
-                isMobileMode={isMobile}
-              />
-            )}
+              {activeTab === 'inventory' && (
+                <InventoryBrowser
+                  items={items}
+                  logs={logs}
+                  selectedCategory={selectedCategory}
+                  onSelectCategory={setSelectedCategory}
+                  onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
+                  onBatchAction={handleBatchInventoryAction}
+                  onToggleCondition={handleToggleItemCondition}
+                  onOpenLabelPrinter={() => setIsLabelPrinterOpen(true)}
+                  isAdmin={adminSettings.isUnlocked}
+                  onOpenAdminUnlock={handleOpenAdminUnlock}
+                  isMobileMode={isMobile}
+                />
+              )}
 
-            {activeTab === 'teams' && (
-              <TeamLookup
-                items={items}
-                selectedTeam={selectedTeam}
-                onSelectTeam={setSelectedTeam}
-                onOpenCheckout={(item, action, team) =>
-                  handleOpenCheckoutModal(item, action || 'Check Out', team || selectedTeam)
-                }
-                onReturnItem={handleReturnItem}
-                onReturnAllForTeam={handleReturnAllForTeam}
-                isAdmin={adminSettings.isUnlocked}
-                onOpenAdminUnlock={handleOpenAdminUnlock}
-                isMobileMode={isMobile}
-              />
-            )}
+              {activeTab === 'teams' && (
+                <TeamLookup
+                  items={items}
+                  selectedTeam={selectedTeam}
+                  onSelectTeam={setSelectedTeam}
+                  onOpenCheckout={(item, action, team) =>
+                    handleOpenCheckoutModal(item, action || 'Check Out', team || selectedTeam)
+                  }
+                  onReturnItem={handleReturnItem}
+                  onReturnAllForTeam={handleReturnAllForTeam}
+                  isAdmin={adminSettings.isUnlocked}
+                  onOpenAdminUnlock={handleOpenAdminUnlock}
+                  isMobileMode={isMobile}
+                />
+              )}
 
-            {activeTab === 'packlist' && <CompetitionPackList items={items} />}
+              {activeTab === 'packlist' && <CompetitionPackList items={items} />}
 
-            {activeTab === 'logs' && <ActivityLogs logs={logs} isMobileMode={isMobile} />}
-          </div>
+              {activeTab === 'logs' && <ActivityLogs logs={logs} isMobileMode={isMobile} />}
+            </div>
+          </TabErrorBoundary>
         </main>
 
         {/* Mobile Fixed Bottom Nav (Natural thumb zone) */}
