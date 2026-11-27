@@ -22,6 +22,9 @@ import {
   ShieldAlert,
   Wrench,
   QrCode,
+  Plus,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import {
   InventoryItem,
@@ -29,11 +32,13 @@ import {
   VexCategory,
   CLUB_TEAMS,
   SENSOR_CATEGORIES,
+  CATEGORY_PREFIX_MAP,
   classifyVexCategory,
+  getCategoryDefaultLocation,
   normalizeItemId,
 } from '../types';
 import { MobileInventoryList } from './MobileInventoryList';
-import { playClick, playBeep } from '../services/soundFx';
+import { playClick, playBeep, playSuccess } from '../services/soundFx';
 import { getVexHardwareSpec } from '../data/vexSpecs';
 import { SpotlightCard, useSlidingIndicator } from './MotionPrimitives';
 
@@ -43,8 +48,12 @@ interface InventoryBrowserProps {
   selectedCategory: VexCategory | 'All';
   onSelectCategory: (cat: VexCategory | 'All') => void;
   onOpenCheckout: (item: InventoryItem, defaultAction?: 'Check Out' | 'Check In') => void;
-  onBatchAction?: (items: InventoryItem[], action: 'Check Out' | 'Check In') => void;
+  onBatchAction?: (items: InventoryItem[], action: 'Check Out' | 'Check In', targetTeam?: string) => void;
+  onBatchSetCondition?: (items: InventoryItem[], condition: 'Good' | 'Needs Repair') => void;
   onToggleCondition?: (item: InventoryItem) => void;
+  onAddParts?: (items: InventoryItem[]) => void;
+  onUpdateItemDetails?: (itemId: string, updates: { itemName: string; location: string; notes: string }) => void;
+  onDeleteItem?: (itemId: string) => void;
   onOpenLabelPrinter?: () => void;
   isAdmin?: boolean;
   onOpenAdminUnlock?: () => void;
@@ -70,7 +79,11 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
   onSelectCategory,
   onOpenCheckout,
   onBatchAction,
+  onBatchSetCondition,
   onToggleCondition,
+  onAddParts,
+  onUpdateItemDetails,
+  onDeleteItem,
   onOpenLabelPrinter,
   isAdmin = false,
   onOpenAdminUnlock,
@@ -82,10 +95,27 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
   const [sortField, setSortField] = useState<'itemId' | 'itemName' | 'category' | 'status' | 'dateOut'>('itemId');
   const [sortAsc, setSortAsc] = useState<boolean>(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchTargetTeam, setBatchTargetTeam] = useState<string>('654V');
   const [inspectedItemId, setInspectedItemId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<boolean>(false);
   const [copiedCsv, setCopiedCsv] = useState<boolean>(false);
   const [visibleLimit, setVisibleLimit] = useState<number>(60);
+
+  // Admin: Add new catalog parts modal state
+  const [isAddPartsOpen, setIsAddPartsOpen] = useState<boolean>(false);
+  const [addCategory, setAddCategory] = useState<VexCategory>('Solenoids');
+  const [addMode, setAddMode] = useState<'single' | 'range'>('single');
+  const [addStartNum, setAddStartNum] = useState<number>(32);
+  const [addEndNum, setAddEndNum] = useState<number>(35);
+  const [addPartName, setAddPartName] = useState<string>('Pneumatic Solenoid');
+  const [addLocation, setAddLocation] = useState<string>('Pneumatics Cabinet');
+
+  // Admin: Edit / Delete inside Part Inspector Drawer
+  const [isEditingInspector, setIsEditingInspector] = useState<boolean>(false);
+  const [editName, setEditName] = useState<string>('');
+  const [editLocation, setEditLocation] = useState<string>('');
+  const [editNotes, setEditNotes] = useState<string>('');
+  const [confirmDeleteInspector, setConfirmDeleteInspector] = useState<boolean>(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -93,10 +123,50 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
     setVisibleLimit(60);
   }, [selectedCategory, statusFilter, teamFilter, searchQuery, sortField, sortAsc]);
 
+  // Suggest next unused number & default name/location when category changes in Add Parts modal
+  const suggestNextForCategory = (cat: VexCategory) => {
+    let maxNum = 0;
+    const prefix = CATEGORY_PREFIX_MAP[cat];
+    items.forEach((it) => {
+      if (classifyVexCategory(it.category, it.itemName, it.itemId) === cat || String(it.itemId).startsWith(prefix)) {
+        const m = String(it.itemId).match(/(\d+)$/);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (n > maxNum) maxNum = n;
+        }
+      }
+    });
+    const nextNum = maxNum + 1;
+    setAddStartNum(nextNum);
+    setAddEndNum(nextNum + 2);
+    const defaultNames: Record<VexCategory, string> = {
+      Brain: 'V5 Robot Brain',
+      Radio: 'V5 Robot Radio',
+      Optical: 'Optical Sensor',
+      Distance: 'Distance Sensor',
+      Inertial: 'Inertial Sensor',
+      Rotational: 'Rotational Sensor',
+      Solenoids: 'Pneumatic Solenoid',
+      Sensors: 'V5 Sensor',
+    };
+    setAddPartName(defaultNames[cat] || 'VEX Component');
+    setAddLocation(getCategoryDefaultLocation(cat));
+  };
+
   const inspectedItem = useMemo(() => {
     if (!inspectedItemId) return null;
     return items.find((i) => i.itemId === inspectedItemId) || null;
   }, [items, inspectedItemId]);
+
+  useEffect(() => {
+    setIsEditingInspector(false);
+    setConfirmDeleteInspector(false);
+    if (inspectedItem) {
+      setEditName(inspectedItem.itemName || '');
+      setEditLocation(inspectedItem.location || getCategoryDefaultLocation(inspectedItem.category));
+      setEditNotes(inspectedItem.notes || '');
+    }
+  }, [inspectedItemId]);
 
   const inspectedItemLogs = useMemo(() => {
     if (!inspectedItem) return [];
@@ -215,7 +285,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
   }, [items, selectedCategory, statusFilter, teamFilter, searchQuery, sortField, sortAsc]);
 
   useEffect(() => {
-    if (!inspectedItemId) return;
+    if (!inspectedItemId || isAddPartsOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setInspectedItemId(null);
@@ -238,7 +308,18 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [inspectedItemId, filteredItems, items]);
+  }, [inspectedItemId, isAddPartsOpen, filteredItems, items]);
+
+  useEffect(() => {
+    if (!isAddPartsOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsAddPartsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isAddPartsOpen]);
 
   // Instant Item Profile matching (Page 10 in spreadsheet)
   const matchedExactItem = useMemo(() => {
@@ -366,7 +447,21 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                 Search, sort, and update all {items.length} club parts.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {isAdmin && onAddParts && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    playClick();
+                    suggestNextForCategory(addCategory);
+                    setIsAddPartsOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors btn-crimson-glow"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Parts</span>
+                </button>
+              )}
               {onOpenLabelPrinter && (
                 <button
                   onClick={() => {
@@ -644,30 +739,72 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
 
         {/* Bulk Action Toolbar if items selected */}
         {selectedIds.size > 0 && onBatchAction && (
-          <div className="flex items-center justify-between p-3 bg-[#1a1a1f] border border-red-500/35 rounded-xl text-xs animate-fade-in-up">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-zinc-100">{selectedIds.size} items selected</span>
-              <span className="text-zinc-400">· Batch action:</span>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 p-3 bg-[#1a1a1f] border border-red-500/35 rounded-xl text-xs animate-fade-in-up">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-zinc-100 font-mono tabular-nums">{selectedIds.size} selected</span>
+              {isAdmin && (
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                  <span>· Assign team:</span>
+                  <select
+                    value={batchTargetTeam}
+                    onChange={(e) => setBatchTargetTeam(e.target.value)}
+                    className="px-2 py-1 text-xs bg-[#09090b] border border-[#27272d] rounded-md text-zinc-100 font-mono focus:outline-none focus:border-red-500"
+                    aria-label="Target team for batch checkout"
+                  >
+                    {CLUB_TEAMS.map((t) => (
+                      <option key={t} value={t}>
+                        Team {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-2 font-sans">
+            <div className="flex items-center gap-2 flex-wrap font-sans">
               <button
                 onClick={() => {
-                  onBatchAction(selectedItemsList, 'Check Out');
+                  onBatchAction(selectedItemsList, 'Check Out', isAdmin ? batchTargetTeam : undefined);
                   setSelectedIds(new Set());
                 }}
                 className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg btn-crimson-glow"
               >
-                Batch Check Out
+                {isAdmin ? `Check Out → ${batchTargetTeam}` : 'Batch Check Out'}
               </button>
               <button
                 onClick={() => {
-                  onBatchAction(selectedItemsList, 'Check In');
+                  onBatchAction(selectedItemsList, 'Check In', isAdmin ? batchTargetTeam : undefined);
                   setSelectedIds(new Set());
                 }}
                 className="px-3 py-1.5 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold rounded-lg transition-colors btn-tactile"
               >
                 Batch Check In
               </button>
+              {isAdmin && onBatchSetCondition && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick();
+                      onBatchSetCondition(selectedItemsList, 'Needs Repair');
+                      setSelectedIds(new Set());
+                    }}
+                    className="px-2.5 py-1.5 text-red-400 bg-[#09090b] hover:bg-red-500/15 border border-red-500/35 font-semibold rounded-lg transition-colors btn-tactile"
+                  >
+                    Flag Repair
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick();
+                      onBatchSetCondition(selectedItemsList, 'Good');
+                      setSelectedIds(new Set());
+                    }}
+                    className="px-2.5 py-1.5 text-zinc-200 bg-[#09090b] hover:bg-[#27272d] border border-[#27272d] font-semibold rounded-lg transition-colors btn-tactile"
+                  >
+                    Mark Good
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => setSelectedIds(new Set())}
                 className="px-2.5 py-1.5 text-zinc-400 hover:text-zinc-100"
@@ -1134,7 +1271,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                       )}
 
                       {onToggleCondition && (
-                        <div className="pt-2 border-t border-[#1a1a1f]">
+                        <div className="pt-2 border-t border-[#1a1a1f] space-y-2">
                           <button
                             type="button"
                             onClick={() => {
@@ -1154,6 +1291,138 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                                 : 'Flag Part as Needs Repair'}
                             </span>
                           </button>
+
+                          {/* Admin Part Metadata Edit & Retire Controls */}
+                          {isAdmin && (onUpdateItemDetails || onDeleteItem) && (
+                            <div className="pt-2 border-t border-[#1a1a1f] space-y-2.5">
+                              <div className="flex items-center justify-between gap-2">
+                                {onUpdateItemDetails && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      playClick();
+                                      setIsEditingInspector((prev) => !prev);
+                                      setConfirmDeleteInspector(false);
+                                    }}
+                                    className="flex-1 py-1.5 px-2.5 rounded-lg bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] text-xs font-medium text-zinc-200 flex items-center justify-center gap-1.5 transition-colors btn-tactile"
+                                  >
+                                    <Pencil className="w-3 h-3 text-zinc-400" />
+                                    <span>{isEditingInspector ? 'Cancel Edit' : 'Edit Part Info'}</span>
+                                  </button>
+                                )}
+
+                                {onDeleteItem && !confirmDeleteInspector && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      playClick();
+                                      setConfirmDeleteInspector(true);
+                                      setIsEditingInspector(false);
+                                    }}
+                                    className="py-1.5 px-2.5 rounded-lg bg-[#111114] hover:bg-rose-500/15 border border-rose-500/30 text-xs font-medium text-rose-400 flex items-center justify-center gap-1.5 transition-colors btn-tactile"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                    <span>Retire Part</span>
+                                  </button>
+                                )}
+                              </div>
+
+                              {confirmDeleteInspector && onDeleteItem && (
+                                <div className="p-2.5 rounded-lg bg-rose-950/30 border border-rose-500/35 flex items-center justify-between gap-2 text-xs animate-pop">
+                                  <span className="text-rose-200 font-medium">Remove {inspectedItem.itemId}?</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmDeleteInspector(false)}
+                                      className="px-2.5 py-1 rounded bg-[#1a1a1f] text-zinc-300 border border-[#27272d]"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        playClick();
+                                        const deletedId = inspectedItem.itemId;
+                                        setInspectedItemId(null);
+                                        onDeleteItem(deletedId);
+                                      }}
+                                      className="px-2.5 py-1 rounded bg-red-600 hover:bg-red-700 text-white font-semibold"
+                                    >
+                                      Confirm
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {isEditingInspector && onUpdateItemDetails && (
+                                <form
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    playSuccess();
+                                    onUpdateItemDetails(inspectedItem.itemId, {
+                                      itemName: editName,
+                                      location: editLocation,
+                                      notes: editNotes,
+                                    });
+                                    setIsEditingInspector(false);
+                                  }}
+                                  className="p-3 rounded-lg bg-[#111114] border border-red-500/30 space-y-2.5 text-xs animate-fade-in-up"
+                                >
+                                  <div>
+                                    <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
+                                      Part Name
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={editName}
+                                      onChange={(e) => setEditName(e.target.value)}
+                                      className="w-full px-2.5 py-1.5 bg-[#09090b] border border-[#27272d] rounded text-zinc-100 focus:outline-none focus:border-red-500"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
+                                      Cabinet / Bin Location
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={editLocation}
+                                      onChange={(e) => setEditLocation(e.target.value)}
+                                      className="w-full px-2.5 py-1.5 bg-[#09090b] border border-[#27272d] rounded text-zinc-100 focus:outline-none focus:border-red-500"
+                                    />
+                                    <div className="flex flex-wrap gap-1 mt-1.5">
+                                      {['Cabinet 1', 'Sensor Cabinet', 'Pneumatics Cabinet', 'Competition Case'].map((loc) => (
+                                        <button
+                                          key={loc}
+                                          type="button"
+                                          onClick={() => setEditLocation(loc)}
+                                          className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#1a1a1f] text-zinc-300 hover:text-zinc-100 border border-[#27272d]"
+                                        >
+                                          {loc}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
+                                      Notes
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={editNotes}
+                                      onChange={(e) => setEditNotes(e.target.value)}
+                                      className="w-full px-2.5 py-1.5 bg-[#09090b] border border-[#27272d] rounded text-zinc-100 focus:outline-none focus:border-red-500"
+                                    />
+                                  </div>
+                                  <button
+                                    type="submit"
+                                    className="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg btn-crimson-glow"
+                                  >
+                                    Save Changes
+                                  </button>
+                                </form>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1269,6 +1538,206 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
               );
             })()}
           </aside>
+        </div>
+      )}
+
+      {/* Admin Add Hardware Parts Modal */}
+      {isAdmin && isAddPartsOpen && onAddParts && (
+        <div
+          onClick={() => setIsAddPartsOpen(false)}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-backdrop-enter"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#111114] border-t sm:border border-[#27272d] rounded-t-3xl sm:rounded-2xl max-w-md w-full overflow-hidden shadow-2xl pb-[env(safe-area-inset-bottom,0px)] animate-modal-enter"
+          >
+            <div className="w-12 h-1.5 bg-zinc-700/80 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+            <div className="px-5 py-3.5 bg-[#09090b] border-b border-[#27272d] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Plus className="w-4 h-4 text-red-400" />
+                <h2 className="text-sm font-bold text-zinc-100">Add New Parts to Catalog</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddPartsOpen(false)}
+                className="text-zinc-400 hover:text-zinc-100 p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const start = Math.max(1, Math.min(999, addStartNum || 1));
+                const end = addMode === 'range' ? Math.max(start, Math.min(start + 24, addEndNum || start)) : start;
+                const prefix = CATEGORY_PREFIX_MAP[addCategory];
+                const newItems: InventoryItem[] = [];
+                for (let n = start; n <= end; n++) {
+                  newItems.push({
+                    itemId: `${prefix}-${n}`,
+                    itemName: addPartName.trim() || `VEX ${addCategory}`,
+                    category: addCategory,
+                    status: 'Available',
+                    currentUser: '',
+                    dateOut: '',
+                    notes: 'In storage, added by Admin',
+                    timesCheckedOut: 0,
+                    location: addLocation.trim() || getCategoryDefaultLocation(addCategory),
+                    condition: 'Good',
+                  });
+                }
+                playSuccess();
+                onAddParts(newItems);
+                setIsAddPartsOpen(false);
+              }}
+              className="p-5 space-y-3.5 text-xs"
+            >
+              <div>
+                <label className="block text-[11px] font-mono uppercase text-zinc-400 mb-1.5">
+                  Category
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                  {(['Brain', 'Radio', 'Solenoids', 'Optical', 'Distance', 'Inertial', 'Rotational'] as VexCategory[]).map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => {
+                        playClick();
+                        setAddCategory(cat);
+                        suggestNextForCategory(cat);
+                      }}
+                      className={`px-2 py-1.5 rounded-lg border font-medium transition-colors ${
+                        addCategory === cat
+                          ? 'bg-zinc-100 text-zinc-950 border-zinc-200 font-bold'
+                          : 'bg-[#09090b] text-zinc-300 border-[#27272d] hover:border-zinc-700'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <span className="text-[11px] font-mono uppercase text-zinc-400">Part Number Mode</span>
+                <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[#09090b] border border-[#27272d] font-mono">
+                  <button
+                    type="button"
+                    onClick={() => setAddMode('single')}
+                    className={`px-2.5 py-1 rounded text-[11px] ${
+                      addMode === 'single' ? 'bg-[#1a1a1f] text-zinc-100 font-bold' : 'text-zinc-400'
+                    }`}
+                  >
+                    Single
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddMode('range')}
+                    className={`px-2.5 py-1 rounded text-[11px] ${
+                      addMode === 'range' ? 'bg-[#1a1a1f] text-zinc-100 font-bold' : 'text-zinc-400'
+                    }`}
+                  >
+                    Number Range
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                    {addMode === 'range' ? 'Start #' : 'Part #'}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={999}
+                    value={addStartNum}
+                    onChange={(e) => setAddStartNum(parseInt(e.target.value, 10) || 1)}
+                    className="w-full px-3 py-2 bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-100 font-mono focus:outline-none focus:border-red-500"
+                  />
+                </div>
+                {addMode === 'range' ? (
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                      End # (max +25)
+                    </label>
+                    <input
+                      type="number"
+                      min={addStartNum}
+                      max={addStartNum + 24}
+                      value={addEndNum}
+                      onChange={(e) => setAddEndNum(parseInt(e.target.value, 10) || addStartNum)}
+                      className="w-full px-3 py-2 bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-100 font-mono focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                      Preview ID
+                    </label>
+                    <div className="px-3 py-2 bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-100 font-mono font-bold truncate">
+                      {CATEGORY_PREFIX_MAP[addCategory]}-{Math.max(1, addStartNum || 1)}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {addMode === 'range' && (
+                <div className="p-2.5 rounded-lg bg-[#09090b] border border-[#27272d] text-[11px] font-mono text-zinc-300">
+                  Will add{' '}
+                  <strong className="text-zinc-100">
+                    {Math.max(1, Math.min(addStartNum + 24, addEndNum || addStartNum) - Math.max(1, addStartNum || 1) + 1)}
+                  </strong>{' '}
+                  parts: <span className="text-zinc-100">{CATEGORY_PREFIX_MAP[addCategory]}-{Math.max(1, addStartNum || 1)}</span>
+                  {' '}..{' '}
+                  <span className="text-zinc-100">
+                    {CATEGORY_PREFIX_MAP[addCategory]}-{Math.max(Math.max(1, addStartNum || 1), Math.min(addStartNum + 24, addEndNum || addStartNum))}
+                  </span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                  Part Name
+                </label>
+                <input
+                  type="text"
+                  value={addPartName}
+                  onChange={(e) => setAddPartName(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-100 focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-zinc-500 mb-1">
+                  Storage Cabinet
+                </label>
+                <input
+                  type="text"
+                  value={addLocation}
+                  onChange={(e) => setAddLocation(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#09090b] border border-[#27272d] rounded-lg text-zinc-100 focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddPartsOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-[#1a1a1f] text-zinc-300 border border-[#27272d] hover:text-zinc-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold btn-crimson-glow"
+                >
+                  Add to Catalog
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
   </>

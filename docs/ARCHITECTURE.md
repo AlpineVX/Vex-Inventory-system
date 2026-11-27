@@ -39,9 +39,9 @@ Every user query, modal input, and spreadsheet row passes through `normalizeItem
 
 | Key | Purpose | Resilience Notes |
 |:---|:---|:---|
-| `vex_inventory_cache` | Last known hardware list (`InventoryItem[]`) | Sanitized on load; falls back cleanly to 179-part baseline |
-| `vex_logs_cache` | Recent check-out / check-in audit rows (`AuditLog[]`) | Deduplicated on `timestamp + itemId + action` |
-| `vex_api_url` | Active Google Apps Script `/exec` URL | Empty string `""` persists explicit disconnect |
+| `vex_inventory_items_cache` | Last known hardware list (`InventoryItem[]`) | Sanitized on load; falls back cleanly to 179-part baseline |
+| `vex_inventory_logs_cache` | Recent check-out / check-in audit rows (`AuditLog[]`) | Deduplicated on `timestamp + itemId + action` |
+| `vex_inventory_gas_url` | Active Google Apps Script `/exec` URL | `__DISCONNECTED__` sentinel persists explicit disconnect |
 | `vex_offline_sync_queue` | Queued checkouts/returns taken offline | Replayed sequentially once `navigator.onLine` returns |
 | `vex_item_conditions_v1` | Local `Needs Repair` health flags | Merged onto live sheet sync rows so repair flags are not lost |
 | `vex_pack_list_state` | Competition Pack List checked quantities & custom spares | Protected by `Array.isArray` validation on read |

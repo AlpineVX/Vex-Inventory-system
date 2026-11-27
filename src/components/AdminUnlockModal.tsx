@@ -98,7 +98,7 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({
         {/* Toggle Method */}
         <div className="p-5 pb-0">
           <p className="text-xs text-zinc-400 mb-3 font-sans">
-            Sign in as an admin to edit Google Sheet links, reset the parts list, or change club settings.
+            Sign in as an admin to add or edit parts, run team batch actions, manage logs and backups, or edit Google Sheet settings.
           </p>
 
           <div

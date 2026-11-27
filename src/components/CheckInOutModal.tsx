@@ -281,12 +281,10 @@ export const CheckInOutModal: React.FC<CheckInOutModalProps> = ({
 
   // Filter items for search mode
   const eligibleItems = useMemo(() => {
-    let pool = items;
-    if (action === 'Check Out') {
-      pool = [...items].sort((a, b) => (a.status === 'Available' ? -1 : 1));
-    } else {
-      pool = [...items].sort((a, b) => (a.status === 'Checked Out' ? -1 : 1));
-    }
+    const targetStatus = action === 'Check Out' ? 'Available' : 'Checked Out';
+    let pool = [...items].sort(
+      (a, b) => (a.status === targetStatus ? 0 : 1) - (b.status === targetStatus ? 0 : 1)
+    );
 
     if (itemSearch.trim()) {
       const q = itemSearch.toLowerCase();

@@ -42,6 +42,11 @@ interface CommandCenterProps {
   onNavigateToTeam: (team: string) => void;
   onNavigateTab: (tab: ActiveTab) => void;
   onOpenCheckout: (item?: InventoryItem, defaultAction?: 'Check Out' | 'Check In') => void;
+  onReturnItem?: (item: InventoryItem) => void;
+  onReturnOverdueItems?: (items: InventoryItem[]) => void;
+  onToggleCondition?: (item: InventoryItem) => void;
+  onClearAllRepairFlags?: () => void;
+  onOpenSettings?: () => void;
   onOpenLabelPrinter?: () => void;
   isAdmin?: boolean;
   onOpenAdminUnlock?: () => void;
@@ -57,6 +62,11 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
   onNavigateToTeam,
   onNavigateTab,
   onOpenCheckout,
+  onReturnItem,
+  onReturnOverdueItems,
+  onToggleCondition,
+  onClearAllRepairFlags,
+  onOpenSettings,
   onOpenLabelPrinter,
   isAdmin = false,
   onOpenAdminUnlock,
@@ -103,6 +113,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
 
   // Drilldown modal states
   const [activeDrilldown, setActiveDrilldown] = useState<'none' | 'overdue' | 'maintenance' | 'readiness'>('none');
+  const [confirmDrilldownBulk, setConfirmDrilldownBulk] = useState<'none' | 'overdue' | 'repair'>('none');
   const [barsReady, setBarsReady] = useState(false);
 
   useEffect(() => {
@@ -410,9 +421,10 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
       {(() => {
         const repairOnlyCount = items.filter((i) => i.condition === 'Needs Repair').length;
         const healthyAvailCount = items.filter((i) => i.status === 'Available' && i.condition !== 'Needs Repair').length;
+        const checkedOutHealthyCount = items.filter((i) => i.status === 'Checked Out' && i.condition !== 'Needs Repair').length;
         const safeTotal = Math.max(1, totalCount);
         const readyPct = (healthyAvailCount / safeTotal) * 100;
-        const outPct = (checkedOutCount / safeTotal) * 100;
+        const outPct = (checkedOutHealthyCount / safeTotal) * 100;
         const repairPct = (repairOnlyCount / safeTotal) * 100;
         return (
           <div className="p-3.5 rounded-xl bg-[#111114] border border-[#27272d] flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in-up">
@@ -502,6 +514,46 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               ? 'Admin mode active — email is optional.'
               : 'Your school email is required so we know who has each part.'}
           </p>
+          {isAdmin && (
+            <div className="flex items-center gap-3 mt-2.5 text-[11px] font-mono">
+              <button
+                type="button"
+                onClick={() => {
+                  playClick();
+                  onNavigateTab('inventory');
+                }}
+                className="text-zinc-300 hover:text-white underline underline-offset-4 transition-colors"
+              >
+                Catalog &amp; Bulk Edit
+              </button>
+              {onOpenSettings && (
+                <>
+                  <span className="text-zinc-600" aria-hidden="true">·</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick();
+                      onOpenSettings();
+                    }}
+                    className="text-red-400 hover:text-red-300 underline underline-offset-4 transition-colors"
+                  >
+                    Sheet &amp; Admin Settings
+                  </button>
+                </>
+              )}
+              <span className="text-zinc-600" aria-hidden="true">·</span>
+              <button
+                type="button"
+                onClick={() => {
+                  playClick();
+                  onNavigateTab('logs');
+                }}
+                className="text-zinc-300 hover:text-white underline underline-offset-4 transition-colors"
+              >
+                Manage Logs
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Interactive Cabinet Locations Inset Box */}
@@ -1383,9 +1435,23 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {items
-                .filter((i) => i.status === 'Checked Out')
-                .map((item, idx) => {
+              {(() => {
+                const checkedOutList = items.filter((i) => i.status === 'Checked Out');
+                if (checkedOutList.length === 0) {
+                  return (
+                    <div className="py-10 text-center space-y-1.5">
+                      <CheckCircle2 className="w-6 h-6 mx-auto text-zinc-400" />
+                      <p className="text-xs font-semibold text-zinc-200">
+                        All parts are currently returned to storage.
+                      </p>
+                      <p className="text-[11px] text-zinc-500">
+                        Checkouts made by teams will appear here with hold duration.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return checkedOutList.map((item, idx) => {
                   const dateOutMs = item.dateOut ? new Date(item.dateOut).getTime() : 0;
                   const daysOut = dateOutMs > 0 ? Math.max(0, Math.floor((now - dateOutMs) / (1000 * 60 * 60 * 24))) : 0;
                   const isVeryLong = daysOut >= 14;
@@ -1412,23 +1478,79 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          setActiveDrilldown('none');
-                          onOpenCheckout(item, 'Check In');
-                        }}
-                        className="min-h-[38px] sm:min-h-0 px-3 py-1.5 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-lg sm:rounded transition-colors shrink-0 btn-tactile"
-                      >
-                        ← Return Item
-                      </button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isAdmin && onReturnItem && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              playClick();
+                              onReturnItem(item);
+                            }}
+                            className="min-h-[38px] sm:min-h-0 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg sm:rounded transition-colors shrink-0 btn-crimson-glow"
+                          >
+                            Admin Return
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            setActiveDrilldown('none');
+                            onOpenCheckout(item, 'Check In');
+                          }}
+                          className="min-h-[38px] sm:min-h-0 px-3 py-1.5 text-xs font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-lg sm:rounded transition-colors shrink-0 btn-tactile"
+                        >
+                          ← Return Item
+                        </button>
+                      </div>
                     </div>
                   );
-                })}
+                });
+              })()}
             </div>
 
-            <div className="pt-3 border-t border-[#27272d] flex justify-end">
+            <div className="pt-3 border-t border-[#27272d] flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                {isAdmin && onReturnOverdueItems && longHeldItems.length > 0 && (
+                  confirmDrilldownBulk === 'overdue' ? (
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="text-amber-300 font-mono">Return {longHeldItems.length} overdue?</span>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDrilldownBulk('none')}
+                        className="px-2.5 py-1 bg-[#1a1a1f] text-zinc-300 border border-[#27272d] rounded"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClick();
+                          setConfirmDrilldownBulk('none');
+                          void onReturnOverdueItems(longHeldItems);
+                        }}
+                        className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-semibold rounded"
+                      >
+                        Confirm
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClick();
+                        setConfirmDrilldownBulk('overdue');
+                      }}
+                      className="px-3 py-1.5 text-xs font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg transition-colors btn-tactile"
+                    >
+                      Admin: Return All 14d+ ({longHeldItems.length})
+                    </button>
+                  )
+                )}
+              </div>
               <button
-                onClick={() => setActiveDrilldown('none')}
+                onClick={() => {
+                  setConfirmDrilldownBulk('none');
+                  setActiveDrilldown('none');
+                }}
                 className="px-4 py-2 text-xs font-medium text-zinc-300 hover:text-zinc-100 bg-[#1a1a1f] rounded-lg transition-colors btn-tactile"
               >
                 Close
@@ -1487,16 +1609,30 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                     <div className="text-[11px] text-zinc-400 font-mono">
                       {item.location || getCategoryDefaultLocation(item.category)} · {item.currentUser ? `Team ${item.currentUser}` : 'In Pit'}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveDrilldown('none');
-                        onOpenCheckout(item, item.status === 'Checked Out' ? 'Check In' : 'Check Out');
-                      }}
-                      className="px-2.5 py-1 text-[11px] font-semibold text-zinc-100 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-md transition-colors btn-tactile"
-                    >
-                      {item.status === 'Checked Out' ? '← Return Item' : 'Inspect / Log'}
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isAdmin && onToggleCondition && item.condition === 'Needs Repair' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playClick();
+                            onToggleCondition(item);
+                          }}
+                          className="px-2.5 py-1 text-[11px] font-semibold text-zinc-950 bg-zinc-100 hover:bg-white rounded-md transition-colors btn-tactile"
+                        >
+                          Mark Good
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveDrilldown('none');
+                          onOpenCheckout(item, item.status === 'Checked Out' ? 'Check In' : 'Check Out');
+                        }}
+                        className="px-2.5 py-1 text-[11px] font-semibold text-zinc-100 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-md transition-colors btn-tactile"
+                      >
+                        {item.status === 'Checked Out' ? '← Return Item' : 'Inspect / Log'}
+                      </button>
+                    </div>
                   </div>
                   {item.notes && (
                     <div className="text-xs text-zinc-200 bg-[#1a1a1f] p-2 rounded border border-zinc-800">
@@ -1537,10 +1673,50 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               )}
             </div>
 
-            <div className="pt-3 border-t border-[#27272d] flex items-center justify-between">
-              <span className="text-xs text-zinc-500">Tip: Include repair notes during Check In</span>
+            <div className="pt-3 border-t border-[#27272d] flex items-center justify-between gap-2 flex-wrap">
+              {isAdmin && onClearAllRepairFlags && maintenanceItems.some((i) => i.condition === 'Needs Repair') ? (
+                confirmDrilldownBulk === 'repair' ? (
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="text-zinc-300 font-mono">Clear all repair flags?</span>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDrilldownBulk('none')}
+                      className="px-2.5 py-1 bg-[#1a1a1f] text-zinc-300 border border-[#27272d] rounded"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClick();
+                        setConfirmDrilldownBulk('none');
+                        onClearAllRepairFlags();
+                      }}
+                      className="px-2.5 py-1 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold rounded"
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick();
+                      setConfirmDrilldownBulk('repair');
+                    }}
+                    className="px-3 py-1.5 text-xs font-semibold text-zinc-100 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors btn-tactile"
+                  >
+                    Admin: Mark All Good
+                  </button>
+                )
+              ) : (
+                <span className="text-xs text-zinc-500">Tip: Include repair notes during Check In</span>
+              )}
               <button
-                onClick={() => setActiveDrilldown('none')}
+                onClick={() => {
+                  setConfirmDrilldownBulk('none');
+                  setActiveDrilldown('none');
+                }}
                 className="px-4 py-2 text-xs font-medium text-zinc-300 hover:text-zinc-100 bg-[#1a1a1f] rounded-lg transition-colors btn-tactile"
               >
                 Close

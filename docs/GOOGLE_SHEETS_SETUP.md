@@ -49,7 +49,7 @@ Formula-driven hardware tabs are **never modified directly**.
 
 - If a tablet or laptop loses Wi-Fi inside a tournament venue, checkouts and returns are saved immediately in local browser storage (`vex_offline_sync_queue`) and shown in the pending sync banner.
 - As soon as Wi-Fi returns (or when you tap **Sync Now**), pending entries replay sequentially through `/api/action` and refresh the live table.
-- Disconnecting the Google Sheet URL in **Settings** persists across page reloads (`localStorage.vex_api_url = ""`) until an admin reconnects manually.
+- Disconnecting the Google Sheet URL in **Settings** persists across page reloads (`localStorage.vex_inventory_gas_url = "__DISCONNECTED__"`) until an admin reconnects manually.
 
 ---
 

@@ -46,5 +46,6 @@ jobs:
           TAG_NAME: ${{ inputs.tag || github.ref_name }}
         run: |
           gh release create "$TAG_NAME" vex-654-inventory-dist.tar.gz \
+            --target "${{ github.sha }}" \
             --title "VEX 654 Inventory $TAG_NAME" \
             --generate-notes

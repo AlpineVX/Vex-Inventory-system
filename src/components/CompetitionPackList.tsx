@@ -16,11 +16,13 @@ import { SpotlightCard, AnimatedNumber, AnimatedRingGauge, useSlidingIndicator }
 
 interface CompetitionPackListProps {
   items: InventoryItem[];
+  isAdmin?: boolean;
 }
 
 const STORAGE_KEY_PACKLIST = 'vex_pack_list_state';
 
-export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items }) => {
+export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items, isAdmin = false }) => {
+  const [confirmRestoreDefaults, setConfirmRestoreDefaults] = useState(false);
   const [packList, setPackList] = useState<CompetitionPackItem[]>(() => {
     if (typeof window !== 'undefined') {
       const cached = localStorage.getItem(STORAGE_KEY_PACKLIST);
@@ -170,6 +172,29 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
     setPackList((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const updateTargetCount = (id: string, delta: number) => {
+    playClick();
+    setPackList((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const nextTarget = Math.max(1, Math.min(99, item.targetCount + delta));
+        const nextPacked = Math.min(item.packedCount, nextTarget);
+        return {
+          ...item,
+          targetCount: nextTarget,
+          packedCount: nextPacked,
+          isPacked: nextPacked >= nextTarget,
+        };
+      })
+    );
+  };
+
+  const restoreDefaultPackList = () => {
+    playSuccess();
+    setPackList(INITIAL_PACK_LIST);
+    setConfirmRestoreDefaults(false);
+  };
+
   // Readiness calculations
   const totalTargetUnits = packList.reduce((acc, i) => acc + i.targetCount, 0);
   const totalPackedUnits = packList.reduce((acc, i) => acc + i.packedCount, 0);
@@ -223,6 +248,37 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
             >
               Mark All Packed
             </button>
+            {isAdmin && (
+              confirmRestoreDefaults ? (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRestoreDefaults(false)}
+                    className="px-2.5 py-1.5 text-zinc-300 bg-[#1a1a1f] border border-[#27272d] rounded-lg"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={restoreDefaultPackList}
+                    className="px-2.5 py-1.5 text-white bg-red-600 hover:bg-red-700 font-semibold rounded-lg"
+                  >
+                    Reset Defaults
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    playClick();
+                    setConfirmRestoreDefaults(true);
+                  }}
+                  className="px-3 py-1.5 text-xs font-semibold text-red-400 hover:text-red-300 bg-[#111114] border border-red-500/30 rounded-lg transition-colors btn-tactile"
+                >
+                  Restore Defaults
+                </button>
+              )
+            )}
           </div>
         </div>
       </div>
@@ -441,15 +497,20 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
           <div className="p-10 rounded-xl border border-[#27272d] bg-[#111114] text-center space-y-2">
             <CheckCircle2 className="w-7 h-7 mx-auto text-zinc-300" />
             <p className="text-sm font-semibold text-zinc-100">
-              {filterState === 'unpacked'
+              {packSearch.trim()
+                ? `No pack list items matching "${packSearch.trim()}".`
+                : filterState === 'unpacked'
                 ? 'All pack list items are boxed and ready!'
                 : 'No items packed yet.'}
             </p>
             <button
-              onClick={() => setFilterState('all')}
+              onClick={() => {
+                setFilterState('all');
+                setPackSearch('');
+              }}
               className="text-xs text-red-400 hover:underline font-medium"
             >
-              View full pack list
+              {packSearch.trim() ? 'Reset search & view all' : 'View full pack list'}
             </button>
           </div>
         ) : (
@@ -558,6 +619,33 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
                       </button>
                     </div>
 
+                    {isAdmin && (
+                      <div className="flex items-center gap-1 bg-[#09090b] px-2 py-1 rounded-xl border border-[#27272d] font-mono text-[11px]">
+                        <span className="text-zinc-500 mr-0.5">Target:</span>
+                        <button
+                          type="button"
+                          onClick={() => updateTargetCount(item.id, -1)}
+                          disabled={item.targetCount <= 1}
+                          className="w-5 h-5 flex items-center justify-center rounded hover:bg-[#1a1a1f] text-zinc-300 disabled:opacity-30"
+                          title="Decrease target quantity"
+                        >
+                          -
+                        </button>
+                        <span className="text-zinc-100 font-bold w-5 text-center tabular-nums">
+                          {item.targetCount}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateTargetCount(item.id, 1)}
+                          disabled={item.targetCount >= 99}
+                          className="w-5 h-5 flex items-center justify-center rounded hover:bg-[#1a1a1f] text-zinc-300 disabled:opacity-30"
+                          title="Increase target quantity"
+                        >
+                          +
+                        </button>
+                      </div>
+                    )}
+
                     {/* Pack Status Action */}
                     <div className="flex items-center gap-1.5">
                       <button
@@ -571,11 +659,11 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
                         {item.isPacked ? 'Packed' : 'Mark Packed'}
                       </button>
 
-                      {isCustom && (
+                      {(isCustom || isAdmin) && (
                         <button
                           onClick={() => removeCustomItem(item.id)}
-                          title="Remove custom item"
-                          aria-label="Remove custom item"
+                          title={isCustom ? 'Remove custom item' : 'Remove item from checklist'}
+                          aria-label={isCustom ? 'Remove custom item' : 'Remove item from checklist'}
                           className="min-h-[38px] min-w-[38px] flex items-center justify-center text-zinc-500 hover:text-rose-400 rounded-xl hover:bg-[#1a1a1f] transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />

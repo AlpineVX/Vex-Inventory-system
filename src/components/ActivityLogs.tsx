@@ -6,6 +6,7 @@ import {
   ArrowDownLeft,
   X,
   RotateCcw,
+  Trash2,
 } from 'lucide-react';
 import { AuditLog } from '../types';
 import { useSlidingIndicator } from './MotionPrimitives';
@@ -14,13 +15,23 @@ import { playClick } from '../services/soundFx';
 interface ActivityLogsProps {
   logs: AuditLog[];
   isMobileMode?: boolean;
+  isAdmin?: boolean;
+  onDeleteLog?: (logId: string) => void;
+  onClearLogs?: (mode: 'older30' | 'all') => void;
 }
 
-export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, isMobileMode = false }) => {
+export const ActivityLogs: React.FC<ActivityLogsProps> = ({
+  logs,
+  isMobileMode = false,
+  isAdmin = false,
+  onDeleteLog,
+  onClearLogs,
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [actionFilter, setActionFilter] = useState<'All' | 'Check Out' | 'Check In'>('All');
   const [teamFilter, setTeamFilter] = useState<string>('All');
   const [visibleLimit, setVisibleLimit] = useState<number>(50);
+  const [confirmClearAll, setConfirmClearAll] = useState<boolean>(false);
   const { containerRef: actionNavRef, setItemRef: setActionTabRef, indicator: actionIndicator } =
     useSlidingIndicator<'All' | 'Check Out' | 'Check In'>(actionFilter);
 
@@ -103,7 +114,55 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, isMobileMode =
               History of every part checked out and returned
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {isAdmin && onClearLogs && logs.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playClick();
+                    onClearLogs('older30');
+                  }}
+                  className="px-3 py-2 text-xs font-semibold text-zinc-300 hover:text-zinc-100 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors font-mono btn-tactile"
+                >
+                  Prune &gt;30d
+                </button>
+                {confirmClearAll ? (
+                  <div className="flex items-center gap-1.5 font-mono text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmClearAll(false)}
+                      className="px-2.5 py-2 bg-[#1a1a1f] text-zinc-300 border border-[#27272d] rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClick();
+                        setConfirmClearAll(false);
+                        onClearLogs('all');
+                      }}
+                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
+                    >
+                      Confirm Clear
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick();
+                      setConfirmClearAll(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-400 hover:text-rose-300 bg-[#111114] border border-rose-500/30 rounded-lg transition-colors font-mono btn-tactile"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Clear Logs</span>
+                  </button>
+                )}
+              </>
+            )}
             <button
               onClick={exportLogsCSV}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors font-mono btn-tactile"
@@ -295,10 +354,25 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, isMobileMode =
                     )}
                   </div>
 
-                  {(log.notes || log.userEmail) && (
-                    <div className="pt-1.5 border-t border-[#1a1a1f] text-[11px] space-y-0.5">
-                      {log.notes && <p className="text-zinc-300">{log.notes}</p>}
-                      {log.userEmail && <div className="font-mono text-zinc-500 truncate">{log.userEmail}</div>}
+                  {(log.notes || log.userEmail || (isAdmin && onDeleteLog)) && (
+                    <div className="pt-1.5 border-t border-[#1a1a1f] text-[11px] flex items-end justify-between gap-2">
+                      <div className="space-y-0.5 min-w-0">
+                        {log.notes && <p className="text-zinc-300">{log.notes}</p>}
+                        {log.userEmail && <div className="font-mono text-zinc-500 truncate">{log.userEmail}</div>}
+                      </div>
+                      {isAdmin && onDeleteLog && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playClick();
+                            onDeleteLog(log.id);
+                          }}
+                          aria-label="Delete log entry"
+                          className="p-1.5 text-zinc-500 hover:text-rose-400 rounded-lg hover:bg-[#1a1a1f] shrink-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -347,12 +421,13 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, isMobileMode =
                   <th className="py-3 px-4 font-semibold">TEAM</th>
                   <th className="py-3 px-4 font-semibold">NOTES</th>
                   <th className="py-3 px-4 font-semibold">STUDENT EMAIL</th>
+                  {isAdmin && onDeleteLog && <th className="py-3 px-4 w-12 text-right font-semibold">DEL</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1a1a1f] font-sans">
                 {filteredLogs.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-zinc-400">
+                    <td colSpan={isAdmin && onDeleteLog ? 8 : 7} className="py-12 text-center text-zinc-400">
                       <p className="font-mono text-xs">No entries match your filters.</p>
                       {(searchQuery || actionFilter !== 'All' || teamFilter !== 'All') && (
                         <button
@@ -430,6 +505,22 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, isMobileMode =
                         <td className="py-2.5 px-4 text-zinc-400 font-mono text-xs whitespace-nowrap">
                           {log.userEmail || '—'}
                         </td>
+                        {isAdmin && onDeleteLog && (
+                          <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                playClick();
+                                onDeleteLog(log.id);
+                              }}
+                              title="Delete log entry"
+                              aria-label="Delete log entry"
+                              className="p-1 text-zinc-500 hover:text-rose-400 rounded hover:bg-[#09090b] transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })

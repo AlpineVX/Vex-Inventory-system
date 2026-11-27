@@ -20,6 +20,11 @@ import { MobileBottomNav } from '../src/components/MobileBottomNav';
 import { OfflineQueueBanner } from '../src/components/PWAControls';
 import { BackToTopButton } from '../src/components/MotionPrimitives';
 import { ToastContainer } from '../src/components/Toast';
+import { SystemDiagnosticsModal } from '../src/components/SystemDiagnosticsModal';
+import { ClubAssetsModal } from '../src/components/ClubAssetsModal';
+import { KeyboardShortcutsModal } from '../src/components/KeyboardShortcutsModal';
+import { SettingsModal } from '../src/components/SettingsModal';
+import { AdminUnlockModal } from '../src/components/AdminUnlockModal';
 
 function assert(condition: unknown, message: string): void {
   if (!condition) {
@@ -289,6 +294,120 @@ function testSsrViews(): void {
         })
       ),
     ],
+    [
+      'SystemDiagnosticsModal',
+      renderToString(
+        React.createElement(SystemDiagnosticsModal, {
+          isOpen: true,
+          onClose: noop,
+          items,
+          logs,
+          syncStatus,
+        })
+      ),
+    ],
+    [
+      'ClubAssetsModal',
+      renderToString(
+        React.createElement(ClubAssetsModal, {
+          isOpen: true,
+          onClose: noop,
+        })
+      ),
+    ],
+    [
+      'KeyboardShortcutsModal',
+      renderToString(
+        React.createElement(KeyboardShortcutsModal, {
+          isOpen: true,
+          onClose: noop,
+        })
+      ),
+    ],
+    [
+      'SettingsModal',
+      renderToString(
+        React.createElement(SettingsModal, {
+          isOpen: true,
+          onClose: noop,
+          syncStatus,
+          onSaveUrl: async () => {},
+          onResetFactoryData: noop,
+          adminSettings,
+          onUpdateAdminSettings: noop,
+          needsRepairCount: 2,
+          offlineQueueCount: 1,
+          onClearAllRepairFlags: noop,
+          onClearOfflineQueue: noop,
+          onExportBackup: noop,
+          onImportBackup: noop,
+        })
+      ),
+    ],
+    [
+      'AdminUnlockModal',
+      renderToString(
+        React.createElement(AdminUnlockModal, {
+          isOpen: true,
+          onClose: noop,
+          adminSettings,
+          onUnlockSuccess: noop,
+        })
+      ),
+    ],
+    [
+      'CommandCenter (Admin)',
+      renderToString(
+        React.createElement(CommandCenter, {
+          items,
+          logs,
+          onNavigateToCategory: noop,
+          onNavigateToTeam: noop,
+          onNavigateTab: noop,
+          onOpenCheckout: noop,
+          onOpenLabelPrinter: noop,
+          isAdmin: true,
+          onOpenSettings: noop,
+          onReturnOverdueItems: noop,
+          onClearAllRepairFlags: noop,
+          onToggleCondition: noop,
+        })
+      ),
+    ],
+    [
+      'InventoryBrowser (Admin)',
+      renderToString(
+        React.createElement(InventoryBrowser, {
+          items,
+          logs,
+          selectedCategory: 'All',
+          onSelectCategory: noop,
+          onOpenCheckout: noop,
+          onBatchAction: noop,
+          onBatchSetCondition: noop,
+          onAddParts: noop,
+          onUpdateItemDetails: noop,
+          onDeleteItem: noop,
+          onOpenLabelPrinter: noop,
+          isAdmin: true,
+        })
+      ),
+    ],
+    [
+      'CompetitionPackList (Admin)',
+      renderToString(React.createElement(CompetitionPackList, { items, isAdmin: true })),
+    ],
+    [
+      'ActivityLogs (Admin)',
+      renderToString(
+        React.createElement(ActivityLogs, {
+          logs,
+          isAdmin: true,
+          onDeleteLog: noop,
+          onClearLogs: noop,
+        })
+      ),
+    ],
   ];
 
   for (const [label, html] of renders) {
@@ -309,6 +428,10 @@ function testRepositoryGuardrails(): void {
     'create_qr_badges.mjs',
     'public/favicon.ico',
     'public/lake_travis_logo_transparent.png',
+    'public/lake_travis_logo_original.png',
+    'public/lake_travis_qr_badge_round.png',
+    'public/lake_travis_qr_badge_squircle.png',
+    'public/lake_travis_ready_to_use_qr_code.png',
     'public/assets/aistudio/lt_logo_transparent.png',
     'public/pwa-192x192.png',
     'public/pwa-512x512.png',

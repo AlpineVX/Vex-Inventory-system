@@ -59,6 +59,15 @@ import { isSoundEnabled, setSoundEnabled, playToggle, playClick } from './servic
 
 const CONDITION_MAP_KEY = 'vex_item_conditions_v1';
 const OFFLINE_QUEUE_KEY = 'vex_offline_sync_queue';
+const CUSTOM_PARTS_KEY = 'vex_admin_custom_parts_v1';
+const RETIRED_PARTS_KEY = 'vex_admin_retired_parts_v1';
+const PART_META_OVERRIDES_KEY = 'vex_admin_part_overrides_v1';
+
+interface PartMetaOverride {
+  itemName?: string;
+  location?: string;
+  notes?: string;
+}
 
 function loadConditionMap(): Record<string, ItemCondition> {
   if (typeof window === 'undefined') return {};
@@ -77,6 +86,60 @@ function saveConditionMap(map: Record<string, ItemCondition>) {
   } catch {}
 }
 
+function loadCustomParts(): InventoryItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(CUSTOM_PARTS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomParts(parts: InventoryItem[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CUSTOM_PARTS_KEY, JSON.stringify(parts));
+  } catch {}
+}
+
+function loadRetiredParts(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(RETIRED_PARTS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.map((x) => String(x).toUpperCase()) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRetiredParts(ids: string[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(RETIRED_PARTS_KEY, JSON.stringify(ids));
+  } catch {}
+}
+
+function loadPartMetaOverrides(): Record<string, PartMetaOverride> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(PART_META_OVERRIDES_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function savePartMetaOverrides(overrides: Record<string, PartMetaOverride>) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(PART_META_OVERRIDES_KEY, JSON.stringify(overrides));
+  } catch {}
+}
+
 function applyConditionMap(list: InventoryItem[], map: Record<string, ItemCondition>): InventoryItem[] {
   return list.map((item) => {
     const rawId = String(item.itemId || '');
@@ -85,6 +148,40 @@ function applyConditionMap(list: InventoryItem[], map: Record<string, ItemCondit
     const cond = map[norm] || map[raw] || item.condition || 'Good';
     return cond === item.condition ? item : { ...item, condition: cond };
   });
+}
+
+function mergeAdminPartOverrides(baseList: InventoryItem[]): InventoryItem[] {
+  const retiredSet = new Set(loadRetiredParts().map((id) => id.toUpperCase()));
+  const overrides = loadPartMetaOverrides();
+  const customParts = loadCustomParts();
+  const existingKeys = new Set<string>();
+
+  const merged = baseList
+    .filter((item) => {
+      const raw = String(item.itemId || '').toUpperCase();
+      const norm = normalizeItemId(item.itemId, item.category).toUpperCase();
+      return !retiredSet.has(raw) && !retiredSet.has(norm);
+    })
+    .map((item) => {
+      const raw = String(item.itemId || '').toUpperCase();
+      const norm = normalizeItemId(item.itemId, item.category).toUpperCase();
+      existingKeys.add(raw);
+      existingKeys.add(norm);
+      const ov = overrides[norm] || overrides[raw];
+      return ov ? { ...item, ...ov } : item;
+    });
+
+  for (const cp of customParts) {
+    const raw = String(cp.itemId || '').toUpperCase();
+    const norm = normalizeItemId(cp.itemId, cp.category).toUpperCase();
+    if (!retiredSet.has(raw) && !retiredSet.has(norm) && !existingKeys.has(raw) && !existingKeys.has(norm)) {
+      const ov = overrides[norm] || overrides[raw];
+      merged.push(ov ? { ...cp, ...ov } : cp);
+      existingKeys.add(norm);
+    }
+  }
+
+  return applyConditionMap(merged, loadConditionMap());
 }
 
 function loadOfflineQueue(): OfflineQueueAction[] {
@@ -159,7 +256,7 @@ export default function App() {
     }
     const cached = getCachedInventory();
     const base = cached && cached.length > 0 ? cached : generateDefaultInventory();
-    return applyConditionMap(base, condMap);
+    return mergeAdminPartOverrides(base);
   });
 
   const [logs, setLogs] = useState<AuditLog[]>(() => {
@@ -316,6 +413,26 @@ export default function App() {
         return;
       }
 
+      // Close modals on Escape anywhere
+      if (e.key === 'Escape') {
+        const activeEl = document.activeElement as HTMLElement | null;
+        const activeTag = (activeEl?.tagName || '').toLowerCase();
+        if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+          activeEl?.blur();
+          return;
+        }
+        setIsCommandPaletteOpen(false);
+        setIsLabelPrinterOpen(false);
+        setIsCheckoutModalOpen(false);
+        setIsSettingsModalOpen(false);
+        setIsAdminUnlockModalOpen(false);
+        setIsAssetsModalOpen(false);
+        setIsShortcutsModalOpen(false);
+        setIsDiagnosticsModalOpen(false);
+        closeIOSGuide();
+        return;
+      }
+
       // Never intercept browser shortcuts like Cmd/Ctrl+C, Cmd/Ctrl+V, Alt+...
       if (e.metaKey || e.ctrlKey || e.altKey) {
         return;
@@ -324,8 +441,15 @@ export default function App() {
       // Don't intercept when user is typing in form controls
       const activeTag = (document.activeElement?.tagName || '').toLowerCase();
       if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
-        if (e.key === 'Escape') {
-          (document.activeElement as HTMLElement)?.blur();
+        return;
+      }
+
+      // Allow '?' to close the Shortcuts modal if it's currently open; ignore other global keys behind modals
+      if (isAnyModalOpen) {
+        if ((e.key === '?' || (e.key === '/' && e.shiftKey)) && isShortcutsModalOpen) {
+          e.preventDefault();
+          playClick();
+          setIsShortcutsModalOpen(false);
         }
         return;
       }
@@ -381,22 +505,20 @@ export default function App() {
       } else if (e.key === 'm' || e.key === 'M') {
         e.preventDefault();
         handleToggleSound();
-      } else if (e.key === 'Escape') {
-        setIsCommandPaletteOpen(false);
-        setIsLabelPrinterOpen(false);
-        setIsCheckoutModalOpen(false);
-        setIsSettingsModalOpen(false);
-        setIsAdminUnlockModalOpen(false);
-        setIsAssetsModalOpen(false);
-        setIsShortcutsModalOpen(false);
-        setIsDiagnosticsModalOpen(false);
-        closeIOSGuide();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleToggleSound, handleOpenCheckoutModal, adminSettings.kioskOnly, adminSettings.isUnlocked]);
+  }, [
+    handleToggleSound,
+    handleOpenCheckoutModal,
+    adminSettings.kioskOnly,
+    adminSettings.isUnlocked,
+    isAnyModalOpen,
+    isShortcutsModalOpen,
+    closeIOSGuide,
+  ]);
 
   // Mobile viewport detection and manual layout mode switch
   const [viewMode, setViewMode] = useState<'auto' | 'mobile' | 'desktop'>(() => {
@@ -488,7 +610,7 @@ export default function App() {
       try {
         const data = await fetchLiveInventory(apiUrl);
         if (data.inventory && data.inventory.length > 0) {
-          const synced = applyConditionMap(data.inventory, loadConditionMap());
+          const synced = mergeAdminPartOverrides(data.inventory);
           setItems(synced);
           saveCachedInventory(synced);
         }
@@ -645,7 +767,7 @@ export default function App() {
     addToast(
       'success',
       'Admin Mode Unlocked',
-      'You can now edit Google Sheet links, reset the parts list, and manage settings.'
+      'Catalog editing, batch team checkout, repair overrides, log controls, and settings are active.'
     );
   };
 
@@ -1037,31 +1159,474 @@ export default function App() {
   };
 
   // Batch action from inventory table (admin feature)
-  const handleBatchInventoryAction = async (selected: InventoryItem[], action: 'Check Out' | 'Check In') => {
+  const handleBatchInventoryAction = async (
+    selected: InventoryItem[],
+    action: 'Check Out' | 'Check In',
+    targetTeam?: string
+  ) => {
     if (!adminSettings.isUnlocked) {
       handleOpenAdminUnlock();
       addToast('info', 'Admin Access Required', 'Batch operations require admin unlock.');
       return;
     }
 
+    const assignedTeam = targetTeam || selectedTeam || '654V';
+
     for (const item of selected) {
       await handleSubmitAction(
         {
           action,
           itemId: item.itemId,
-          team: action === 'Check Out' ? selectedTeam || '654V' : item.currentUser || '654V',
+          team: action === 'Check Out' ? assignedTeam : item.currentUser || assignedTeam,
           notes: `Bulk ${action}`,
           email: adminSettings.adminEmails[0] || 'admin@vex.club',
           category: item.category,
         },
-        true // Skip individual live sync to avoid flooding
+        { skipLiveSync: true, skipUndo: true }
       );
     }
 
     if (syncStatus.url) {
       handleLiveSync(syncStatus.url, false);
     }
-    addToast('success', 'Batch Operation Completed', `${selected.length} items processed.`);
+    addToast(
+      'success',
+      'Batch Operation Completed',
+      action === 'Check Out'
+        ? `Assigned ${selected.length} part${selected.length === 1 ? '' : 's'} to Team ${assignedTeam}.`
+        : `Checked in ${selected.length} part${selected.length === 1 ? '' : 's'}.`
+    );
+  };
+
+  // Batch repair flag toggle from inventory table (Admin only)
+  const handleBatchSetCondition = (selected: InventoryItem[], condition: ItemCondition) => {
+    if (!adminSettings.isUnlocked) {
+      handleOpenAdminUnlock();
+      addToast('info', 'Admin Access Required', 'Bulk condition updates require admin unlock.');
+      return;
+    }
+    if (selected.length === 0) return;
+
+    const map = loadConditionMap();
+    const targetKeys = new Set<string>();
+
+    selected.forEach((it) => {
+      const rawUpper = String(it.itemId || '').toUpperCase();
+      const normUpper = normalizeItemId(String(it.itemId || ''), it.category).toUpperCase();
+      targetKeys.add(rawUpper);
+      targetKeys.add(normUpper);
+      if (condition === 'Needs Repair') {
+        map[normUpper] = 'Needs Repair';
+      } else {
+        delete map[normUpper];
+        delete map[rawUpper];
+      }
+    });
+    saveConditionMap(map);
+
+    setItems((prev) => {
+      const next = prev.map((it) => {
+        const rawUpper = String(it.itemId || '').toUpperCase();
+        const normUpper = normalizeItemId(String(it.itemId || ''), it.category).toUpperCase();
+        return targetKeys.has(rawUpper) || targetKeys.has(normUpper) ? { ...it, condition } : it;
+      });
+      saveCachedInventory(next);
+      return next;
+    });
+
+    addToast(
+      condition === 'Needs Repair' ? 'info' : 'success',
+      condition === 'Needs Repair'
+        ? `Flagged ${selected.length} Part${selected.length === 1 ? '' : 's'} Needs Repair`
+        : `Marked ${selected.length} Part${selected.length === 1 ? '' : 's'} Good`,
+      'Condition status updated across inventory.'
+    );
+  };
+
+  // Clear all repair flags across pit inventory (Admin only)
+  const handleClearAllRepairFlags = () => {
+    if (!adminSettings.isUnlocked) {
+      handleOpenAdminUnlock();
+      addToast('info', 'Admin Access Required', 'Clearing all repair flags requires admin unlock.');
+      return;
+    }
+
+    const flaggedCount = items.filter((i) => i.condition === 'Needs Repair').length;
+    saveConditionMap({});
+    setItems((prev) => {
+      const next = prev.map((it) => (it.condition === 'Needs Repair' ? { ...it, condition: 'Good' as ItemCondition } : it));
+      saveCachedInventory(next);
+      return next;
+    });
+
+    addToast(
+      'success',
+      'All Repair Flags Cleared',
+      flaggedCount > 0 ? `Marked ${flaggedCount} part${flaggedCount === 1 ? '' : 's'} back in good condition.` : 'No repair flags were active.'
+    );
+  };
+
+  // Bulk return overdue (14d+) parts from Overview drilldown (Admin only)
+  const handleReturnOverdueItems = async (overdueItems: InventoryItem[]) => {
+    if (!adminSettings.isUnlocked) {
+      handleOpenAdminUnlock();
+      addToast('info', 'Admin Access Required', 'Bulk overdue returns require admin unlock.');
+      return;
+    }
+    if (overdueItems.length === 0) return;
+
+    for (const item of overdueItems) {
+      await handleSubmitAction(
+        {
+          action: 'Check In',
+          itemId: item.itemId,
+          team: item.currentUser || '654V',
+          notes: 'Overdue return cleared by Admin',
+          email: adminSettings.adminEmails[0] || 'admin@vex.club',
+          category: item.category,
+        },
+        { skipLiveSync: true, skipUndo: true }
+      );
+    }
+
+    if (syncStatus.url) {
+      handleLiveSync(syncStatus.url, false);
+    }
+    addToast(
+      'success',
+      `Returned ${overdueItems.length} Overdue Part${overdueItems.length === 1 ? '' : 's'}`,
+      'All 14+ day checkouts are now marked available.'
+    );
+  };
+
+  // Add new hardware part(s) to catalog (Admin only)
+  const handleAddInventoryItems = (newParts: InventoryItem[]) => {
+    if (!adminSettings.isUnlocked) {
+      handleOpenAdminUnlock();
+      addToast('info', 'Admin Access Required', 'Adding new catalog parts requires admin unlock.');
+      return;
+    }
+    if (newParts.length === 0) return;
+
+    const existingIds = new Set(
+      items.map((i) => normalizeItemId(i.itemId, i.category).toUpperCase())
+    );
+    const sanitizedToAdd: InventoryItem[] = [];
+    for (const part of newParts) {
+      const normId = normalizeItemId(part.itemId, part.category).toUpperCase();
+      if (!normId || existingIds.has(normId)) continue;
+      existingIds.add(normId);
+      sanitizedToAdd.push({
+        ...part,
+        itemId: normId,
+        condition: part.condition || 'Good',
+      });
+    }
+
+    if (sanitizedToAdd.length === 0) {
+      addToast('info', 'Already Cataloged', 'All specified part IDs already exist in inventory.');
+      return;
+    }
+
+    const addedIds = new Set(sanitizedToAdd.map((p) => p.itemId.toUpperCase()));
+    const retired = loadRetiredParts().filter((id) => !addedIds.has(id.toUpperCase()));
+    saveRetiredParts(retired);
+
+    const existingCustom = loadCustomParts().filter((p) => !addedIds.has(p.itemId.toUpperCase()));
+    saveCustomParts([...existingCustom, ...sanitizedToAdd]);
+
+    setItems((prev) => {
+      const next = [...prev, ...sanitizedToAdd];
+      saveCachedInventory(next);
+      return next;
+    });
+
+    addToast(
+      'success',
+      `Added ${sanitizedToAdd.length} Part${sanitizedToAdd.length === 1 ? '' : 's'}`,
+      sanitizedToAdd.length === 1
+        ? `${sanitizedToAdd[0].itemId} (${sanitizedToAdd[0].itemName}) added to ${sanitizedToAdd[0].location || 'storage'}.`
+        : `${sanitizedToAdd[0].itemId} through ${sanitizedToAdd[sanitizedToAdd.length - 1].itemId} added to catalog.`
+    );
+  };
+
+  // Edit part metadata (name, location, notes) (Admin only)
+  const handleUpdateItemDetails = (
+    itemId: string,
+    updates: { itemName: string; location: string; notes: string }
+  ) => {
+    if (!adminSettings.isUnlocked) {
+      handleOpenAdminUnlock();
+      addToast('info', 'Admin Access Required', 'Editing part details requires admin unlock.');
+      return;
+    }
+
+    const normKey = normalizeItemId(itemId).toUpperCase();
+    const overrides = loadPartMetaOverrides();
+    overrides[normKey] = {
+      itemName: updates.itemName.trim() || itemId,
+      location: updates.location.trim(),
+      notes: updates.notes.trim(),
+    };
+    savePartMetaOverrides(overrides);
+
+    const custom = loadCustomParts();
+    const updatedCustom = custom.map((c) =>
+      normalizeItemId(c.itemId, c.category).toUpperCase() === normKey
+        ? { ...c, ...overrides[normKey] }
+        : c
+    );
+    saveCustomParts(updatedCustom);
+
+    setItems((prev) => {
+      const next = prev.map((it) =>
+        normalizeItemId(it.itemId, it.category).toUpperCase() === normKey ||
+        it.itemId.toUpperCase() === itemId.toUpperCase()
+          ? { ...it, ...overrides[normKey] }
+          : it
+      );
+      saveCachedInventory(next);
+      return next;
+    });
+
+    addToast('success', `${itemId} Updated`, 'Part name, location, and notes saved.');
+  };
+
+  // Retire / remove part from catalog (Admin only, with Undo)
+  const handleDeleteItem = (itemId: string) => {
+    if (!adminSettings.isUnlocked) {
+      handleOpenAdminUnlock();
+      addToast('info', 'Admin Access Required', 'Removing parts from the catalog requires admin unlock.');
+      return;
+    }
+
+    const targetItem = items.find(
+      (i) =>
+        i.itemId.toUpperCase() === itemId.toUpperCase() ||
+        normalizeItemId(i.itemId, i.category).toUpperCase() === normalizeItemId(itemId).toUpperCase()
+    );
+    if (!targetItem) return;
+
+    const normKey = normalizeItemId(targetItem.itemId, targetItem.category).toUpperCase();
+    const retired = loadRetiredParts();
+    if (!retired.includes(normKey)) {
+      saveRetiredParts([...retired, normKey]);
+    }
+
+    const prevCustom = loadCustomParts();
+    const wasCustom = prevCustom.some(
+      (c) => normalizeItemId(c.itemId, c.category).toUpperCase() === normKey
+    );
+    if (wasCustom) {
+      saveCustomParts(
+        prevCustom.filter((c) => normalizeItemId(c.itemId, c.category).toUpperCase() !== normKey)
+      );
+    }
+
+    setItems((prev) => {
+      const next = prev.filter(
+        (i) => normalizeItemId(i.itemId, i.category).toUpperCase() !== normKey
+      );
+      saveCachedInventory(next);
+      return next;
+    });
+
+    addToast('info', `Removed ${targetItem.itemId}`, 'Part retired from local catalog.', {
+      actionLabel: 'Undo',
+      onAction: () => {
+        saveRetiredParts(loadRetiredParts().filter((id) => id !== normKey));
+        if (wasCustom) {
+          saveCustomParts([...loadCustomParts(), targetItem]);
+        }
+        setItems((prev) => {
+          if (prev.some((i) => normalizeItemId(i.itemId, i.category).toUpperCase() === normKey)) {
+            return prev;
+          }
+          const next = [...prev, targetItem];
+          saveCachedInventory(next);
+          return next;
+        });
+      },
+    });
+  };
+
+  // Delete single activity log entry (Admin only, with Undo)
+  const handleDeleteLogEntry = (logId: string) => {
+    if (!adminSettings.isUnlocked) {
+      handleOpenAdminUnlock();
+      addToast('info', 'Admin Access Required', 'Deleting activity log rows requires admin unlock.');
+      return;
+    }
+
+    const removed = logs.find((l) => l.id === logId);
+    if (!removed) return;
+
+    setLogs((prev) => {
+      const next = prev.filter((l) => l.id !== logId);
+      saveCachedLogs(next);
+      return next;
+    });
+
+    addToast('info', 'Log Entry Deleted', `${removed.action} · ${removed.itemId}`, {
+      actionLabel: 'Undo',
+      onAction: () => {
+        setLogs((prev) => {
+          if (prev.some((l) => l.id === removed.id)) return prev;
+          const restored = [removed, ...prev].sort(
+            (a, b) => (new Date(b.timestamp).getTime() || 0) - (new Date(a.timestamp).getTime() || 0)
+          );
+          saveCachedLogs(restored);
+          return restored;
+        });
+      },
+    });
+  };
+
+  // Prune old logs or clear local audit log (Admin only)
+  const handleClearLogs = (mode: 'older30' | 'all') => {
+    if (!adminSettings.isUnlocked) {
+      handleOpenAdminUnlock();
+      addToast('info', 'Admin Access Required', 'Clearing activity logs requires admin unlock.');
+      return;
+    }
+
+    if (mode === 'all') {
+      const count = logs.length;
+      setLogs([]);
+      saveCachedLogs([]);
+      addToast('info', 'Activity Log Cleared', `Removed ${count} local log entries.`);
+      return;
+    }
+
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const kept = logs.filter((l) => {
+      const t = new Date(l.timestamp).getTime();
+      return isNaN(t) || t >= cutoff;
+    });
+    const removedCount = logs.length - kept.length;
+    setLogs(kept);
+    saveCachedLogs(kept);
+    addToast(
+      'info',
+      removedCount > 0 ? `Pruned ${removedCount} Old Log${removedCount === 1 ? '' : 's'}` : 'Nothing to Prune',
+      removedCount > 0 ? 'Kept entries from the past 30 days.' : 'All current log entries are within 30 days.'
+    );
+  };
+
+  // Clear pending offline queue (Admin only)
+  const handleClearOfflineQueue = () => {
+    if (!adminSettings.isUnlocked) {
+      handleOpenAdminUnlock();
+      return;
+    }
+    const count = offlineQueue.length;
+    saveOfflineQueue([]);
+    setOfflineQueue([]);
+    addToast('info', 'Offline Queue Cleared', `Discarded ${count} pending action${count === 1 ? '' : 's'}.`);
+  };
+
+  // Export complete JSON backup (Admin only)
+  const handleExportFullBackup = () => {
+    if (!adminSettings.isUnlocked) {
+      handleOpenAdminUnlock();
+      return;
+    }
+    let packListSnapshot: unknown = [];
+    try {
+      const raw = localStorage.getItem('vex_pack_list_state');
+      if (raw) packListSnapshot = JSON.parse(raw);
+    } catch {}
+
+    const bundle = {
+      exportedAt: new Date().toISOString(),
+      app: 'VEX Robotics Team 654 Inventory',
+      version: 1,
+      inventory: items,
+      logs,
+      conditionMap: loadConditionMap(),
+      customParts: loadCustomParts(),
+      retiredParts: loadRetiredParts(),
+      partMetaOverrides: loadPartMetaOverrides(),
+      packList: packListSnapshot,
+      adminSettings: {
+        adminEmails: adminSettings.adminEmails,
+        adminPin: adminSettings.adminPin,
+        kioskOnly: adminSettings.kioskOnly,
+      },
+    };
+
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `VEX654_Full_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    addToast('success', 'Full Backup Exported', `Saved ${items.length} parts and ${logs.length} log entries.`);
+  };
+
+  // Import and restore JSON backup (Admin only)
+  const handleImportFullBackup = (rawJson: string) => {
+    if (!adminSettings.isUnlocked) {
+      handleOpenAdminUnlock();
+      return;
+    }
+    try {
+      const parsed = JSON.parse(rawJson);
+      if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.inventory)) {
+        throw new Error('Invalid backup file format (missing inventory array).');
+      }
+
+      if (parsed.conditionMap && typeof parsed.conditionMap === 'object') {
+        saveConditionMap(parsed.conditionMap);
+      }
+      if (Array.isArray(parsed.customParts)) {
+        saveCustomParts(parsed.customParts);
+      }
+      if (Array.isArray(parsed.retiredParts)) {
+        saveRetiredParts(parsed.retiredParts);
+      }
+      if (parsed.partMetaOverrides && typeof parsed.partMetaOverrides === 'object') {
+        savePartMetaOverrides(parsed.partMetaOverrides);
+      }
+      if (Array.isArray(parsed.packList)) {
+        localStorage.setItem('vex_pack_list_state', JSON.stringify(parsed.packList));
+      }
+
+      const restoredItems = mergeAdminPartOverrides(parsed.inventory);
+      setItems(restoredItems);
+      saveCachedInventory(restoredItems);
+
+      if (Array.isArray(parsed.logs)) {
+        setLogs(parsed.logs);
+        saveCachedLogs(parsed.logs);
+      }
+
+      if (parsed.adminSettings && typeof parsed.adminSettings === 'object') {
+        setAdminSettings((prev) => ({
+          ...prev,
+          adminEmails:
+            Array.isArray(parsed.adminSettings.adminEmails) && parsed.adminSettings.adminEmails.length > 0
+              ? parsed.adminSettings.adminEmails
+              : prev.adminEmails,
+          adminPin:
+            typeof parsed.adminSettings.adminPin === 'string' && parsed.adminSettings.adminPin.trim()
+              ? parsed.adminSettings.adminPin
+              : prev.adminPin,
+          kioskOnly: Boolean(parsed.adminSettings.kioskOnly),
+        }));
+      }
+
+      addToast(
+        'success',
+        'Backup Restored',
+        `Loaded ${restoredItems.length} parts${Array.isArray(parsed.logs) ? ` and ${parsed.logs.length} log entries` : ''}.`
+      );
+    } catch (err: any) {
+      addToast('error', 'Restore Failed', err?.message || 'Could not parse backup JSON file.');
+    }
   };
 
   // Factory reset (admin protected)
@@ -1071,6 +1636,11 @@ export default function App() {
       addToast('info', 'Admin Sign In Needed', 'Resetting the parts list requires admin sign in.');
       return;
     }
+
+    saveConditionMap({});
+    saveCustomParts([]);
+    saveRetiredParts([]);
+    savePartMetaOverrides({});
 
     const factory = generateDefaultInventory();
     const availCount = factory.filter((i) => i.status === 'Available').length;
@@ -1200,6 +1770,11 @@ export default function App() {
                   onNavigateToTeam={handleNavigateToTeam}
                   onNavigateTab={handleTabChange}
                   onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
+                  onReturnItem={handleReturnItem}
+                  onReturnOverdueItems={handleReturnOverdueItems}
+                  onToggleCondition={handleToggleItemCondition}
+                  onClearAllRepairFlags={handleClearAllRepairFlags}
+                  onOpenSettings={handleOpenSettingsProtected}
                   onOpenLabelPrinter={() => setIsLabelPrinterOpen(true)}
                   isMobileMode={isMobile}
                 />
@@ -1213,7 +1788,11 @@ export default function App() {
                   onSelectCategory={setSelectedCategory}
                   onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
                   onBatchAction={handleBatchInventoryAction}
+                  onBatchSetCondition={handleBatchSetCondition}
                   onToggleCondition={handleToggleItemCondition}
+                  onAddParts={handleAddInventoryItems}
+                  onUpdateItemDetails={handleUpdateItemDetails}
+                  onDeleteItem={handleDeleteItem}
                   onOpenLabelPrinter={() => setIsLabelPrinterOpen(true)}
                   isAdmin={adminSettings.isUnlocked}
                   onOpenAdminUnlock={handleOpenAdminUnlock}
@@ -1237,9 +1816,19 @@ export default function App() {
                 />
               )}
 
-              {activeTab === 'packlist' && <CompetitionPackList items={items} />}
+              {activeTab === 'packlist' && (
+                <CompetitionPackList items={items} isAdmin={adminSettings.isUnlocked} />
+              )}
 
-              {activeTab === 'logs' && <ActivityLogs logs={logs} isMobileMode={isMobile} />}
+              {activeTab === 'logs' && (
+                <ActivityLogs
+                  logs={logs}
+                  isMobileMode={isMobile}
+                  isAdmin={adminSettings.isUnlocked}
+                  onDeleteLog={handleDeleteLogEntry}
+                  onClearLogs={handleClearLogs}
+                />
+              )}
             </div>
           </TabErrorBoundary>
         </main>
@@ -1346,6 +1935,12 @@ export default function App() {
           onResetFactoryData={handleResetFactoryData}
           adminSettings={adminSettings}
           onUpdateAdminSettings={setAdminSettings}
+          needsRepairCount={items.filter((i) => i.condition === 'Needs Repair').length}
+          offlineQueueCount={offlineQueue.length}
+          onClearAllRepairFlags={handleClearAllRepairFlags}
+          onClearOfflineQueue={handleClearOfflineQueue}
+          onExportBackup={handleExportFullBackup}
+          onImportBackup={handleImportFullBackup}
         />
 
         {/* Admin Unlock Modal */}

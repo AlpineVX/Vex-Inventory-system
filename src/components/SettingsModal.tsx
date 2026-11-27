@@ -11,6 +11,9 @@ import {
   KeyRound,
   UserPlus,
   Trash2,
+  Download,
+  Upload,
+  Wrench,
 } from 'lucide-react';
 import { SyncStatus, AdminSettings } from '../types';
 import { APPS_SCRIPT_SOURCE, DEFAULT_GAS_URL } from '../services/sheetApi';
@@ -25,6 +28,12 @@ interface SettingsModalProps {
   onResetFactoryData: () => void;
   adminSettings: AdminSettings;
   onUpdateAdminSettings: (settings: AdminSettings) => void;
+  needsRepairCount?: number;
+  offlineQueueCount?: number;
+  onClearAllRepairFlags?: () => void;
+  onClearOfflineQueue?: () => void;
+  onExportBackup?: () => void;
+  onImportBackup?: (rawJson: string) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -35,6 +44,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onResetFactoryData,
   adminSettings,
   onUpdateAdminSettings,
+  needsRepairCount = 0,
+  offlineQueueCount = 0,
+  onClearAllRepairFlags,
+  onClearOfflineQueue,
+  onExportBackup,
+  onImportBackup,
 }) => {
   const [urlInput, setUrlInput] = useState(syncStatus.url);
   const [isTesting, setIsTesting] = useState(false);
@@ -48,6 +63,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [newPin, setNewPin] = useState(adminSettings.adminPin);
   const [pinSavedNotice, setPinSavedNotice] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmClearQueue, setConfirmClearQueue] = useState(false);
+  const backupInputRef = React.useRef<HTMLInputElement>(null);
 
   const { containerRef: tabBarRef, setItemRef: setTabRef, indicator: tabIndicator } =
     useSlidingIndicator<'url' | 'instructions' | 'code' | 'security'>(activeTab, [isOpen]);
@@ -59,6 +76,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setTestResult(null);
       setAdminEmailError(null);
       setConfirmReset(false);
+      setConfirmClearQueue(false);
     }
   }, [isOpen, syncStatus.url, adminSettings.adminPin]);
 
@@ -511,6 +529,119 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {adminSettings.kioskOnly ? 'LOCKED ON' : 'OFF'}
                 </button>
               </div>
+
+              {/* 4. Full Backup, Restore & Pit Maintenance */}
+              {(onExportBackup || onImportBackup || onClearAllRepairFlags || onClearOfflineQueue) && (
+                <div className="p-4 bg-[#09090b] rounded-xl border border-[#27272d] space-y-3">
+                  <div>
+                    <div className="font-bold text-zinc-100 font-mono">DATA BACKUP &amp; PIT MAINTENANCE</div>
+                    <p className="text-zinc-400 text-[11px] mt-0.5 font-sans">
+                      Export or restore complete snapshots (parts, logs, repair flags, pack list, and admin settings).
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 font-mono">
+                    {onExportBackup && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClick();
+                          onExportBackup();
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-zinc-100 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors btn-tactile"
+                      >
+                        <Download className="w-3.5 h-3.5 text-red-400" />
+                        <span>Export Backup (.json)</span>
+                      </button>
+                    )}
+
+                    {onImportBackup && (
+                      <>
+                        <input
+                          ref={backupInputRef}
+                          type="file"
+                          accept=".json,application/json"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              if (typeof reader.result === 'string') {
+                                onImportBackup(reader.result);
+                              }
+                            };
+                            reader.readAsText(file);
+                            e.target.value = '';
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playClick();
+                            backupInputRef.current?.click();
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors btn-tactile"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-zinc-400" />
+                          <span>Restore Backup</span>
+                        </button>
+                      </>
+                    )}
+
+                    {onClearAllRepairFlags && needsRepairCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClick();
+                          onClearAllRepairFlags();
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-zinc-950 bg-zinc-100 hover:bg-white rounded-lg transition-colors btn-tactile"
+                      >
+                        <Wrench className="w-3.5 h-3.5" />
+                        <span>Clear Repair Flags ({needsRepairCount})</span>
+                      </button>
+                    )}
+
+                    {onClearOfflineQueue && offlineQueueCount > 0 && (
+                      confirmClearQueue ? (
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmClearQueue(false)}
+                            className="px-2.5 py-1.5 bg-[#1a1a1f] text-zinc-300 border border-[#27272d] rounded-lg"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              playClick();
+                              setConfirmClearQueue(false);
+                              onClearOfflineQueue();
+                            }}
+                            className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
+                          >
+                            Discard {offlineQueueCount} Queued
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playClick();
+                            setConfirmClearQueue(true);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg transition-colors btn-tactile"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Clear Offline Queue ({offlineQueueCount})</span>
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
