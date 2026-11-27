@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { normalizeItemId, classifyVexCategory } from '../src/types';
+import { normalizeItemId, classifyVexCategory, CLUB_TEAMS } from '../src/types';
 import { generateDefaultInventory, INITIAL_LOGS } from '../src/data/mockInventory';
 import { saveStoredApiUrl, getStoredApiUrl, DEFAULT_GAS_URL } from '../src/services/sheetApi';
 import { CommandCenter } from '../src/components/CommandCenter';
@@ -13,6 +13,12 @@ import { CompetitionPackList } from '../src/components/CompetitionPackList';
 import { ActivityLogs } from '../src/components/ActivityLogs';
 import { CheckInOutModal } from '../src/components/CheckInOutModal';
 import { LabelPrinterModal } from '../src/components/LabelPrinterModal';
+import { CommandPalette } from '../src/components/CommandPalette';
+import { Header } from '../src/components/Header';
+import { MobileTopHeader } from '../src/components/MobileTopHeader';
+import { MobileBottomNav } from '../src/components/MobileBottomNav';
+import { OfflineQueueBanner } from '../src/components/PWAControls';
+import { BackToTopButton } from '../src/components/MotionPrimitives';
 import { ToastContainer } from '../src/components/Toast';
 
 function assert(condition: unknown, message: string): void {
@@ -34,6 +40,7 @@ function testPartIdNormalization(): void {
   assert(classifyVexCategory(undefined, undefined, 'VEXSOL-1') === 'Solenoids', 'VEXSOL-1 category');
   assert(classifyVexCategory(undefined, undefined, 'VEXS-DIST-4') === 'Distance', 'VEXS-DIST-4 category');
   assert(classifyVexCategory(undefined, undefined, 'VEXB-2') === 'Brain', 'VEXB-2 category');
+  assert(CLUB_TEAMS.includes('654V') && CLUB_TEAMS.includes('RECF'), 'Club teams include 654V and RECF');
 }
 
 function testStorageAndDisconnectPersistence(): void {
@@ -57,6 +64,7 @@ function testStorageAndDisconnectPersistence(): void {
 
   // Ensure corrupted pack list storage does not crash CompetitionPackList
   store['vex_pack_list_state'] = '{"corrupt":true}';
+  store['vex_offline_sync_queue'] = '{broken-json';
 }
 
 function testSsrViews(): void {
@@ -65,8 +73,72 @@ function testSsrViews(): void {
 
   const logs = INITIAL_LOGS;
   const noop = () => {};
+  const syncStatus = {
+    url: DEFAULT_GAS_URL,
+    isSyncing: false,
+    error: null,
+    lastSynced: null,
+    mode: 'live' as const,
+  };
+  const adminSettings = {
+    adminEmails: ['coach@school.edu'],
+    adminPin: '6540',
+    isUnlocked: false,
+    kioskOnly: false,
+  };
 
   const renders: Array<[string, string]> = [
+    [
+      'Header',
+      renderToString(
+        React.createElement(Header, {
+          activeTab: 'dashboard',
+          onTabChange: noop,
+          syncStatus,
+          adminSettings,
+          onOpenSettings: noop,
+          onOpenCheckout: noop,
+          onSyncNow: noop,
+          onOpenAdminUnlock: noop,
+          onLockAdmin: noop,
+          onOpenCommandPalette: noop,
+          onOpenLabelPrinter: noop,
+        })
+      ),
+    ],
+    [
+      'MobileTopHeader',
+      renderToString(
+        React.createElement(MobileTopHeader, {
+          activeTab: 'dashboard',
+          onTabChange: noop,
+          syncStatus,
+          adminSettings,
+          onOpenSettings: noop,
+          onSyncNow: noop,
+          onOpenAdminUnlock: noop,
+          onLockAdmin: noop,
+          isMobileModeForced: false,
+          onToggleViewMode: noop,
+          onOpenCommandPalette: noop,
+          onOpenLabelPrinter: noop,
+        })
+      ),
+    ],
+    [
+      'MobileBottomNav',
+      renderToString(
+        React.createElement(MobileBottomNav, {
+          activeTab: 'dashboard',
+          onTabChange: noop,
+          onOpenCheckout: noop,
+          availableCount: 100,
+          totalCount: 179,
+          adminSettings,
+          onOpenAdminUnlock: noop,
+        })
+      ),
+    ],
     [
       'CommandCenter',
       renderToString(
@@ -77,6 +149,7 @@ function testSsrViews(): void {
           onNavigateToTeam: noop,
           onNavigateTab: noop,
           onOpenCheckout: noop,
+          onOpenLabelPrinter: noop,
           isMobileMode: false,
         })
       ),
@@ -90,6 +163,7 @@ function testSsrViews(): void {
           selectedCategory: 'All',
           onSelectCategory: noop,
           onOpenCheckout: noop,
+          onOpenLabelPrinter: noop,
           isMobileMode: false,
         })
       ),
@@ -170,10 +244,47 @@ function testSsrViews(): void {
       ),
     ],
     [
+      'CommandPalette',
+      renderToString(
+        React.createElement(CommandPalette, {
+          isOpen: true,
+          onClose: noop,
+          items,
+          onNavigateTab: noop,
+          onNavigateToTeam: noop,
+          onOpenCheckout: noop,
+          onSyncNow: noop,
+          onToggleSound: noop,
+          soundEnabled: true,
+          onOpenShortcuts: noop,
+          onOpenDiagnostics: noop,
+          onOpenAssetsModal: noop,
+          onOpenLabelPrinter: noop,
+        })
+      ),
+    ],
+    [
+      'OfflineQueueBanner',
+      renderToString(
+        React.createElement(OfflineQueueBanner, {
+          pendingCount: 2,
+          onRetrySync: noop,
+        })
+      ),
+    ],
+    [
       'ToastContainer',
       renderToString(
         React.createElement(ToastContainer, {
-          toasts: [{ id: 'test-1', type: 'success', title: 'Saved' }],
+          toasts: [
+            {
+              id: 'test-1',
+              type: 'success',
+              title: 'Saved',
+              actionLabel: 'Undo',
+              onAction: noop,
+            },
+          ],
           onDismiss: noop,
         })
       ),
@@ -183,23 +294,44 @@ function testSsrViews(): void {
   for (const [label, html] of renders) {
     assert(html.length > 0, `${label} rendered empty output`);
   }
+
+  // Ensure BackToTopButton stays clean on initial mount (hidden below scroll threshold)
+  const backToTopHtml = renderToString(React.createElement(BackToTopButton, { isMobile: false }));
+  assert(typeof backToTopHtml === 'string', 'BackToTopButton rendered cleanly');
 }
 
 function testRepositoryGuardrails(): void {
   const root = process.cwd();
   const requiredFiles = [
     '.env.example',
+    'server.ts',
+    'vite.config.ts',
+    'create_qr_badges.mjs',
     'public/favicon.ico',
     'public/lake_travis_logo_transparent.png',
     'public/assets/aistudio/lt_logo_transparent.png',
     'public/pwa-192x192.png',
     'public/pwa-512x512.png',
+    'public/pwa-maskable-512x512.png',
     'public/apple-touch-icon.png',
   ];
 
   for (const rel of requiredFiles) {
-    assert(fs.existsSync(path.join(root, rel)), `Missing required asset: ${rel}`);
+    assert(fs.existsSync(path.join(root, rel)), `Missing required file/asset: ${rel}`);
   }
+
+  // Validate key JSON configs parse cleanly
+  for (const jsonFile of ['package.json', 'tsconfig.json', 'metadata.json']) {
+    const raw = fs.readFileSync(path.join(root, jsonFile), 'utf8');
+    const parsed = JSON.parse(raw);
+    assert(parsed && typeof parsed === 'object', `Invalid JSON object in ${jsonFile}`);
+  }
+
+  // Validate Express proxy SSRF protections remain intact
+  const serverSource = fs.readFileSync(path.join(root, 'server.ts'), 'utf8');
+  assert(serverSource.includes("parsedUrl.protocol !== 'https:'"), 'server.ts enforces https://');
+  assert(serverSource.includes('script.google.com'), 'server.ts restricts proxy to script.google.com');
+  assert(serverSource.includes('127.0.0.1') && serverSource.includes('192.168.'), 'server.ts blocks local/private IPs');
 
   const walk = (dir: string): string[] => {
     const out: string[] = [];

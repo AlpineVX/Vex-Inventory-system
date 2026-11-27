@@ -7,6 +7,7 @@ import {
   Plus,
   Trash2,
   X,
+  Search,
 } from 'lucide-react';
 import { CompetitionPackItem, InventoryItem, VexCategory, classifyVexCategory } from '../types';
 import { INITIAL_PACK_LIST } from '../data/mockInventory';
@@ -36,6 +37,7 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
   });
 
   const [filterState, setFilterState] = useState<'all' | 'packed' | 'unpacked'>('all');
+  const [packSearch, setPackSearch] = useState('');
   const [isAddingCustom, setIsAddingCustom] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customCategory, setCustomCategory] = useState<VexCategory>('Sensors');
@@ -175,8 +177,13 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
   const fullyPackedItemsCount = packList.filter((i) => i.isPacked).length;
 
   const filteredList = packList.filter((item) => {
-    if (filterState === 'packed') return item.isPacked;
-    if (filterState === 'unpacked') return !item.isPacked;
+    if (filterState === 'packed' && !item.isPacked) return false;
+    if (filterState === 'unpacked' && item.isPacked) return false;
+    if (packSearch.trim()) {
+      const q = packSearch.toLowerCase().trim();
+      const hay = `${item.name} ${item.category} ${item.description} ${item.priority}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
     return true;
   });
 
@@ -329,10 +336,24 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
             <div className="absolute inset-0 shimmer-active" />
           </div>
         </div>
+
+        {readinessPercent === 100 && packList.length > 0 && (
+          <div className="mt-4 p-3 rounded-xl bg-[#09090b] border border-zinc-300/30 flex items-center justify-between gap-3 animate-card-enter">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <CheckCircle2 className="w-4 h-4 text-zinc-100 shrink-0 animate-pop" />
+              <span className="text-xs font-semibold text-zinc-100 truncate">
+                All {totalTargetUnits} tournament pit spares packed and verified.
+              </span>
+            </div>
+            <span className="text-[10px] font-mono font-bold text-red-400 shrink-0">
+              READY
+            </span>
+          </div>
+        )}
       </SpotlightCard>
 
-      {/* Filter Tabs with Spring Sliding Indicator */}
-      <div className="flex items-center justify-between">
+      {/* Filter Tabs & Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div
           ref={packNavRef}
           className="relative flex items-center gap-1 p-1 bg-[#111114] border border-[#27272d] rounded-xl text-xs font-mono overflow-x-auto no-scrollbar max-w-full"
@@ -390,6 +411,27 @@ export const CompetitionPackList: React.FC<CompetitionPackListProps> = ({ items 
           >
             Packed ({packList.filter((i) => i.isPacked).length})
           </button>
+        </div>
+
+        <div className="relative sm:w-64">
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+          <input
+            type="text"
+            value={packSearch}
+            onChange={(e) => setPackSearch(e.target.value)}
+            placeholder="Filter pack list items..."
+            className="w-full pl-8 pr-7 py-1.5 text-xs bg-[#111114] border border-[#27272d] rounded-xl text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-500 crimson-focus-glow font-sans"
+          />
+          {packSearch && (
+            <button
+              type="button"
+              onClick={() => setPackSearch('')}
+              aria-label="Clear pack search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-100"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
         </div>
       </div>
 

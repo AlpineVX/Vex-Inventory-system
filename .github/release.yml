@@ -25,6 +25,7 @@ changelog:
       labels:
         - dependencies
         - ci
+        - tests
         - documentation
     - title: Other Changes
       labels:

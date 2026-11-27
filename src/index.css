@@ -311,6 +311,17 @@
   }
 }
 
+@keyframes drawerBottomEnter {
+  from {
+    opacity: 0;
+    transform: translateY(36px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes drawerEnter {
   from {
     opacity: 0;
@@ -323,7 +334,13 @@
 }
 
 .animate-drawer-enter {
-  animation: drawerEnter 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: drawerBottomEnter 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (min-width: 640px) {
+  .animate-drawer-enter {
+    animation: drawerEnter 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
 }
 
 @keyframes toastIn {
@@ -388,6 +405,19 @@
   animation: popIn 240ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
 }
 
+@keyframes softFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.animate-soft-float {
+  animation: softFloat 2.8s ease-in-out infinite;
+}
+
 .stagger-1 { animation-delay: 25ms; }
 .stagger-2 { animation-delay: 55ms; }
 .stagger-3 { animation-delay: 85ms; }
@@ -399,6 +429,7 @@
 
 .progress-fill {
   transition: width 750ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: width;
 }
 
 .ring-progress {
@@ -432,7 +463,7 @@
 }
 
 .shimmer-active {
-  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0) 100%);
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 100%);
   background-size: 200% 100%;
   animation: shimmerWave 2.8s infinite linear;
 }
@@ -449,6 +480,7 @@
   .animate-toast-progress,
   .animate-card-enter,
   .animate-pop,
+  .animate-soft-float,
   .radar-dot,
   .shimmer-active {
     animation: none !important;

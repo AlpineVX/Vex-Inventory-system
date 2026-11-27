@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: Type-Check, Verify Suite, Build & Server Check
+  quality:
+    name: Type-Check, Tests & Guardrails
     runs-on: ubuntu-latest
 
     steps:
@@ -42,13 +42,62 @@ jobs:
       - name: TypeScript Check
         run: bun run lint
 
-      - name: Run Automated Verification Suite
+      - name: Run Verification & SSR Suite
         run: bun run test
+
+  build-and-smoke:
+    name: Production Build, Server Check & Health Smoke Test
+    needs: quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
 
       - name: Build Production + PWA Bundle
         run: |
           bun run build
           test -f dist/index.html
+          test -f dist/manifest.webmanifest
+          test -f dist/sw.js
 
-      - name: Check Express Server Bundle
+      - name: Bundle & Syntax-Check Express Server
         run: bun build server.ts --target=node --packages=external --outfile=/tmp/server-check.mjs && node --check /tmp/server-check.mjs
+
+      - name: Smoke Test Production Server (/api/health & /)
+        run: |
+          NODE_ENV=production PORT=3000 bun run start >/tmp/server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:3000/api/health >/dev/null; then
+              break
+            fi
+            sleep 0.5
+          done
+          curl -sf http://127.0.0.1:3000/api/health | grep -q '"status":"ok"'
+          curl -sf http://127.0.0.1:3000/ | grep -q '<title>'
+
+      - name: Upload Production Dist Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vex-654-inventory-dist
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error

@@ -54,6 +54,7 @@ import { LabelPrinterModal } from './components/LabelPrinterModal';
 import { IOSInstallGuideModal, OfflineQueueBanner, usePWAInstallTrigger } from './components/PWAControls';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { ToastContainer, ToastMessage } from './components/Toast';
+import { BackToTopButton } from './components/MotionPrimitives';
 import { isSoundEnabled, setSoundEnabled, playToggle, playClick } from './services/soundFx';
 
 const CONDITION_MAP_KEY = 'vex_item_conditions_v1';
@@ -1199,6 +1200,7 @@ export default function App() {
                   onNavigateToTeam={handleNavigateToTeam}
                   onNavigateTab={handleTabChange}
                   onOpenCheckout={(item, action) => handleOpenCheckoutModal(item, action || 'Check Out')}
+                  onOpenLabelPrinter={() => setIsLabelPrinterOpen(true)}
                   isMobileMode={isMobile}
                 />
               )}
@@ -1383,6 +1385,9 @@ export default function App() {
           pendingCount={offlineQueue.length}
           onRetrySync={() => void flushOfflineQueue(true)}
         />
+
+        {/* Floating Scroll-to-Top Helper */}
+        <BackToTopButton isMobile={isMobile} />
 
         {/* Toast Notification Container */}
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />

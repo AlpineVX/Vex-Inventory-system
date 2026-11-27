@@ -1,4 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ArrowUp } from 'lucide-react';
+import { playClick } from '../services/soundFx';
 
 interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
@@ -386,5 +388,54 @@ export const SwipeableActionCard: React.FC<SwipeableActionCardProps> = ({
         {children}
       </div>
     </div>
+  );
+};
+
+interface BackToTopButtonProps {
+  isMobile?: boolean;
+}
+
+/**
+ * Compact floating button that smoothly scrolls long inventory/log views back to top.
+ */
+export const BackToTopButton: React.FC<BackToTopButtonProps> = ({ isMobile = false }) => {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onScroll = () => {
+      setVisible(window.scrollY > 360);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  if (!visible) return null;
+
+  const scrollToTop = () => {
+    playClick();
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({
+      top: 0,
+      behavior: prefersReduced ? 'auto' : 'smooth',
+    });
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={scrollToTop}
+      aria-label="Scroll back to top"
+      title="Back to top"
+      className={`fixed z-30 no-print flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#111114]/95 hover:bg-[#1a1a1f] text-zinc-200 hover:text-white border border-zinc-700/80 hover:border-red-500/50 shadow-xl backdrop-blur-md text-xs font-medium animate-pop btn-tactile ${
+        isMobile ? 'bottom-20 right-3.5 min-h-[40px]' : 'bottom-5 right-5'
+      }`}
+    >
+      <ArrowUp className="w-3.5 h-3.5 text-red-400" />
+      <span className="hidden sm:inline font-mono text-[11px]">Top</span>
+    </button>
   );
 };

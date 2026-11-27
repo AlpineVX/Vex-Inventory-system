@@ -4,17 +4,17 @@
 
 # VEX Robotics Team 654 — Parts Inventory
 
-**Fast part checkout, team equipment tracking, printable QR bin labels, and offline-ready pit tools for Lake Travis VEX Robotics (Club 654).**
+**Fast part checkout, team kit checks, printable QR bin labels, and offline-ready pit tools for Lake Travis VEX Robotics (Club 654).**
 
-[![CI](https://img.shields.io/badge/CI-Lint_%2B_Tests_%2B_Build-c52329?style=for-the-badge&logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
+[![CI Pipeline](https://img.shields.io/badge/CI-Lint_%2B_SSR_Tests_%2B_Smoke_Test-c52329?style=for-the-badge&logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/badge/Security-CodeQL-111114?style=for-the-badge&logo=github&logoColor=white)](.github/workflows/codeql.yml)
 [![React 19](https://img.shields.io/badge/React-19.0-111114?style=for-the-badge&logo=react&logoColor=white)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-111114?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-8.3-c52329?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.3-111114?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![PWA Ready](https://img.shields.io/badge/PWA-Offline_Ready-111114?style=for-the-badge)](vite.config.ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-f4f4f5?style=for-the-badge)](LICENSE)
 
-[Overview](#overview) · [Features](#features) · [Shortcuts](#keyboard-shortcuts) · [Architecture](#how-it-works) · [VEX Parts](#supported-vex-v5-parts) · [Setup](#getting-started) · [Google Sheets](#google-sheets-sync)
+[Overview](#overview) · [Features](#features) · [Shortcuts](#keyboard-shortcuts) · [Architecture](docs/ARCHITECTURE.md) · [Google Sheets Setup](docs/GOOGLE_SHEETS_SETUP.md) · [VEX Parts](#supported-vex-v5-parts) · [Setup](#getting-started)
 
 </div>
 
@@ -24,7 +24,7 @@
 
 Built for daily shop use and tournament pits, this app replaces manual spreadsheet edits with a fast **red, black, and white** inventory tracker for every **Club 654** team (`654K`, `654J`, `654A`, `654B`, `654G`, `654T`, `654V`, `654Y`, `654X`, `654Z`, `654W`, and `RECF`).
 
-Students can check parts in and out in seconds from a laptop, phone, or installed PWA, while coaches and leads get per-team custody breakdowns, printable QR bin labels, part health tracking, tournament pack lists, and non-destructive Google Sheets syncing.
+Students can check parts in and out in seconds from a laptop, phone, or installed PWA, while coaches and leads get a live Pit Stock Health overview, per-team Core Kit checks, printable QR bin labels, part repair tracking, tournament pack checklists, and non-destructive Google Sheets syncing.
 
 ```text
 +-----------------------------------------------------------------------------+
@@ -52,20 +52,20 @@ Students can check parts in and out in seconds from a laptop, phone, or installe
 ### Five Focused Views & Command Palette
 | View | What It Does |
 |:---|:---|
-| **Overview** | Live stock totals, category breakdown, cabinet locator, quick borrow shortcuts, overdue checkouts, and recent activity. |
-| **Parts Inventory** | Search all 179 starter parts (plus synced sheet parts), inspect specs & custody history in a slide-over drawer, toggle `Needs Repair` health flags, and export CSV. |
-| **Team Parts** | Filter everything checked out to a specific team (`654K`–`654W` + `RECF`), print a team checklist, or return parts in one batch. |
-| **Pack List** | Track tournament pit box spares against live available stock, add custom spare items, and catch low-stock warnings early. |
+| **Overview** | Live Pit Stock Health ratio bar, category breakdown, 14+ day overdue review, cabinet locator, quick borrow shortcuts, and QR Labels trigger. |
+| **Parts Inventory** | Search all 179 starter parts, step through items (`←`/`→`) in the Part Details drawer, toggle `Needs Repair` flags, copy rows to clipboard (`Copy Rows`), or export CSV. |
+| **Team Parts** | Filter everything checked out to a specific team (`654K`–`654W` + `RECF`), check core kit coverage (`Brain`, `Radio`, `Sensors`, `Solenoids`) with 1-tap assignment, print checklists, or batch-return parts. |
+| **Pack List** | Search and filter tournament pit box spares against live available stock, add custom spare items, and track 100% tournament readiness. |
 | **Activity Log** | Progressive-loaded history of every checkout and return filtered by team, action, or email, with CSV export. |
 
 - **Command Palette (`⌘K` / `Ctrl+K`)**: Jump directly to any view, club team, part ID, sync action, QR label sheet, or diagnostics screen from anywhere.
 
 ### Pit & Shop Utilities
-- **Printable QR Bin Labels (`LabelPrinterModal`)**: Pick specific parts or categories and print 3-column or 4-column sticker sheets with QR codes, part IDs, and cabinet locations. Selections persist safely while searching or syncing.
-- **Part Health & Repair Flags**: Flag damaged hardware as `Needs Repair` from the Parts Inventory, Mobile Cards, or Check In sheet, triggering clear checkout warnings before parts go back on a robot.
-- **Offline Sync Queue & PWA (`PWAControls`)**: Installable on mobile and desktop. Actions submitted without venue Wi-Fi are stored in an offline queue and synced automatically once connection returns.
-- **Built for Desktop and Phone**: Automatically switches to `MobileTopHeader`, `MobileBottomNav`, swipe-friendly `MobileInventoryList` cards, and bottom-sheet modals with safe-area padding—plus a manual **Phone View / Desktop View** toggle.
-- **Clean Print Sheets (`P` / `Ctrl+P`) & Sound Effects (`M`)**: High-contrast black-and-white `@media print` stylesheets and optional Web Audio confirmation sounds respecting `prefers-reduced-motion`.
+- **Printable QR Bin Labels (`LabelPrinterModal`)**: Pick specific parts or categories and print 3-column or 4-column sticker sheets with QR codes, part IDs, and cabinet locations.
+- **Part Health & Repair Flags**: Flag damaged hardware as `Needs Repair` from the Parts Inventory, Mobile Cards, or Check In sheet, with checkout warnings before parts go back on a robot.
+- **Offline Sync Queue & PWA (`PWAControls`)**: Installable on iOS, Android, and Desktop. Actions submitted without venue Wi-Fi save to a local offline queue and sync automatically when Wi-Fi returns.
+- **Adaptive Desktop & Phone Layout**: Automatically switches to `MobileTopHeader`, `MobileBottomNav`, swipe-friendly `MobileInventoryList` cards, responsive bottom sheets, and a floating Back-to-Top button—plus a manual **Phone View / Desktop View** toggle.
+- **Clean Print Sheets (`P` / `Ctrl+P`) & Sound Effects (`M`)**: High-contrast black-and-white `@media print` stylesheets and optional Web Audio cues respecting `prefers-reduced-motion`.
 
 ---
 
@@ -79,6 +79,7 @@ Students can check parts in and out in seconds from a laptop, phone, or installe
 | `4` | **Pack List** | Competition pit box checklist |
 | `5` | **Activity Log** | Checkout and return history |
 | `/` or `⌘K` | **Search / Palette** | Focus search or open Command Palette (`⌘K`) |
+| `←` / `→` | **Step Parts** | Previous / Next part inside the Part Details drawer |
 | `C` | **Check Out / In** | Open the Check Out / Check In sheet |
 | `D` | **App Status** | Cache size, sync check, offline queue, and server ping |
 | `M` | **Sound** | Toggle click and confirmation sounds |
@@ -88,7 +89,7 @@ Students can check parts in and out in seconds from a laptop, phone, or installe
 
 ---
 
-## How It Works
+## Architecture & Google Sheets Sync
 
 ```mermaid
 flowchart LR
@@ -118,8 +119,8 @@ flowchart LR
     Action -->|"doPost()"| GAS
 ```
 
-- **Safe Proxy**: `server.ts` validates Google Apps Script URLs with `new URL()`, enforces `https://`, blocks loopback and private network ranges, and only forwards requests to `script.google.com` or `script.googleusercontent.com`.
-- **Resilient Local State**: Works offline out of the box with local caching, explicit disconnect persistence, sanitized sheet parsing, and corrupted-storage recovery.
+- **Full Architecture Reference**: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- **Google Sheets & Apps Script Setup Guide**: [`docs/GOOGLE_SHEETS_SETUP.md`](docs/GOOGLE_SHEETS_SETUP.md)
 
 ---
 
@@ -140,7 +141,7 @@ flowchart LR
 ## Getting Started
 
 ### Requirements
-- [Bun](https://bun.sh/) *(recommended, `bun.lock` included)* or **Node.js 20+**
+- [Bun](https://bun.sh/) *(recommended, `bun.lock` included)* or **Node.js 22+** (`.nvmrc` included)
 - Any modern browser
 
 ### Run Locally
@@ -165,37 +166,10 @@ bun run dev
 |:---|:---|
 | `bun run dev` | Full-stack Express + Vite server on port `3000` |
 | `bun run lint` | TypeScript check (`tsc --noEmit`) |
-| `bun run test` | Automated verification (`scripts/verify.ts`: ID parser, storage, SSR views, asset/theme checks) |
+| `bun run test` | Verification suite (`scripts/verify.ts`: ID parser, storage, SSR views, proxy/theme/dialog guardrails) |
 | `bun run build` | Production Vite + PWA bundle into `dist/` |
 | `bun run start` | Production Express server on port `3000` |
 | `bun run create:qr-badges` | Regenerates QR badge PNGs in `public/qr_badges/` |
-
----
-
-## Google Sheets Sync
-
-When connected to Google Sheets, the app uses a **LOGS-only** setup so formula-driven hardware tabs are never overwritten:
-
-- **`doGet(e)`**: Reads your hardware tabs (`OPTICAL`, `DISTANCE`, `INERTIAL`, `ROTATIONAL`, `SOLENOIDS`, `RADIO`, `BRAIN`) and `LOGS` tab.
-- **`doPost(e)`**: Appends a single row to `LOGS` (`Timestamp`, `Item ID`, `Action`, `Team`, `Notes`, `Borrower Email`, `Category`, `Number`).
-
-<details>
-<summary><strong>Step-by-step Google Apps Script setup &amp; API endpoints</strong></summary>
-
-1. Open your club Google Sheet and go to **Extensions > Apps Script**.
-2. In the web app, sign into **Admin Mode**, open **Settings > Backend Code**, and copy the `Code.gs` script.
-3. Click **Deploy > New deployment > Web app**:
-   - **Execute as**: `Me`
-   - **Who has access**: `Anyone`
-4. Paste the `/exec` URL into **Settings > API Endpoint** and click **Connect & Sync**.
-
-| Endpoint | Method | Purpose |
-|:---|:---:|:---|
-| `/api/health` | `GET` | Health & ping check (`{ status: "ok", timestamp }`) |
-| `/api/sync` | `GET` | Fetches and sanitizes inventory & log rows from `?url=<GAS_EXEC_URL>` |
-| `/api/action` | `POST` | Validates and posts a checkout/return row to Google Apps Script |
-
-</details>
 
 ---
 
@@ -210,53 +184,39 @@ When connected to Google Sheets, the app uses a **LOGS-only** setup so formula-d
 │   ├── ISSUE_TEMPLATE/
 │   │   ├── bug_report.yml            # Structured bug report form
 │   │   ├── feature_request.yml       # Feature proposal form
+│   │   ├── part_catalog_update.yml   # Part catalog / team roster change request
 │   │   └── config.yml                # Issue chooser configuration
 │   ├── workflows/
-│   │   └── ci.yml                    # TypeScript check, verify suite, build & server check
+│   │   ├── ci.yml                    # Type-check, SSR/guardrail tests, PWA build & smoke test
+│   │   ├── codeql.yml                # Scheduled & PR TypeScript/JavaScript security scan
+│   │   ├── pr-labeler.yml            # Auto-labels PRs by changed directory
+│   │   └── release.yml               # Builds, packages, and publishes GitHub Releases on v* tags
 │   ├── dependabot.yml                # Grouped weekly npm & GitHub Actions updates
+│   ├── labeler.yml                   # Path matching rules for PR labels
 │   ├── pull_request_template.md      # Pre-merge engineering checklist
 │   └── release.yml                   # Categorized release notes configuration
-├── public/                           # Club logos, PWA icons, favicon.ico, and QR badges
+├── docs/
+│   ├── ARCHITECTURE.md               # Client/server data flow, ID parsing & storage reference
+│   └── GOOGLE_SHEETS_SETUP.md        # Step-by-step Apps Script & LOGS sync guide
+├── public/                           # Club logos, PWA icons, favicon.ico & QR badges
 ├── scripts/
-│   └── verify.ts                     # Unit, SSR, storage, asset, and theme guardrail checks
+│   └── verify.ts                     # Unit, SSR, JSON, proxy SSRF & theme guardrail suite
 ├── src/
-│   ├── components/
-│   │   ├── ActivityLogs.tsx          # Paginated checkout/return history + CSV export
-│   │   ├── AdminUnlockModal.tsx      # PIN / email admin sign-in modal
-│   │   ├── CheckInOutModal.tsx       # Dual-mode Check Out / Check In + Batch Queue sheet
-│   │   ├── ClubAssetsModal.tsx       # Club logos & QR badge downloads
-│   │   ├── CommandCenter.tsx         # Overview dashboard, quick finder & drilldowns
-│   │   ├── CommandPalette.tsx        # ⌘K quick navigation & action launcher
-│   │   ├── CompetitionPackList.tsx   # Pit box packing list & low-stock alerts
-│   │   ├── Header.tsx                # Desktop header navigation & quick tools
-│   │   ├── InventoryBrowser.tsx      # Paginated desktop table, inspector drawer & bulk actions
-│   │   ├── KeyboardShortcutsModal.tsx # Keyboard shortcuts reference modal
-│   │   ├── LabelPrinterModal.tsx     # Printable 3-col / 4-col QR bin label sheet generator
-│   │   ├── MobileBottomNav.tsx       # Mobile bottom navigation bar
-│   │   ├── MobileInventoryList.tsx   # Mobile expandable part cards with quick actions
-│   │   ├── MobileTopHeader.tsx       # Compact mobile header & navigation drawer
-│   │   ├── MotionPrimitives.tsx      # Spring pill tabs, spotlight cards & gauges
-│   │   ├── PWAControls.tsx           # Offline queue banner & app install prompt
-│   │   ├── SettingsModal.tsx         # Google Sheet URL, admin PIN/emails & Code.gs
-│   │   ├── SystemDiagnosticsModal.tsx # App status, cache usage, offline queue & connection test
-│   │   ├── TeamLookup.tsx            # Per-team parts breakdown & batch returns
-│   │   └── Toast.tsx                 # Toast notifications with 1-tap Undo
-│   ├── data/
-│   │   ├── mockInventory.ts          # Starter 179-part inventory & default pack list
-│   │   └── vexSpecs.ts               # VEX V5 part specs & manual rules
-│   ├── hooks/
-│   │   ├── useOnlineStatus.ts        # Online/offline connectivity & queued action count hook
-│   │   └── usePWAInstall.ts          # Browser / mobile PWA install prompt hook
-│   ├── services/
-│   │   ├── sheetApi.ts               # Proxy/direct Google Sheets client, offline queue & Code.gs
-│   │   └── soundFx.ts                # Web Audio sound effects
+│   ├── components/                   # 20 modular React UI views, drawers & modals
+│   ├── data/                         # 179-part baseline catalog & VEX V5 hardware specs
+│   ├── hooks/                        # useOnlineStatus & usePWAInstall hooks
+│   ├── services/                     # sheetApi proxy client & Web Audio soundFx
 │   ├── App.tsx                       # Root state, shortcuts, undo & desktop/mobile switcher
 │   ├── index.css                     # Tailwind v4 theme, animations & print styles
 │   ├── main.tsx                      # React 19 entry point
 │   └── types.ts                      # Shared types, ID normalizer & category classifiers
+├── .editorconfig                     # Unified UTF-8, LF & 2-space indent rules
+├── .gitattributes                    # Cross-platform line-ending & binary asset protection
+├── .nvmrc                            # Node.js 22 runtime pin
 ├── CHANGELOG.md                      # Version release notes
+├── CODE_OF_CONDUCT.md                # Club 654 collaboration standards
 ├── CONTRIBUTING.md                   # Development & style guidelines
-├── SECURITY.md                       # Security notes & reporting policy
+├── SECURITY.md                       # Proxy SSRF rules & vulnerability reporting policy
 ├── LICENSE                           # MIT License
 ├── create_qr_badges.mjs              # QR badge image generator script
 ├── server.ts                         # Express proxy + Vite/static server (port 3000)
@@ -267,11 +227,12 @@ When connected to Google Sheets, the app uses a **LOGS-only** setup so formula-d
 
 ---
 
-## Contributing, Releases & Security
+## Contributing, Code of Conduct & Security
 
-- **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) for code style, color tokens, ID rules, and verification commands.
-- **Changelog**: See [`CHANGELOG.md`](CHANGELOG.md) for release history and notable fixes.
-- **Security**: See [`SECURITY.md`](SECURITY.md) for proxy URL rules, admin boundaries, and vulnerability reporting.
+- **Contributing**: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- **Code of Conduct**: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
+- **Changelog**: [`CHANGELOG.md`](CHANGELOG.md)
+- **Security Policy**: [`SECURITY.md`](SECURITY.md)
 
 ---
 

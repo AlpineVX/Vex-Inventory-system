@@ -1,0 +1,50 @@
+name: Part Catalog or Team Roster Update
+description: Request adding or retiring VEX hardware IDs, updating cabinet locations, or changing Club 654 sub-teams
+title: "[Catalog]: "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: update-type
+    attributes:
+      label: Update Type
+      options:
+        - Add New VEX Part IDs
+        - Retire / Remove Damaged Part IDs
+        - Change Cabinet Storage Location
+        - Add or Rename Club 654 Team
+        - Update Competition Pack List Defaults
+    validations:
+      required: true
+
+  - type: input
+    id: id-range
+    attributes:
+      label: Part ID Range or Team Code
+      description: "Example: VEXS-DIST-25 to VEXS-DIST-30, or Team 654N"
+      placeholder: VEXS-DIST-25..VEXS-DIST-30
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Hardware Category
+      options:
+        - V5 Brain (VEXB)
+        - V5 Radio (VEXR)
+        - Optical Sensor (VEXS-O)
+        - Distance Sensor (VEXS-DIST)
+        - Inertial Sensor (VEXS-INER)
+        - Rotational Sensor (VEXS-ROT)
+        - Pneumatic Solenoid (VEXSOL)
+        - Multiple Categories / Club Roster
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details & Cabinet Location
+      description: Include target cabinet (Cabinet 1, Sensor Cabinet, or Pneumatics Cabinet) and Google Sheet tab name if applicable.
+    validations:
+      required: true

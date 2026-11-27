@@ -285,6 +285,85 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
           )}
         </div>
 
+        {/* Core Robot Kit Check Strip */}
+        {(() => {
+          const kitSystems = [
+            { label: 'Brain', cat: 'Brain' as const, count: categoryBreakdown['Brain'] || 0 },
+            { label: 'Radio', cat: 'Radio' as const, count: categoryBreakdown['Radio'] || 0 },
+            {
+              label: 'Sensors',
+              cat: 'Inertial' as const,
+              count:
+                (categoryBreakdown['Sensors'] || 0) +
+                (categoryBreakdown['Optical'] || 0) +
+                (categoryBreakdown['Distance'] || 0) +
+                (categoryBreakdown['Inertial'] || 0) +
+                (categoryBreakdown['Rotational'] || 0),
+            },
+            { label: 'Solenoids', cat: 'Solenoids' as const, count: categoryBreakdown['Solenoids'] || 0 },
+          ];
+          return (
+            <div className="p-3.5 rounded-xl bg-[#111114] border border-[#27272d] animate-fade-in-up">
+              <div className="flex items-center justify-between gap-2 mb-2.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-300">
+                  Team {selectedTeam} Core Kit Check
+                </span>
+                <span className="text-[11px] font-mono text-zinc-500">
+                  Tap any missing system to assign
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {kitSystems.map((sys) => {
+                  const hasOne = sys.count > 0;
+                  const firstReady = items.find(
+                    (i) =>
+                      i.status === 'Available' &&
+                      i.condition !== 'Needs Repair' &&
+                      (sys.label === 'Sensors'
+                        ? ['Optical', 'Distance', 'Inertial', 'Rotational', 'Sensors'].includes(
+                            classifyVexCategory(i.category, i.itemName, i.itemId)
+                          )
+                        : classifyVexCategory(i.category, i.itemName, i.itemId) === sys.cat)
+                  );
+                  return (
+                    <button
+                      key={sys.label}
+                      type="button"
+                      onClick={() => {
+                        playClick();
+                        onOpenCheckout(firstReady, 'Check Out', selectedTeam);
+                      }}
+                      className={`p-2.5 rounded-lg border text-left transition-all card-hover-lift ${
+                        hasOne
+                          ? 'bg-[#09090b] border-[#27272d] hover:border-zinc-700'
+                          : 'bg-red-500/5 border-red-500/30 hover:border-red-500/55'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-xs font-semibold text-zinc-100">{sys.label}</span>
+                        <span
+                          className={`text-[10px] font-mono font-bold tabular-nums ${
+                            hasOne ? 'text-zinc-200' : 'text-red-400'
+                          }`}
+                        >
+                          {hasOne ? `${sys.count} out` : 'None'}
+                        </span>
+                      </div>
+                      <div className="text-[10px] font-mono text-zinc-500 mt-1 truncate">
+                        {hasOne
+                          ? 'Assigned'
+                          : firstReady
+                          ? `+ Assign ${firstReady.itemId}`
+                          : 'Out of stock'}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Team Item Table */}
         <div className="rounded-xl border border-[#27272d] bg-[#111114] overflow-hidden shadow-none">
         <div className="px-5 py-4 bg-[#09090b] border-b border-[#27272d] flex items-center justify-between">
@@ -328,7 +407,10 @@ export const TeamLookup: React.FC<TeamLookupProps> = ({
                       }
                     }}
                   >
-                    <div className="p-4 space-y-2.5 bg-[#111114]">
+                    <div
+                      style={idx < 10 ? ({ '--row-idx': idx } as React.CSSProperties) : undefined}
+                      className={`p-4 space-y-2.5 bg-[#111114] ${idx < 10 ? 'animate-row-enter' : ''}`}
+                    >
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">

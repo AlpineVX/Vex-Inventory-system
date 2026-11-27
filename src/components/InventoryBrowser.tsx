@@ -12,6 +12,8 @@ import {
   MapPin,
   ExternalLink,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Lock,
   X,
   Copy,
@@ -82,6 +84,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [inspectedItemId, setInspectedItemId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<boolean>(false);
+  const [copiedCsv, setCopiedCsv] = useState<boolean>(false);
   const [visibleLimit, setVisibleLimit] = useState<number>(60);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -107,15 +110,6 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
       .sort((a, b) => (new Date(b.timestamp).getTime() || 0) - (new Date(a.timestamp).getTime() || 0))
       .slice(0, 6);
   }, [inspectedItem, logs]);
-
-  useEffect(() => {
-    if (!inspectedItemId) return;
-    const onEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setInspectedItemId(null);
-    };
-    window.addEventListener('keydown', onEsc);
-    return () => window.removeEventListener('keydown', onEsc);
-  }, [inspectedItemId]);
 
   const { containerRef: catBarRef, setItemRef: setCatTabRef, indicator: catIndicator } =
     useSlidingIndicator<VexCategory | 'All'>(selectedCategory);
@@ -220,6 +214,32 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
     });
   }, [items, selectedCategory, statusFilter, teamFilter, searchQuery, sortField, sortAsc]);
 
+  useEffect(() => {
+    if (!inspectedItemId) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setInspectedItemId(null);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const tag = (document.activeElement?.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+        const navSource = filteredItems.length > 0 ? filteredItems : items;
+        const idx = navSource.findIndex((x) => x.itemId === inspectedItemId);
+        if (idx < 0) return;
+        if (e.key === 'ArrowLeft' && idx > 0) {
+          e.preventDefault();
+          playClick();
+          setInspectedItemId(navSource[idx - 1].itemId);
+        } else if (e.key === 'ArrowRight' && idx < navSource.length - 1) {
+          e.preventDefault();
+          playClick();
+          setInspectedItemId(navSource[idx + 1].itemId);
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [inspectedItemId, filteredItems, items]);
+
   // Instant Item Profile matching (Page 10 in spreadsheet)
   const matchedExactItem = useMemo(() => {
     if (!searchQuery.trim()) return null;
@@ -284,6 +304,26 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
+  const copyFilteredTable = () => {
+    const headers = ['Item ID', 'Item Name', 'Category', 'Status', 'Team', 'Date Out', 'Location'];
+    const rows = filteredItems.map((i) =>
+      [
+        i.itemId || '',
+        i.itemName || '',
+        i.category || '',
+        i.status || '',
+        i.currentUser || '',
+        i.dateOut || '',
+        i.location || '',
+      ].join('\t')
+    );
+    const tsv = [headers.join('\t'), ...rows].join('\n');
+    navigator.clipboard?.writeText(tsv).catch(() => {});
+    playClick();
+    setCopiedCsv(true);
+    setTimeout(() => setCopiedCsv(false), 1800);
+  };
+
   const selectedItemsList = useMemo(() => {
     return items.filter((i) => selectedIds.has(i.itemId));
   }, [items, selectedIds]);
@@ -339,6 +379,15 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                   <span>Print QR Labels</span>
                 </button>
               )}
+              <button
+                type="button"
+                onClick={copyFilteredTable}
+                title="Copy current filtered rows to paste into Sheets"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors btn-tactile"
+              >
+                {copiedCsv ? <Check className="w-3.5 h-3.5 text-zinc-100" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
+                <span>{copiedCsv ? 'Copied' : 'Copy Rows'}</span>
+              </button>
               <button
                 onClick={exportToCSV}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-lg transition-colors btn-tactile"
@@ -933,23 +982,27 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
       {/* Part Details Slide-Over Drawer */}
       {inspectedItem && (
         <div
-          className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-xs animate-backdrop-enter"
+          className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end bg-black/70 backdrop-blur-xs animate-backdrop-enter"
           onClick={() => setInspectedItemId(null)}
         >
           <aside
             aria-label="Part Details"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-[#111114] border-l border-[#27272d] h-full flex flex-col shadow-2xl animate-drawer-enter"
+            className="w-full sm:max-w-md bg-[#111114] border-t sm:border-t-0 sm:border-l border-[#27272d] rounded-t-3xl sm:rounded-none max-h-[92vh] sm:max-h-full sm:h-full flex flex-col shadow-2xl animate-drawer-enter"
           >
             {(() => {
               const spec = getVexHardwareSpec(inspectedItem.category);
               const isAvail = inspectedItem.status === 'Available';
+              const navSource = filteredItems.length > 0 ? filteredItems : items;
+              const currentIdx = navSource.findIndex((x) => x.itemId === inspectedItem.itemId);
+              const prevItem = currentIdx > 0 ? navSource[currentIdx - 1] : null;
+              const nextItem = currentIdx >= 0 && currentIdx < navSource.length - 1 ? navSource[currentIdx + 1] : null;
               return (
                 <>
                   {/* Drawer Header */}
                   <div className="px-5 py-4 bg-[#09090b] border-b border-[#27272d] flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="px-2 py-0.5 text-xs font-mono font-bold text-zinc-100 bg-[#1a1a1f] border border-zinc-700 rounded">
                           {inspectedItem.itemId}
                         </span>
@@ -967,6 +1020,41 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                           {copiedId ? <Check className="w-3 h-3 text-zinc-100" /> : <Copy className="w-3 h-3" />}
                           <span>{copiedId ? 'Copied' : 'Copy'}</span>
                         </button>
+                        {currentIdx >= 0 && (
+                          <div className="flex items-center gap-0.5 bg-[#1a1a1f] border border-[#27272d] rounded px-0.5 py-0.5">
+                            <button
+                              type="button"
+                              disabled={!prevItem}
+                              onClick={() => {
+                                if (!prevItem) return;
+                                playClick();
+                                setInspectedItemId(prevItem.itemId);
+                              }}
+                              title="Previous part"
+                              aria-label="Previous part"
+                              className="p-0.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-30 rounded transition-colors"
+                            >
+                              <ChevronLeft className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="text-[10px] font-mono text-zinc-500 px-1 tabular-nums">
+                              {currentIdx + 1}/{navSource.length}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={!nextItem}
+                              onClick={() => {
+                                if (!nextItem) return;
+                                playClick();
+                                setInspectedItemId(nextItem.itemId);
+                              }}
+                              title="Next part"
+                              aria-label="Next part"
+                              className="p-0.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-30 rounded transition-colors"
+                            >
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <h2 className="text-base font-bold text-zinc-100 mt-2 truncate">
                         {inspectedItem.itemName}
@@ -978,7 +1066,7 @@ export const InventoryBrowser: React.FC<InventoryBrowserProps> = ({
                     <button
                       onClick={() => setInspectedItemId(null)}
                       aria-label="Close Inspector"
-                      className="p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-[#1a1a1f] rounded-lg transition-colors"
+                      className="p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-[#1a1a1f] rounded-lg transition-colors shrink-0"
                     >
                       <X className="w-4 h-4" />
                     </button>

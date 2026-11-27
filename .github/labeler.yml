@@ -1,0 +1,42 @@
+ui:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/components/**"
+          - "src/index.css"
+          - "index.html"
+
+mobile:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/components/Mobile*"
+          - "src/hooks/usePWAInstall.ts"
+          - "src/components/PWAControls.tsx"
+
+sync:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/services/sheetApi.ts"
+          - "src/hooks/useOnlineStatus.ts"
+          - "docs/GOOGLE_SHEETS_SETUP.md"
+
+server:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "server.ts"
+          - "vite.config.ts"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "scripts/**"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.md"
+          - "docs/**"

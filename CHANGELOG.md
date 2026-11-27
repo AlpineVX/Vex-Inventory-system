@@ -2,6 +2,18 @@
 
 All notable updates to **VEX Robotics Team 654 — Parts Inventory** are listed here.
 
+## [1.3.0] - 2026-11-27
+
+### Added
+- **Live Pit Stock Health Strip (`CommandCenter`)**: 3-segment ratio bar showing Ready, Checked Out, and Needs Repair counts, plus 1-click drilldown for parts out 14+ days and a **QR Labels** header button.
+- **Core Robot Kit Check (`TeamLookup`)**: Per-team checklist for `Brain`, `Radio`, `Sensors`, and `Solenoids` with 1-tap checkout when any core component is missing.
+- **Part Inspector Stepping & Copy Rows (`InventoryBrowser`)**: Step forward and backward through filtered parts inside the details drawer (`←` / `→` arrow keys or header buttons), plus one-click TSV **Copy Rows** for spreadsheets.
+- **Pack List Search & Completion Banner (`CompetitionPackList`)**: Instant keyword filtering alongside status tabs and a tournament-ready verification banner at `100%`.
+- **Floating Back-to-Top Control (`MotionPrimitives`)**: Compact scroll-to-top button appearing smoothly on long inventory and log views.
+- **GitHub Automation & Documentation Suite**: Added two-stage CI with live production `/api/health` smoke testing, CodeQL security scanning, automated PR area labeling, tag-based GitHub Release packaging, part catalog issue template, Code of Conduct, `.editorconfig`, and dedicated Google Sheets & Architecture guides under `docs/`.
+
+---
+
 ## [1.2.0] - 2026-11-26
 
 ### Added

@@ -20,6 +20,7 @@ import {
   Cpu,
   Eye,
   Check,
+  QrCode,
 } from 'lucide-react';
 import {
   InventoryItem,
@@ -41,6 +42,7 @@ interface CommandCenterProps {
   onNavigateToTeam: (team: string) => void;
   onNavigateTab: (tab: ActiveTab) => void;
   onOpenCheckout: (item?: InventoryItem, defaultAction?: 'Check Out' | 'Check In') => void;
+  onOpenLabelPrinter?: () => void;
   isAdmin?: boolean;
   onOpenAdminUnlock?: () => void;
   isMobileMode?: boolean;
@@ -55,6 +57,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
   onNavigateToTeam,
   onNavigateTab,
   onOpenCheckout,
+  onOpenLabelPrinter,
   isAdmin = false,
   onOpenAdminUnlock,
   isMobileMode = false,
@@ -367,6 +370,18 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           </p>
         </div>
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          {onOpenLabelPrinter && (
+            <button
+              onClick={() => {
+                playClick();
+                onOpenLabelPrinter();
+              }}
+              className="px-3.5 py-2 text-xs font-medium text-zinc-200 bg-[#1a1a1f] hover:bg-[#27272d] border border-zinc-700/80 rounded-lg transition-colors flex items-center gap-1.5 btn-tactile"
+            >
+              <QrCode className="w-3.5 h-3.5 text-red-400" />
+              <span>QR Labels</span>
+            </button>
+          )}
           <button
             onClick={() => {
               playClick();
@@ -390,6 +405,87 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Live Pit Stock Health Strip */}
+      {(() => {
+        const repairOnlyCount = items.filter((i) => i.condition === 'Needs Repair').length;
+        const healthyAvailCount = items.filter((i) => i.status === 'Available' && i.condition !== 'Needs Repair').length;
+        const safeTotal = Math.max(1, totalCount);
+        const readyPct = (healthyAvailCount / safeTotal) * 100;
+        const outPct = (checkedOutCount / safeTotal) * 100;
+        const repairPct = (repairOnlyCount / safeTotal) * 100;
+        return (
+          <div className="p-3.5 rounded-xl bg-[#111114] border border-[#27272d] flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in-up">
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
+                <div className="flex items-center gap-3 font-mono tabular-nums flex-wrap">
+                  <span className="text-zinc-200 font-semibold">
+                    {healthyAvailCount} Ready
+                  </span>
+                  <span className="text-zinc-600" aria-hidden="true">·</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick();
+                      setActiveDrilldown('overdue');
+                    }}
+                    className="text-amber-400 hover:text-amber-300 font-semibold transition-colors"
+                  >
+                    {checkedOutCount} Checked Out
+                  </button>
+                  {repairOnlyCount > 0 && (
+                    <>
+                      <span className="text-zinc-600" aria-hidden="true">·</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClick();
+                          setActiveDrilldown('maintenance');
+                        }}
+                        className="text-red-400 hover:text-red-300 font-semibold transition-colors"
+                      >
+                        {repairOnlyCount} Needs Repair
+                      </button>
+                    </>
+                  )}
+                </div>
+                {longHeldItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick();
+                      setActiveDrilldown('overdue');
+                    }}
+                    className="text-[11px] font-mono text-amber-400 hover:underline flex items-center gap-1"
+                  >
+                    <Clock className="w-3 h-3" />
+                    <span>{longHeldItems.length} out 14+ days</span>
+                  </button>
+                )}
+              </div>
+              <div className="w-full h-2 bg-[#09090b] border border-[#27272d] rounded-full overflow-hidden flex">
+                <div
+                  style={{ width: barsReady ? `${readyPct}%` : '0%' }}
+                  className="h-full bg-zinc-200 progress-fill"
+                  title={`${healthyAvailCount} Ready`}
+                />
+                <div
+                  style={{ width: barsReady ? `${outPct}%` : '0%' }}
+                  className="h-full bg-amber-500 progress-fill"
+                  title={`${checkedOutCount} Checked Out`}
+                />
+                {repairOnlyCount > 0 && (
+                  <div
+                    style={{ width: barsReady ? `${repairPct}%` : '0%' }}
+                    className="h-full bg-red-600 progress-fill"
+                    title={`${repairOnlyCount} Needs Repair`}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 2. Quick Check Out / Return Banner */}
       <SpotlightCard className="bg-[#111114] border border-[#27272d] rounded-xl p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-5 animate-section-enter">
@@ -1379,16 +1475,28 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                   className="p-3.5 bg-[#09090b] border border-red-500/35 rounded-lg space-y-1.5 text-xs animate-row-enter"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-red-400">{item.itemId}</span>
-                      <span className="text-zinc-200 font-semibold">{item.itemName}</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-mono font-bold text-red-400 shrink-0">{item.itemId}</span>
+                      <span className="text-zinc-200 font-semibold truncate">{item.itemName}</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/35 font-mono text-[10px] font-bold">
+                    <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/35 font-mono text-[10px] font-bold shrink-0">
                       NEEDS REPAIR
                     </span>
                   </div>
-                  <div className="text-[11px] text-zinc-400 font-mono">
-                    {item.location || getCategoryDefaultLocation(item.category)} · {item.currentUser ? `Team ${item.currentUser}` : 'In Pit'}
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="text-[11px] text-zinc-400 font-mono">
+                      {item.location || getCategoryDefaultLocation(item.category)} · {item.currentUser ? `Team ${item.currentUser}` : 'In Pit'}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveDrilldown('none');
+                        onOpenCheckout(item, item.status === 'Checked Out' ? 'Check In' : 'Check Out');
+                      }}
+                      className="px-2.5 py-1 text-[11px] font-semibold text-zinc-100 bg-[#1a1a1f] hover:bg-[#27272d] border border-[#27272d] rounded-md transition-colors btn-tactile"
+                    >
+                      {item.status === 'Checked Out' ? '← Return Item' : 'Inspect / Log'}
+                    </button>
                   </div>
                   {item.notes && (
                     <div className="text-xs text-zinc-200 bg-[#1a1a1f] p-2 rounded border border-zinc-800">
